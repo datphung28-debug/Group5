@@ -1,121 +1,70 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React from 'react';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { Layout, Menu } from 'antd';
+import { 
+  LayoutDashboard, 
+  Pill, 
+  ShoppingCart, 
+  Users, 
+  Settings,
+  ClipboardList
+} from 'lucide-react';
+
+const { Header, Content, Sider } = Layout;
+
+// Placeholder components
+const Dashboard = () => <div className="p-6"><h1>Dashboard Tổng quan GPP</h1></div>;
+const MedicineList = () => <div className="p-6"><h1>Danh mục thuốc</h1></div>;
+const Sales = () => <div className="p-6"><h1>Quản lý bán hàng</h1></div>;
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    <BrowserRouter>
+      <Layout style={{ minHeight: '100vh' }}>
+        <Sider breakpoint="lg" collapsedWidth="0">
+          <div className="h-16 m-4 bg-white/20 flex items-center justify-center text-white font-bold">
+            GPP MANAGER
+          </div>
+          <Menu theme="dark" mode="inline" defaultSelectedKeys={['1']}>
+            <Menu.Item key="1" icon={<LayoutDashboard size={18} />}>
+              <Link to="/">Dashboard</Link>
+            </Menu.Item>
+            <Menu.Item key="2" icon={<Pill size={18} />}>
+              <Link to="/medicines">Danh mục thuốc</Link>
+            </Menu.Item>
+            <Menu.Item key="3" icon={<ShoppingCart size={18} />}>
+              <Link to="/sales">Bán hàng</Link>
+            </Menu.Item>
+            <Menu.Item key="4" icon={<ClipboardList size={18} />}>
+              <Link to="/prescriptions">Đơn thuốc</Link>
+            </Menu.Item>
+            <Menu.Item key="5" icon={<Users size={18} />}>
+              <Link to="/customers">Khách hàng</Link>
+            </Menu.Item>
+            <Menu.Item key="6" icon={<Settings size={18} />}>
+              <Link to="/settings">Cài đặt</Link>
+            </Menu.Item>
+          </Menu>
+        </Sider>
+        <Layout>
+          <Header className="bg-white p-0 px-6 flex items-center justify-between shadow-sm">
+            <span className="font-medium text-lg">Hệ thống Nhà thuốc GPP</span>
+            <div className="flex items-center gap-4">
+              <span>Chào, Dược sĩ Admin</span>
+            </div>
+          </Header>
+          <Content className="m-4 bg-white rounded-lg shadow-sm">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/medicines" element={<MedicineList />} />
+              <Route path="/sales" element={<Sales />} />
+              {/* Thêm các route khác ở đây */}
+            </Routes>
+          </Content>
+        </Layout>
+      </Layout>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
