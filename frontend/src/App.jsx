@@ -3,9 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './stores/useAuthStore';
 import LoginPage from './pages/LoginPage';
 import Sidebar from './components/Sidebar';
+import Dashboard from './pages/Dashboard';
 
 // Placeholder components
-const Dashboard = () => <div className="p-6"><h1>Dashboard Tổng quan GPP</h1></div>;
 const MedicineList = () => <div className="p-6"><h1>Danh mục thuốc</h1></div>;
 const Sales = () => <div className="p-6"><h1>Quản lý bán hàng</h1></div>;
 
@@ -43,14 +43,12 @@ function AppLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-6">
-          <div className="bg-white rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border-light)] min-h-full">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/medicines" element={<MedicineList />} />
-              <Route path="/pos" element={<Sales />} />
-            </Routes>
-          </div>
+        <main className="flex-1 overflow-auto">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/medicines" element={<div className="p-6"><div className="bg-white rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border-light)] min-h-[calc(100vh-8rem)] p-6"><MedicineList /></div></div>} />
+            <Route path="/pos" element={<div className="p-6"><div className="bg-white rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border-light)] min-h-[calc(100vh-8rem)] p-6"><Sales /></div></div>} />
+          </Routes>
         </main>
       </div>
     </div>

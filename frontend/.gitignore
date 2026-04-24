@@ -1,3 +1,15 @@
+# Mardown
+DESIGN.md
+COMPONENTS.md
+
+# Claude
+.claude
+CLAUDE.md
+
+# Codex
+.codex/
+AGENTS.md
+
 # Logs
 logs
 *.log
