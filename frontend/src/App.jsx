@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './stores/useAuthStore';
 import LoginPage from './pages/LoginPage';
 import Sidebar from './components/Sidebar';
+import Header from './components/Header';
 import Dashboard from './pages/Dashboard';
 
 // Placeholder components
@@ -20,7 +21,6 @@ function ProtectedRoute({ children }) {
 }
 
 function AppLayout() {
-  const user = useAuthStore((state) => state.user);
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -32,16 +32,7 @@ function AppLayout() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-14 bg-white px-6 flex items-center justify-between border-b border-[var(--color-border-light)] flex-shrink-0">
-          <span className="font-semibold text-[15px] text-[var(--color-text-primary)]">
-            Hệ thống Nhà thuốc GPP
-          </span>
-          <div className="flex items-center gap-4">
-            <span className="text-[13px] font-medium text-[var(--color-text-secondary)]">
-              Chào, {user?.name || 'Dược sĩ'}
-            </span>
-          </div>
-        </header>
+        <Header />
 
         <main className="flex-1 overflow-auto">
           <Routes>
