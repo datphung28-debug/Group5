@@ -28,12 +28,6 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../stores/useAuthStore';
 
-// Type definitions internally documented since we are using JS
-// interface SidebarProps {
-//   collapsed: boolean
-//   onCollapse: (val: boolean) => void
-//   badges?: { inventory?: number }
-// }
 
 export default function Sidebar({ collapsed, onCollapse, badges = {} }) {
   const location = useLocation();

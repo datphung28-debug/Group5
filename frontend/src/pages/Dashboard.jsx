@@ -5,10 +5,10 @@ import { Column, DualAxes } from '@ant-design/charts';
 import { useDashboard } from '../hooks/useDashboard';
 import '../styles/dashboard.css';
 
-const Dashboard: React.FC = () => {
+const Dashboard = () => {
   const { data, loading, formatCurrency, formatNumber } = useDashboard();
   const [showRevenue, setShowRevenue] = useState(true);
-  const [compareYear, setCompareYear] = useState<'2026' | '2025'>('2026');
+  const [compareYear, setCompareYear] = useState('2026');
 
   if (loading || !data) {
     return (
@@ -43,7 +43,7 @@ const Dashboard: React.FC = () => {
         type: 'interval',
         yField: 'revenue',
         style: { fill: 'var(--color-primary)' },
-        tooltip: { channel: 'y', valueFormatter: (d: any) => formatCurrency(d) }
+        tooltip: { channel: 'y', valueFormatter: (d) => formatCurrency(d) }
       },
       {
         type: 'line',
@@ -53,12 +53,12 @@ const Dashboard: React.FC = () => {
         axis: {
           y: { position: 'right', title: 'Lãi gộp' },
         },
-        tooltip: { channel: 'y', valueFormatter: (d: any) => formatCurrency(d) }
+        tooltip: { channel: 'y', valueFormatter: (d) => formatCurrency(d) }
       },
     ],
     legend: {
       color: {
-        itemMarker: (v: string) => {
+        itemMarker: (value) => {
           if (v === 'profit') return 'smooth';
           return 'rect';
         },
@@ -75,11 +75,11 @@ const Dashboard: React.FC = () => {
     columnWidthRatio: 0.8,
     yAxis: {
       label: {
-        formatter: (v: string) => `${(Number(v) / 1000).toFixed(0)}k`,
+        formatter: (value) => `${(Number(value) / 1000).toFixed(0)}k`,
       },
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum) => ({
         name: 'Doanh thu',
         value: formatCurrency(datum.revenue),
       }),
@@ -104,7 +104,7 @@ const Dashboard: React.FC = () => {
         scale: {
           color: { range: ['var(--color-primary)', 'var(--color-border-light)'] }
         },
-        tooltip: { channel: 'y', valueFormatter: (d: any) => formatCurrency(d) }
+        tooltip: { channel: 'y', valueFormatter: (d) => formatCurrency(d) }
       },
       {
         type: 'line',
@@ -115,7 +115,7 @@ const Dashboard: React.FC = () => {
         axis: {
           y: { position: 'right', title: 'Lãi gộp' },
         },
-        tooltip: { channel: 'y', valueFormatter: (d: any) => formatCurrency(d) }
+        tooltip: { channel: 'y', valueFormatter: (d) => formatCurrency(d) }
       },
     ],
   };
@@ -126,7 +126,7 @@ const Dashboard: React.FC = () => {
       title: '#',
       key: 'index',
       width: 40,
-      render: (_text: any, _record: any, index: number) => {
+      render: (_text, _record, index) => {
         if (index === 0) return <Medal size={16} className="text-yellow-500" />;
         if (index === 1) return <Medal size={16} className="text-gray-400" />;
         if (index === 2) return <Medal size={16} className="text-amber-600" />;
@@ -137,7 +137,7 @@ const Dashboard: React.FC = () => {
       title: 'Thuốc',
       dataIndex: 'name',
       key: 'name',
-      render: (text: string, record: any) => (
+      render: (text, record) => (
         <div className="flex flex-col">
           <span className="font-medium text-[var(--color-text-primary)]">{text}</span>
           <span className="text-xs text-[var(--color-text-secondary)]">SL: {record.quantity}</span>
@@ -148,16 +148,16 @@ const Dashboard: React.FC = () => {
       title: 'Doanh thu',
       dataIndex: 'revenue',
       key: 'revenue',
-      align: 'right' as const,
-      render: (val: number) => (
+      align: 'right',
+      render: (val) => (
         <span className="text-[var(--color-text-primary)]">{formatCurrency(val)}</span>
       ),
     },
     {
       title: 'Lãi',
       key: 'profit',
-      align: 'right' as const,
-      render: (_: any, record: any) => (
+      align: 'right',
+      render: (_, record) => (
         <div className="flex flex-col items-end">
           <span className="text-[var(--color-profit)] font-medium">{formatCurrency(record.profit)}</span>
           <span className="text-xs text-[var(--color-text-secondary)] bg-[var(--color-bg-subtle)] px-1 rounded">
@@ -276,13 +276,13 @@ const Dashboard: React.FC = () => {
           <div className="h-[300px] w-full">
             {/* Note: DualAxes from ant-design/charts can be complex to type correctly in TS without exact versions,
                 so using any or ignoring TS checks for config might be needed in a real project depending on version */}
-            <DualAxes {...comboConfig30Days as any} />
+            <DualAxes {...comboConfig30Days} />
           </div>
         </Card>
 
         <Card className="lg:col-span-1 chart-card" title="Doanh thu theo giờ hôm nay">
           <div className="h-[300px] w-full">
-            <Column {...columnConfigHourly as any} />
+            <Column {...columnConfigHourly} />
           </div>
         </Card>
       </div>
@@ -322,7 +322,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="h-[280px] w-full">
-            <DualAxes {...dualAxesConfigYearly as any} />
+            <DualAxes {...dualAxesConfigYearly} />
           </div>
         </Card>
 
