@@ -119,24 +119,9 @@ export default function Sidebar({ collapsed, onCollapse, badges = {} }) {
         borderRight: '1px solid rgba(255,255,255,0.05)'
       }}
     >
-      {/* Collapse Toggle Button - visible on hover */}
-      <div className="absolute -right-12 top-5 w-12 h-10 flex items-center justify-end opacity-0 group-hover/sidebar:opacity-100 transition-opacity z-20">
-        <button
-          onClick={() => onCollapse(!collapsed)}
-          className="w-7 h-7 rounded-full flex items-center justify-center hover:scale-110 shadow-sm transition-transform cursor-pointer"
-          style={{
-            backgroundColor: 'var(--color-bg-surface)',
-            color: 'var(--color-text-secondary)',
-            border: '1px solid var(--color-border)'
-          }}
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
-      </div>
-
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-5 flex-shrink-0 overflow-hidden">
-        <div className="flex items-center gap-3">
+      <div className="h-16 flex items-center justify-between px-5 flex-shrink-0 relative group/header">
+        <div className={`flex items-center gap-3 transition-opacity duration-200 ${collapsed ? 'opacity-100 group-hover/header:opacity-0' : 'opacity-100'}`}>
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: 'var(--color-primary)' }}
@@ -149,6 +134,19 @@ export default function Sidebar({ collapsed, onCollapse, badges = {} }) {
             </span>
           )}
         </div>
+
+        {/* Collapse Toggle Button */}
+        <button
+          onClick={() => onCollapse(!collapsed)}
+          className={`flex items-center justify-center w-7 h-7 rounded transition-all cursor-pointer hover:bg-[var(--color-sidebar-hover-bg)]
+            ${collapsed
+              ? 'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover/header:opacity-100 text-white'
+              : 'text-[var(--color-sidebar-text)] hover:text-white'
+            }
+          `}
+        >
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
       </div>
 
       {/* Navigation Area */}
