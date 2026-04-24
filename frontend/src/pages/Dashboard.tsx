@@ -37,58 +37,33 @@ const Dashboard: React.FC = () => {
 
   // 1. Combo chart (Bar + Line) for 30 Days Revenue/Profit
   const comboConfig30Days = {
-    data: [data.revenueProfit30Days, data.revenueProfit30Days],
+    data: data.revenueProfit30Days,
     xField: 'date',
-    yField: ['revenue', 'profit'],
-    geometryOptions: [
+    children: [
       {
-        geometry: 'column',
-        color: 'var(--color-primary)',
-        columnWidthRatio: 0.6,
+        type: 'interval',
+        yField: 'revenue',
+        style: { fill: 'var(--color-primary)' },
+        tooltip: { channel: 'y', valueFormatter: (d: any) => formatCurrency(d) }
       },
       {
-        geometry: 'line',
-        color: 'var(--color-profit)',
-        lineStyle: {
-          lineWidth: 2,
+        type: 'line',
+        yField: 'profit',
+        shapeField: 'smooth',
+        style: { stroke: 'var(--color-profit)', lineWidth: 2 },
+        axis: {
+          y: { position: 'right', title: 'Lãi gộp' },
         },
-        smooth: true,
+        tooltip: { channel: 'y', valueFormatter: (d: any) => formatCurrency(d) }
       },
     ],
-    yAxis: {
-      revenue: {
-        label: {
-          formatter: (v: string) => `${(Number(v) / 1000000).toFixed(0)}tr`,
-        },
-      },
-      profit: {
-        label: {
-          formatter: (v: string) => `${(Number(v) / 1000000).toFixed(0)}tr`,
-        },
-      },
-    },
-    tooltip: {
-      formatter: (datum: any) => {
-        return {
-          name: datum.revenue ? 'Doanh thu' : 'Lãi gộp',
-          value: formatCurrency(datum.revenue || datum.profit),
-        };
-      },
-    },
     legend: {
-      custom: true,
-      items: [
-        {
-          name: 'Doanh thu',
-          value: 'revenue',
-          marker: { symbol: 'square', style: { fill: 'var(--color-primary)' } },
+      color: {
+        itemMarker: (v: string) => {
+          if (v === 'profit') return 'smooth';
+          return 'rect';
         },
-        {
-          name: 'Lãi gộp',
-          value: 'profit',
-          marker: { symbol: 'hyphen', style: { stroke: 'var(--color-profit)', lineWidth: 2 } },
-        },
-      ],
+      },
     },
   };
 
@@ -113,45 +88,37 @@ const Dashboard: React.FC = () => {
   };
 
   // 3. DualAxes Chart for Yearly Comparison
+  const yearlyBarData = data.yearlyRevenue.flatMap(d => [
+    { month: d.month, type: 'Năm nay', value: d.revenueThisYear },
+    { month: d.month, type: 'Năm ngoái', value: d.revenueLastYear }
+  ]);
+
   const dualAxesConfigYearly = {
-    data: [data.yearlyRevenue, data.yearlyRevenue],
     xField: 'month',
-    yField: ['revenueThisYear', 'profitThisYear'],
-    geometryOptions: [
+    children: [
       {
-        geometry: 'column',
-        isGroup: true,
-        seriesField: 'type',
-        color: ['var(--color-primary)', 'var(--color-border-light)'], // Mocking comparison using colors for now
-        // Ant Design Charts dual axes is tricky with grouped columns and lines,
-        // so we simplify to Revenue this year vs Profit
+        type: 'interval',
+        data: yearlyBarData,
+        yField: 'value',
+        colorField: 'type',
+        transform: [{ type: 'dodgeX' }],
+        scale: {
+          color: { range: ['var(--color-primary)', 'var(--color-border-light)'] }
+        },
+        tooltip: { channel: 'y', valueFormatter: (d: any) => formatCurrency(d) }
       },
       {
-        geometry: 'line',
-        color: 'var(--color-profit)',
-        smooth: true,
-        lineStyle: { lineWidth: 2 },
+        type: 'line',
+        data: data.yearlyRevenue,
+        yField: 'profitThisYear',
+        shapeField: 'smooth',
+        style: { stroke: 'var(--color-profit)', lineWidth: 2 },
+        axis: {
+          y: { position: 'right', title: 'Lãi gộp' },
+        },
+        tooltip: { channel: 'y', valueFormatter: (d: any) => formatCurrency(d) }
       },
     ],
-    yAxis: {
-      revenueThisYear: {
-        label: {
-          formatter: (v: string) => `${(Number(v) / 1000000).toFixed(0)}tr`,
-        },
-      },
-      profitThisYear: {
-        label: {
-          formatter: (v: string) => `${(Number(v) / 1000000).toFixed(0)}tr`,
-        },
-      },
-    },
-    legend: {
-      custom: true,
-      items: [
-        { name: 'Doanh thu', value: 'revenue', marker: { symbol: 'square', style: { fill: 'var(--color-primary)' } } },
-        { name: 'Lãi gộp', value: 'profit', marker: { symbol: 'hyphen', style: { stroke: 'var(--color-profit)' } } },
-      ],
-    },
   };
 
   // --- Table Configuration ---

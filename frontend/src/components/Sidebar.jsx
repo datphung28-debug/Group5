@@ -112,7 +112,7 @@ export default function Sidebar({ collapsed, onCollapse, badges = {} }) {
 
   return (
     <aside
-      className="flex flex-col h-screen overflow-hidden transition-all duration-300 ease-in-out relative group/sidebar"
+      className="flex flex-col h-screen transition-all duration-300 ease-in-out relative group/sidebar z-20"
       style={{
         backgroundColor: 'var(--color-sidebar-bg)',
         width: collapsed ? '72px' : '240px',
@@ -120,20 +120,22 @@ export default function Sidebar({ collapsed, onCollapse, badges = {} }) {
       }}
     >
       {/* Collapse Toggle Button - visible on hover */}
-      <button
-        onClick={() => onCollapse(!collapsed)}
-        className="absolute -right-3 top-6 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover/sidebar:opacity-100 transition-opacity z-10 hover:scale-110"
-        style={{
-          backgroundColor: 'var(--color-primary)',
-          color: 'var(--color-sidebar-active)',
-          border: '2px solid var(--color-bg-app)'
-        }}
-      >
-        {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-      </button>
+      <div className="absolute -right-12 top-5 w-12 h-10 flex items-center justify-end opacity-0 group-hover/sidebar:opacity-100 transition-opacity z-20">
+        <button
+          onClick={() => onCollapse(!collapsed)}
+          className="w-7 h-7 rounded-full flex items-center justify-center hover:scale-110 shadow-sm transition-transform cursor-pointer"
+          style={{
+            backgroundColor: 'var(--color-bg-surface)',
+            color: 'var(--color-text-secondary)',
+            border: '1px solid var(--color-border)'
+          }}
+        >
+          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        </button>
+      </div>
 
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-5 flex-shrink-0">
+      <div className="h-16 flex items-center px-5 flex-shrink-0 overflow-hidden">
         <div className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
