@@ -24,7 +24,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  ShieldPlus
+  ShieldPlus,
+  Settings
 } from 'lucide-react';
 import useAuthStore from '../stores/useAuthStore';
 
@@ -93,6 +94,7 @@ export default function Sidebar({ collapsed, onCollapse, badges = {} }) {
         { path: '/schedule', icon: CalendarDays, label: 'Lịch phân ca' },
         { path: '/timesheet', icon: Clock, label: 'Chấm công' },
         { path: '/payroll', icon: Banknote, label: 'Bảng lương' },
+        { path: '/settings', icon: Settings, label: 'Cài đặt' },
       ],
     },
     {

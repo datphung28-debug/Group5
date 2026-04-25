@@ -11,6 +11,7 @@ export default function Header() {
     switch (location.pathname) {
       case '/': return 'Dashboard';
       case '/medicines': return 'Danh mục thuốc';
+      case '/medicines/add': return 'Thêm thuốc mới';
       case '/pos': return 'Quản lý bán hàng';
       default: return 'Tổng quan';
     }
