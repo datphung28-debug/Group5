@@ -1,22 +1,18 @@
 import React from 'react';
-import { Table, Tag, Badge, Button, Dropdown, Menu, Modal, message } from 'antd';
-import { MoreVertical, Eye, Edit3, Power, Package, Trash2, PlayCircle } from 'lucide-react';
-
-const { confirm } = Modal;
+import { Table, Tag, Badge, Button, Dropdown, Popconfirm, message } from 'antd';
+import { 
+  MoreVertical, 
+  Eye, 
+  Pencil, 
+  PowerOff, 
+  CheckCircle, 
+  Warehouse, 
+  Trash2 
+} from 'lucide-react';
 
 const MedicineTable = () => {
   const handleDelete = (record) => {
-    confirm({
-      title: 'Xác nhận xóa thuốc?',
-      icon: <Trash2 size={22} className="text-[var(--color-debt)] mr-2" />,
-      content: `Bạn có chắc chắn muốn xóa thuốc "${record.name}"? Hành động này không thể hoàn tác.`,
-      okText: 'Xóa thuốc',
-      okType: 'danger',
-      cancelText: 'Hủy',
-      onOk() {
-        message.success(`Đã xóa thuốc ${record.code}`);
-      },
-    });
+    message.success(`Đã xóa thuốc ${record.code}`);
   };
 
   const handleToggleStatus = (record) => {
@@ -129,7 +125,10 @@ const MedicineTable = () => {
           <div 
             className="px-2 py-1 rounded-[var(--radius-sm)] inline-flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
             style={{ backgroundColor: bgColor }}
-            onClick={() => message.info(`Lịch sử kho của ${record.code}`)}
+            onClick={(e) => {
+              e.stopPropagation();
+              message.info(`Lịch sử kho của ${record.code}`);
+            }}
           >
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
             <span className="font-medium" style={{ color: color }}>
@@ -180,47 +179,63 @@ const MedicineTable = () => {
       key: 'action',
       width: 50,
       render: (_, record) => {
-        const menu = (
-          <Menu className="min-w-[160px] rounded-[var(--radius-md)] shadow-[var(--shadow-dropdown)] border-[var(--color-border-light)] p-1">
-            <Menu.Item key="view" icon={<Eye size={14} className="text-blue-500" />}>
-              Xem chi tiết
-            </Menu.Item>
-            <Menu.Item key="edit" icon={<Edit3 size={14} className="text-orange-500" />}>
-              Chỉnh sửa
-            </Menu.Item>
-            <Menu.Item key="stock" icon={<Package size={14} className="text-purple-500" />}>
-              Xem tồn kho
-            </Menu.Item>
-            
-            <Menu.Divider />
-            
-            <Menu.Item 
-              key="toggle" 
-              icon={record.status === 'active' ? <Power size={14} className="text-red-400" /> : <PlayCircle size={14} className="text-green-500" />}
-              onClick={() => handleToggleStatus(record)}
-            >
-              {record.status === 'active' ? 'Ngừng bán' : 'Kích hoạt'}
-            </Menu.Item>
-            
-            <Menu.Divider />
-            
-            <Menu.Item 
-              key="delete" 
-              danger 
-              icon={<Trash2 size={14} />}
-              onClick={() => handleDelete(record)}
-            >
-              Xóa thuốc
-            </Menu.Item>
-          </Menu>
-        );
+        const menuItems = [
+          {
+            key: 'view',
+            label: 'Xem chi tiết',
+            icon: <Eye size={16} />,
+          },
+          {
+            key: 'edit',
+            label: 'Chỉnh sửa',
+            icon: <Pencil size={16} />,
+          },
+          {
+            key: 'toggle',
+            label: record.status === 'active' ? 'Ngừng bán' : 'Kích hoạt',
+            icon: record.status === 'active' ? <PowerOff size={16} /> : <CheckCircle size={16} />,
+            onClick: () => handleToggleStatus(record),
+          },
+          {
+            key: 'inventory',
+            label: 'Xem tồn kho',
+            icon: <Warehouse size={16} />,
+          },
+          {
+            type: 'divider',
+          },
+          {
+            key: 'delete',
+            danger: true,
+            icon: <Trash2 size={16} />,
+            label: (
+              <Popconfirm
+                title="Bạn có chắc muốn xóa thuốc này không?"
+                onConfirm={() => handleDelete(record)}
+                okText="Xóa"
+                cancelText="Hủy"
+                onPopupClick={(e) => e.stopPropagation()}
+              >
+                <span className="block w-full">Xóa thuốc</span>
+              </Popconfirm>
+            ),
+          },
+        ];
 
         return (
-          <Dropdown overlay={menu} trigger={['click']} placement="bottomRight">
+          <Dropdown 
+            menu={{ 
+              items: menuItems,
+              onClick: ({ domEvent }) => domEvent.stopPropagation()
+            }} 
+            trigger={['click']} 
+            placement="bottomRight"
+          >
             <Button 
               type="text" 
               className="flex items-center justify-center rounded-full w-8 h-8 hover:bg-[var(--color-bg-subtle)]"
               icon={<MoreVertical size={18} className="text-[var(--color-text-secondary)]" />} 
+              onClick={(e) => e.stopPropagation()}
             />
           </Dropdown>
         );
@@ -244,6 +259,10 @@ const MedicineTable = () => {
         className="medicine-table"
         onRow={(record) => ({
           className: 'hover:bg-[var(--color-bg-app)] transition-colors cursor-pointer',
+          onClick: () => {
+            // Row click would normally navigate, but we stop propagation in action menu
+            console.log('Row clicked:', record.id);
+          }
         })}
       />
     </div>
@@ -251,4 +270,3 @@ const MedicineTable = () => {
 };
 
 export default MedicineTable;
-
