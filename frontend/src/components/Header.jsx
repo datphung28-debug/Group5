@@ -12,6 +12,8 @@ export default function Header() {
       case '/': return 'Dashboard';
       case '/medicines': return 'Danh mục thuốc';
       case '/medicines/add': return 'Thêm thuốc mới';
+      case '/inventory': return 'Tồn kho';
+      case '/inventory/expiry': return 'Cảnh báo hết hạn';
       case '/pos': return 'Quản lý bán hàng';
       default: return 'Tổng quan';
     }
