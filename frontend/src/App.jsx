@@ -4,15 +4,17 @@ import useAuthStore from './stores/useAuthStore';
 import LoginPage from './pages/LoginPage';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import PageHeader from './components/PageHeader';
 import Dashboard from './pages/Dashboard';
 
 import MedicineListPage from './pages/medicines/MedicineListPage';
 import AddMedicinePage from './pages/medicines/AddMedicinePage';
+import MedicineGroupsPage from './pages/medicine-groups/MedicineGroupsPage';
 import InventoryPage from './pages/inventory/InventoryPage';
 import ExpiryWarningPage from './pages/inventory/ExpiryWarningPage';
 
 // Placeholder components
-const Sales = () => <div className="p-6"><h1>Quản lý bán hàng</h1></div>;
+const Sales = () => <div className="p-6"><PageHeader title="Quản lý bán hàng" subtitle="Tạo hóa đơn và quản lý giao dịch bán hàng" /></div>;
 
 function ProtectedRoute({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -43,10 +45,11 @@ function AppLayout() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/medicines" element={<MedicineListPage />} />
             <Route path="/medicines/add" element={<AddMedicinePage />} />
+            <Route path="/medicine-groups" element={<MedicineGroupsPage />} />
             <Route path="/inventory/expiry" element={<ExpiryWarningPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
-            <Route path="/pos" element={<div className="p-6"><div className="bg-white rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border-light)] min-h-[calc(100vh-8rem)] p-6"><Sales /></div></div>} />
-            <Route path="/settings" element={<div className="p-6"><div className="bg-white rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border-light)] min-h-[calc(100vh-8rem)] p-6"><h1>Cài đặt hệ thống</h1></div></div>} />
+            <Route path="/pos" element={<div className="p-6"><Sales /></div>} />
+            <Route path="/settings" element={<div className="p-6"><PageHeader title="Cài đặt hệ thống" subtitle="Tùy chỉnh cấu hình hệ thống" /></div>} />
           </Routes>
         </main>
       </div>

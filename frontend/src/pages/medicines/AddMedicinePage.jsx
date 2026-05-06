@@ -1,8 +1,9 @@
 import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { Card, Input, Select, InputNumber, Switch, Button, Space, Divider, Typography, Row, Col, Alert } from 'antd';
-import { Save, X, Info, Pill, DollarSign, FileText, Settings, Check } from 'lucide-react';
+import { Save, X, Info, Pill, DollarSign, FileText, Settings, Check, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import PageHeader from '../../components/PageHeader';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -51,6 +52,20 @@ const AddMedicinePage = () => {
 
   return (
     <div className="p-6 bg-[var(--color-bg-app)] min-h-screen">
+      <PageHeader
+        title="Thêm thuốc mới"
+        subtitle="Nhập thông tin thuốc vào hệ thống"
+        actions={
+          <Button
+            icon={<ArrowLeft size={18} className="mr-2 inline" />}
+            className="flex items-center h-10 px-4 border-[var(--color-border)] rounded-[var(--radius-md)] font-medium text-[var(--color-text-primary)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]"
+            onClick={() => navigate('/medicines')}
+          >
+            Quay lại
+          </Button>
+        }
+      />
+
       <form onSubmit={handleSubmit(onSubmit)}>
         <Row gutter={16}>
           {/* LEFT COLUMN */}

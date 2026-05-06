@@ -1,38 +1,18 @@
 import { useState } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Search, Bell, Plus, ChevronDown, User, X } from 'lucide-react';
 import useAuthStore from '../stores/useAuthStore';
 
 export default function Header() {
-  const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-
-  const getPageTitle = () => {
-    switch (location.pathname) {
-      case '/': return 'Dashboard';
-      case '/medicines': return 'Danh mục thuốc';
-      case '/medicines/add': return 'Thêm thuốc mới';
-      case '/inventory': return 'Tồn kho';
-      case '/inventory/expiry': return 'Cảnh báo hết hạn';
-      case '/pos': return 'Quản lý bán hàng';
-      default: return 'Tổng quan';
-    }
-  };
 
   return (
     <header className="h-14 md:h-16 bg-white border-b border-[var(--color-border-light)] flex-shrink-0 relative z-10">
       {/* Main header row */}
       <div className="h-full px-3 sm:px-4 md:px-6 flex items-center gap-2 sm:gap-3 md:gap-4">
-        {/* Left: Page Title — fixed width, never shrinks */}
-        <div className="flex-shrink-0 min-w-0">
-          <h1 className="text-[var(--color-text-primary)] text-[15px] sm:text-[16px] md:text-[18px] font-bold m-0 leading-none truncate max-w-[140px] sm:max-w-[180px] md:max-w-none">
-            {getPageTitle()}
-          </h1>
-        </div>
-
-        {/* Center: Search Bar — fills available space, collapses on mobile */}
-        <div className="hidden sm:flex flex-1 justify-center min-w-0 mx-2 md:mx-4">
+        {/* Left: Search Bar — fills available space, collapses on mobile */}
+        <div className="hidden sm:flex flex-1 min-w-0">
           <div className="relative w-full max-w-lg">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search size={16} className="text-[var(--color-text-muted)]" />

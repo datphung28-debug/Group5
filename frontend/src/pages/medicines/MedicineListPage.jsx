@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from 'antd';
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import PageHeader from '../../components/PageHeader';
 import FilterBar from './components/FilterBar';
 import MedicineTable from './components/MedicineTable';
 
@@ -17,17 +18,20 @@ const MedicineListPage = () => {
 
   return (
     <div className="p-6 min-h-screen bg-[var(--color-bg-app)]">
-      {/* Action Header */}
-      <div className="flex justify-end mb-6">
-        <Button 
-          type="primary" 
-          icon={<Plus size={18} className="mr-2 inline" />}
-          className="flex items-center h-10 px-4 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] border-none rounded-[var(--radius-md)] font-medium shadow-[var(--shadow-card)]"
-          onClick={() => navigate('/medicines/add')}
-        >
-          Thêm thuốc mới
-        </Button>
-      </div>
+      <PageHeader
+        title="Danh mục thuốc"
+        subtitle="Quản lý danh sách thuốc trong hệ thống"
+        actions={
+          <Button
+            type="primary"
+            icon={<Plus size={18} className="mr-2 inline" />}
+            className="flex items-center h-10 px-4 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] border-none rounded-[var(--radius-md)] font-medium shadow-[var(--shadow-card)]"
+            onClick={() => navigate('/medicines/add')}
+          >
+            Thêm thuốc mới
+          </Button>
+        }
+      />
 
       {/* Filter Bar */}
       <FilterBar onFilter={handleFilter} onReset={handleReset} />
