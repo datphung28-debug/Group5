@@ -4,15 +4,45 @@ import useAuthStore from './stores/useAuthStore';
 import LoginPage from './pages/LoginPage';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import PageHeader from './components/PageHeader';
 import Dashboard from './pages/Dashboard';
 
 import MedicineListPage from './pages/medicines/MedicineListPage';
 import AddMedicinePage from './pages/medicines/AddMedicinePage';
+import MedicineGroupsPage from './pages/medicine-groups/MedicineGroupsPage';
 import InventoryPage from './pages/inventory/InventoryPage';
 import ExpiryWarningPage from './pages/inventory/ExpiryWarningPage';
+import PurchaseOrderPage from './pages/purchase/PurchaseOrderPage';
+import { useNavigate } from 'react-router-dom';
+import { Button } from 'antd';
 
 // Placeholder components
-const Sales = () => <div className="p-6"><h1>Quản lý bán hàng</h1></div>;
+const Sales = () => <div className="p-6"><PageHeader title="Quản lý bán hàng" subtitle="Tạo hóa đơn và quản lý giao dịch bán hàng" /></div>;
+
+const PurchaseOrders = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="p-6">
+      <PageHeader 
+        title="Đơn nhập hàng" 
+        subtitle="Quản lý các đơn đặt hàng từ nhà cung cấp" 
+        actions={
+          <Button 
+            type="primary" 
+            onClick={() => navigate('/purchase-orders/create')}
+            className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] border-none rounded-[var(--radius-md)] h-10 px-6 font-medium shadow-md"
+          >
+            + Tạo đơn nhập
+          </Button>
+        }
+      />
+      <div className="bg-white p-8 rounded-[var(--radius-lg)] border border-[var(--color-border-light)] text-center">
+        <div className="text-[var(--color-text-muted)] mb-4 italic">Chưa có dữ liệu đơn nhập hàng</div>
+        <Button type="link" onClick={() => navigate('/purchase-orders/create')}>Bắt đầu tạo đơn nhập đầu tiên</Button>
+      </div>
+    </div>
+  );
+};
 
 function ProtectedRoute({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -43,10 +73,13 @@ function AppLayout() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/medicines" element={<MedicineListPage />} />
             <Route path="/medicines/add" element={<AddMedicinePage />} />
+            <Route path="/medicine-groups" element={<MedicineGroupsPage />} />
             <Route path="/inventory/expiry" element={<ExpiryWarningPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
-            <Route path="/pos" element={<div className="p-6"><div className="bg-white rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border-light)] min-h-[calc(100vh-8rem)] p-6"><Sales /></div></div>} />
-            <Route path="/settings" element={<div className="p-6"><div className="bg-white rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border-light)] min-h-[calc(100vh-8rem)] p-6"><h1>Cài đặt hệ thống</h1></div></div>} />
+            <Route path="/purchase-orders" element={<PurchaseOrders />} />
+            <Route path="/purchase-orders/create" element={<PurchaseOrderPage />} />
+            <Route path="/pos" element={<div className="p-6"><Sales /></div>} />
+            <Route path="/settings" element={<div className="p-6"><PageHeader title="Cài đặt hệ thống" subtitle="Tùy chỉnh cấu hình hệ thống" /></div>} />
           </Routes>
         </main>
       </div>

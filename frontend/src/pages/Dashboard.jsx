@@ -3,6 +3,7 @@ import { Card, Table, Button, Skeleton } from 'antd';
 import { TrendingUp, BarChart2, FileText, Calendar, Medal } from 'lucide-react';
 import { Column, DualAxes } from '@ant-design/charts';
 import { useDashboard } from '../hooks/useDashboard';
+import PageHeader from '../components/PageHeader';
 import '../styles/dashboard.css';
 
 const Dashboard = () => {
@@ -170,6 +171,11 @@ const Dashboard = () => {
 
   return (
     <div className="p-6 w-full max-w-[1440px] mx-auto bg-[var(--color-bg-app)] min-h-full">
+      <PageHeader
+        title="Dashboard"
+        subtitle="Tổng quan hoạt động kinh doanh"
+      />
+
       {/* KPI Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <Card className="kpi-card revenue-card">
