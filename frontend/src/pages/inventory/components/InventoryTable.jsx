@@ -1,69 +1,52 @@
-import React from 'react';
-import { Table, Tag, Button, Tooltip, message } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Table, Tag, Button, message, Spin } from 'antd';
 import { Layers, Eye, Calendar, Info } from 'lucide-react';
+import { medicineAPI } from '../../../api/api';
+
+const MOCK_INVENTORY = [
+  { id: '1', code: 'TH001', name: 'Paracetamol 500mg', ingredient: 'Paracetamol', manufacturer: 'DHG Pharma', category: 'Giảm đau - Hạ sốt', batches: [{ id: 'B1', quantity: 100, expiryDate: '2026-12-31' }, { id: 'B2', quantity: 20, expiryDate: '2026-05-20' }], totalStock: 120, unit: 'Viên', nearestExpiry: '2026-05-20', inventoryValue: 180000 },
+  { id: '2', code: 'TH002', name: 'Amoxicillin 500mg', ingredient: 'Amoxicillin', manufacturer: 'Imexpharm', category: 'Kháng sinh', batches: [{ id: 'B3', quantity: 5, expiryDate: '2026-04-30' }], totalStock: 5, unit: 'Viên', nearestExpiry: '2026-04-30', inventoryValue: 16000 },
+  { id: '3', code: 'TH004', name: 'Berberin', ingredient: 'Berberin chloride', manufacturer: 'Mekophar', category: 'Tiêu hóa', batches: [{ id: 'B4', quantity: 450, expiryDate: '2027-01-15' }], totalStock: 450, unit: 'Viên', nearestExpiry: '2027-01-15', inventoryValue: 225000 },
+  { id: '4', code: 'TH005', name: 'Hapacol 250', ingredient: 'Paracetamol', manufacturer: 'DHG Pharma', category: 'Giảm đau - Hạ sốt', batches: [], totalStock: 0, unit: 'Gói', nearestExpiry: null, inventoryValue: 0 },
+];
 
 const InventoryTable = () => {
-  const data = [
-    {
-      id: '1',
-      code: 'TH001',
-      name: 'Paracetamol 500mg',
-      ingredient: 'Paracetamol',
-      manufacturer: 'DHG Pharma',
-      category: 'Giảm đau - Hạ sốt',
-      batches: [
-        { id: 'B1', quantity: 100, expiryDate: '2026-12-31' },
-        { id: 'B2', quantity: 20, expiryDate: '2026-05-20' },
-      ],
-      totalStock: 120,
-      unit: 'Viên',
-      nearestExpiry: '2026-05-20',
-      inventoryValue: 180000,
-    },
-    {
-      id: '2',
-      code: 'TH002',
-      name: 'Amoxicillin 500mg',
-      ingredient: 'Amoxicillin',
-      manufacturer: 'Imexpharm',
-      category: 'Kháng sinh',
-      batches: [
-        { id: 'B3', quantity: 5, expiryDate: '2026-04-30' },
-      ],
-      totalStock: 5,
-      unit: 'Viên',
-      nearestExpiry: '2026-04-30',
-      inventoryValue: 16000,
-    },
-    {
-      id: '3',
-      code: 'TH004',
-      name: 'Berberin',
-      ingredient: 'Berberin chloride',
-      manufacturer: 'Mekophar',
-      category: 'Tiêu hóa',
-      batches: [
-        { id: 'B4', quantity: 450, expiryDate: '2027-01-15' },
-      ],
-      totalStock: 450,
-      unit: 'Viên',
-      nearestExpiry: '2027-01-15',
-      inventoryValue: 225000,
-    },
-    {
-      id: '4',
-      code: 'TH005',
-      name: 'Hapacol 250',
-      ingredient: 'Paracetamol',
-      manufacturer: 'DHG Pharma',
-      category: 'Giảm đau - Hạ sốt',
-      batches: [],
-      totalStock: 0,
-      unit: 'Gói',
-      nearestExpiry: null,
-      inventoryValue: 0,
-    },
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    const fetchInventory = async () => {
+      setLoading(true);
+      try {
+        const res = await medicineAPI.getAll({ limit: 50 });
+        // Map API response to inventory format
+        const medicines = res.data?.data || res.data || [];
+        const inventoryData = medicines.map((m, idx) => ({
+          id: m._id || String(idx),
+          code: m.code,
+          name: m.name,
+          ingredient: m.genericName || m.ingredient || '',
+          manufacturer: m.manufacturer || '',
+          category: m.category?.name || m.category || '',
+          batches: m.batches || [],
+          totalStock: m.stock ?? 0,
+          unit: m.unit || 'Viên',
+          nearestExpiry: m.nearestExpiry || null,
+          inventoryValue: (m.stock ?? 0) * (m.importPrice || m.retailPrice || 0),
+        }));
+        setData(inventoryData);
+        setTotal(inventoryData.length);
+      } catch {
+        // Fallback sang mock data
+        setData(MOCK_INVENTORY);
+        setTotal(MOCK_INVENTORY.length);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInventory();
+  }, []);
 
   const getStatus = (record) => {
     const today = new Date();
@@ -231,12 +214,14 @@ const InventoryTable = () => {
       <Table
         columns={columns}
         dataSource={data}
-        rowKey="id"
+        rowKey={(r) => r._id || r.id}
+        loading={{ spinning: loading, indicator: <Spin size="large" /> }}
         scroll={{ x: 1200 }}
         pagination={{
-          total: data.length,
+          total,
           pageSize: 10,
           showSizeChanger: true,
+          showTotal: (t, range) => `${range[0]}-${range[1]} / ${t} mục`,
           className: "px-6 py-4 border-t border-[var(--color-border-light)]",
           position: ['bottomRight']
         }}

@@ -1,79 +1,59 @@
 import React from 'react';
-import { Table, Tag, Badge, Button, Dropdown, Popconfirm, message } from 'antd';
-import { 
-  MoreVertical, 
-  Eye, 
-  Pencil, 
-  PowerOff, 
-  CheckCircle, 
-  Warehouse, 
-  Trash2 
+import { Table, Tag, Badge, Button, Dropdown, Popconfirm, message, Spin, Empty, Alert } from 'antd';
+import {
+  MoreVertical,
+  Eye,
+  Pencil,
+  PowerOff,
+  CheckCircle,
+  Warehouse,
+  Trash2
 } from 'lucide-react';
+import useMedicineStore from '../../../stores/useMedicineStore';
 
 const MedicineTable = () => {
-  const handleDelete = (record) => {
-    message.success(`Đã xóa thuốc ${record.code}`);
+  const { medicines, loading, error, total, params, setParams, fetchMedicines, deleteMedicine, updateMedicine } = useMedicineStore();
+
+  const handleDelete = async (record) => {
+    const res = await deleteMedicine(record._id || record.id);
+    if (res.success) {
+      message.success(`Đã xóa thuốc ${record.code}`);
+    } else {
+      message.error(res.message || 'Xóa thất bại');
+    }
   };
 
-  const handleToggleStatus = (record) => {
-    const action = record.status === 'active' ? 'ngừng bán' : 'kích hoạt';
-    message.success(`Đã ${action} thuốc ${record.code}`);
+  const handleToggleStatus = async (record) => {
+    const newStatus = record.status === 'active' ? 'inactive' : 'active';
+    const res = await updateMedicine(record._id || record.id, { status: newStatus });
+    if (res.success) {
+      const action = newStatus === 'active' ? 'kích hoạt' : 'ngừng bán';
+      message.success(`Đã ${action} thuốc ${record.code}`);
+    } else {
+      message.error(res.message || 'Cập nhật trạng thái thất bại');
+    }
   };
 
-  const data = [
-    {
-      id: '1',
-      code: 'TH001',
-      name: 'Paracetamol 500mg',
-      ingredient: 'Paracetamol',
-      manufacturer: 'DHG Pharma',
-      category: 'Giảm đau - Hạ sốt',
-      stock: 120,
-      price: 1500,
-      unit: 'Viên',
-      attributes: ['OTC'],
-      status: 'active',
-    },
-    {
-      id: '2',
-      code: 'TH002',
-      name: 'Amoxicillin 500mg',
-      ingredient: 'Amoxicillin',
-      manufacturer: 'Imexpharm',
-      category: 'Kháng sinh',
-      stock: 5,
-      price: 3200,
-      unit: 'Viên',
-      attributes: ['Kê đơn', 'KS'],
-      status: 'active',
-    },
-    {
-      id: '3',
-      code: 'TH003',
-      name: 'Panadol Extra',
-      ingredient: 'Paracetamol, Caffeine',
-      manufacturer: 'GSK',
-      category: 'Giảm đau - Hạ sốt',
-      stock: 0,
-      price: 2500,
-      unit: 'Viên',
-      attributes: ['OTC'],
-      status: 'inactive',
-    },
-    {
-      id: '4',
-      code: 'TH004',
-      name: 'Berberin',
-      ingredient: 'Berberin chloride',
-      manufacturer: 'Mekophar',
-      category: 'Tiêu hóa',
-      stock: 450,
-      price: 500,
-      unit: 'Viên',
-      attributes: ['OTC'],
-      status: 'active',
-    },
-  ];
+  const handlePageChange = (page, pageSize) => {
+    setParams({ page, limit: pageSize });
+    fetchMedicines({ page, limit: pageSize });
+  };
+
+  if (error) {
+    return (
+      <Alert
+        type="error"
+        message="Lỗi tải dữ liệu"
+        description={error}
+        className="mb-4"
+        action={
+          <Button size="small" onClick={() => fetchMedicines()}>
+            Thử lại
+          </Button>
+        }
+      />
+    );
+  }
 
   const columns = [
     {
@@ -90,8 +70,10 @@ const MedicineTable = () => {
       render: (_, record) => (
         <div className="flex flex-col">
           <span className="font-semibold text-[var(--color-text-primary)]">{record.name}</span>
-          <span className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">{record.ingredient}</span>
-          <span className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{record.manufacturer}</span>
+          <span className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">
+            {record.ingredients || record.genericName || ''}
+          </span>
+          <span className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{record.manufacturer || ''}</span>
         </div>
       ),
     },
@@ -101,7 +83,7 @@ const MedicineTable = () => {
       key: 'category',
       render: (category) => (
         <Tag className="bg-[var(--color-bg-subtle)] border-[var(--color-primary-border)] text-[var(--color-primary-text)] rounded-[var(--radius-sm)]">
-          {category}
+          {category?.name || category || '—'}
         </Tag>
       ),
     },
@@ -122,7 +104,7 @@ const MedicineTable = () => {
         }
 
         return (
-          <div 
+          <div
             className="px-2 py-1 rounded-[var(--radius-sm)] inline-flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
             style={{ backgroundColor: bgColor }}
             onClick={(e) => {
@@ -132,7 +114,7 @@ const MedicineTable = () => {
           >
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
             <span className="font-medium" style={{ color: color }}>
-              {stock} {record.unit}
+              {stock ?? 0} {record.unit || ''}
             </span>
           </div>
         );
@@ -140,35 +122,41 @@ const MedicineTable = () => {
     },
     {
       title: 'Giá bán',
-      dataIndex: 'price',
-      key: 'price',
-      render: (price) => (
+      dataIndex: 'sellPrice',
+      key: 'sellPrice',
+      render: (price, record) => (
         <span className="font-semibold text-[var(--color-text-primary)]">
-          {price.toLocaleString('vi-VN')}đ / Viên
+          {(price || 0).toLocaleString('vi-VN')}đ / {record.unit?.name || record.unit || 'Viên'}
         </span>
       ),
     },
     {
       title: 'Đặc tính',
-      dataIndex: 'attributes',
       key: 'attributes',
-      render: (attributes) => (
-        <div className="flex gap-1 flex-wrap">
-          {attributes.map((attr) => (
-            <Tag key={attr} className="m-0 border-[var(--color-border)] text-[var(--color-text-secondary)] text-[var(--font-size-xs)]">
-              {attr}
-            </Tag>
-          ))}
-        </div>
-      ),
+      render: (_, record) => {
+        const attrs = [];
+        if (record.requiresPrescription) attrs.push('Kê đơn');
+        if (record.isAntibiotic) attrs.push('KS');
+        if (record.isNarcotic) attrs.push('GN');
+        if (attrs.length === 0) attrs.push('OTC');
+        return (
+          <div className="flex gap-1 flex-wrap">
+            {attrs.map((attr) => (
+              <Tag key={attr} className="m-0 border-[var(--color-border)] text-[var(--color-text-secondary)] text-[var(--font-size-xs)]">
+                {attr}
+              </Tag>
+            ))}
+          </div>
+        );
+      },
     },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
       render: (status) => (
-        <Badge 
-          status={status === 'active' ? 'success' : 'default'} 
+        <Badge
+          status={status === 'active' ? 'success' : 'default'}
           text={status === 'active' ? 'Đang bán' : 'Ngừng bán'}
           className={status === 'active' ? 'text-[var(--color-profit)]' : 'text-[var(--color-text-muted)]'}
         />
@@ -223,18 +211,18 @@ const MedicineTable = () => {
         ];
 
         return (
-          <Dropdown 
-            menu={{ 
+          <Dropdown
+            menu={{
               items: menuItems,
               onClick: ({ domEvent }) => domEvent.stopPropagation()
-            }} 
-            trigger={['click']} 
+            }}
+            trigger={['click']}
             placement="bottomRight"
           >
-            <Button 
-              type="text" 
+            <Button
+              type="text"
               className="flex items-center justify-center rounded-full w-8 h-8 hover:bg-[var(--color-bg-subtle)]"
-              icon={<MoreVertical size={18} className="text-[var(--color-text-secondary)]" />} 
+              icon={<MoreVertical size={18} className="text-[var(--color-text-secondary)]" />}
               onClick={(e) => e.stopPropagation()}
             />
           </Dropdown>
@@ -247,22 +235,26 @@ const MedicineTable = () => {
     <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border-light)] overflow-hidden">
       <Table
         columns={columns}
-        dataSource={data}
-        rowKey="id"
+        dataSource={medicines}
+        rowKey={(record) => record._id || record.id}
+        loading={{ spinning: loading, indicator: <Spin size="large" /> }}
+        locale={{ emptyText: <Empty description="Chưa có dữ liệu thuốc" /> }}
         pagination={{
-          total: data.length,
-          pageSize: 10,
+          total,
+          current: params.page,
+          pageSize: params.limit,
           showSizeChanger: true,
-          className: "px-6 py-4 border-t border-[var(--color-border-light)]",
-          position: ['bottomRight']
+          showTotal: (t, range) => `${range[0]}-${range[1]} / ${t} thuốc`,
+          onChange: handlePageChange,
+          className: 'px-6 py-4 border-t border-[var(--color-border-light)]',
+          position: ['bottomRight'],
         }}
         className="medicine-table"
         onRow={(record) => ({
           className: 'hover:bg-[var(--color-bg-app)] transition-colors cursor-pointer',
           onClick: () => {
-            // Row click would normally navigate, but we stop propagation in action menu
-            console.log('Row clicked:', record.id);
-          }
+            console.log('Row clicked:', record._id || record.id);
+          },
         })}
       />
     </div>

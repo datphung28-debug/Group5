@@ -1,49 +1,38 @@
-import React from 'react';
-import { Table, Tag, Button, message, Card } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Table, Tag, Button, message, Card, Spin, Alert } from 'antd';
 import { Eye, Calendar } from 'lucide-react';
+import { medicineAPI } from '../../../api/api';
 
 const ExpiryTable = ({ range }) => {
-  const data = [
-    {
-      id: '1',
-      name: 'Amoxicillin 500mg',
-      description: 'Kháng sinh / Imexpharm',
-      batch: 'B3-1204',
-      expiryDate: '2026-04-30',
-      daysRemaining: 3,
-      stock: 5,
-      unit: 'Viên',
-      value: 16000,
-      severity: 'emergency',
-    },
-    {
-      id: '2',
-      name: 'Paracetamol 500mg',
-      description: 'Giảm đau / DHG Pharma',
-      batch: 'B2-9921',
-      expiryDate: '2026-05-20',
-      daysRemaining: 23,
-      stock: 20,
-      unit: 'Viên',
-      value: 30000,
-      severity: 'warning',
-    },
-    {
-      id: '3',
-      name: 'Berberin chloride',
-      description: 'Tiêu hóa / Mekophar',
-      batch: 'B4-0012',
-      expiryDate: '2026-07-15',
-      daysRemaining: 79,
-      stock: 120,
-      unit: 'Viên',
-      value: 60000,
-      severity: 'tracking',
-    },
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Filter based on range
-  const filteredData = data.filter(item => item.daysRemaining <= range);
+  useEffect(() => {
+    const fetchExpiring = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await medicineAPI.getExpiring(range);
+        // Backend trả về mảng các lô hàng sắp hết hạn
+        setData(res.data || []);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Lỗi tải dữ liệu');
+        // Fallback sang mock data
+        setData([
+          { id: '1', name: 'Amoxicillin 500mg', description: 'Kháng sinh / Imexpharm', batch: 'B3-1204', expiryDate: '2026-04-30', daysRemaining: 3, stock: 5, unit: 'Viên', value: 16000, severity: 'emergency' },
+          { id: '2', name: 'Paracetamol 500mg', description: 'Giảm đau / DHG Pharma', batch: 'B2-9921', expiryDate: '2026-05-20', daysRemaining: 23, stock: 20, unit: 'Viên', value: 30000, severity: 'warning' },
+          { id: '3', name: 'Berberin chloride', description: 'Tiêu hóa / Mekophar', batch: 'B4-0012', expiryDate: '2026-07-15', daysRemaining: 79, stock: 120, unit: 'Viên', value: 60000, severity: 'tracking' },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchExpiring();
+  }, [range]);
+
+  // Filter based on range (for mock fallback)
+  const filteredData = data.filter(item => (item.daysRemaining ?? 999) <= range);
 
   const columns = [
     {
@@ -163,9 +152,10 @@ const ExpiryTable = ({ range }) => {
       <Table
         columns={columns}
         dataSource={filteredData}
-        rowKey="id"
+        rowKey={(r) => r._id || r.id}
+        loading={{ spinning: loading, indicator: <Spin size="large" /> }}
         pagination={false}
-        rowClassName={(record) => 
+        rowClassName={(record) =>
           `transition-colors cursor-pointer ${
             record.severity === 'emergency' ? 'bg-[var(--color-debt-bg)]' : ''
           }`

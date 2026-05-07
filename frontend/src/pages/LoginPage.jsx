@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { Button, Input, Checkbox, Typography, message, Divider } from 'antd';
 import { Lock, Mail, Pill } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../stores/useAuthStore';
 
 const { Title, Text } = Typography;
@@ -9,7 +10,8 @@ const { Title, Text } = Typography;
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 export default function LoginPage() {
-  const login = useAuthStore((state) => state.login);
+  const loginWithAPI = useAuthStore((state) => state.loginWithAPI);
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -28,15 +30,14 @@ export default function LoginPage() {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      // Simulate API call — replace with real endpoint
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      login(
-        { email: data.email, name: 'Dược sĩ Admin' },
-        'mock-jwt-token'
-      );
-
-      messageApi.success('Đăng nhập thành công!');
+      const result = await loginWithAPI(data.email, data.password);
+      if (result.success) {
+        messageApi.success('Đăng nhập thành công!');
+        // Chuyển sang Dashboard sau khi login thành công
+        setTimeout(() => navigate('/'), 500);
+      } else {
+        messageApi.error(result.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
+      }
     } catch {
       messageApi.error('Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {

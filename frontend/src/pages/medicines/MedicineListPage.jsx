@@ -1,19 +1,33 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from 'antd';
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import FilterBar from './components/FilterBar';
 import MedicineTable from './components/MedicineTable';
+import useMedicineStore from '../../stores/useMedicineStore';
 
 const MedicineListPage = () => {
   const navigate = useNavigate();
-  const handleFilter = () => {
-    console.log('Filtering...');
+  const { fetchMedicines, setParams, total, loading } = useMedicineStore();
+  const [filters, setFilters] = useState({ search: '', category: '', status: '' });
+
+  // Fetch khi component mount
+  useEffect(() => {
+    fetchMedicines();
+  }, []);
+
+  const handleFilter = (values) => {
+    setFilters(values);
+    setParams({ ...values, page: 1 });
+    fetchMedicines({ ...values, page: 1 });
   };
 
   const handleReset = () => {
-    console.log('Resetting...');
+    const reset = { search: '', category: '', status: '' };
+    setFilters(reset);
+    setParams({ ...reset, page: 1 });
+    fetchMedicines({ ...reset, page: 1 });
   };
 
   return (
@@ -39,11 +53,13 @@ const MedicineListPage = () => {
       {/* Summary info */}
       <div className="flex justify-between items-center mb-3 px-1">
         <span className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">
-          Tổng: <span className="font-semibold text-[var(--color-primary)]">1,248</span> loại thuốc
+          Tổng: <span className="font-semibold text-[var(--color-primary)]">{total.toLocaleString('vi-VN')}</span> loại thuốc
         </span>
-        <span className="text-[var(--font-size-sm)] text-[var(--color-text-muted)]">
-          Hiển thị 1 - 10 trong 1,248
-        </span>
+        {loading && (
+          <span className="text-[var(--font-size-sm)] text-[var(--color-text-muted)] animate-pulse">
+            Đang tải...
+          </span>
+        )}
       </div>
 
       {/* Table */}

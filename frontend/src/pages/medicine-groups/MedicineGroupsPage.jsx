@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button, Modal, message } from 'antd';
 import { Plus } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
@@ -8,11 +8,16 @@ import CategoryCard from './components/CategoryCard';
 import CategoryModal from './components/CategoryModal';
 
 export default function MedicineGroupsPage() {
-  const { categories, getSummary, addCategory, updateCategory, deleteCategory } = useCategoryStore();
+  const { categories, fetchCategories, getSummary, addCategory, updateCategory, deleteCategory } = useCategoryStore();
   const summary = getSummary();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
+
+  // Fetch categories từ API khi component mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   const handleAdd = () => {
     setEditingCategory(null);
@@ -33,7 +38,7 @@ export default function MedicineGroupsPage() {
       cancelText: 'Hủy',
       centered: true,
       onOk: () => {
-        deleteCategory(category.id);
+        deleteCategory(category._id || category.id);
         message.success('Đã xóa nhóm thuốc');
       },
     });
@@ -41,7 +46,7 @@ export default function MedicineGroupsPage() {
 
   const handleSave = (values) => {
     if (editingCategory) {
-      updateCategory(editingCategory.id, values);
+      updateCategory(editingCategory._id || editingCategory.id, values);
       message.success('Đã cập nhật nhóm thuốc');
     } else {
       addCategory(values);

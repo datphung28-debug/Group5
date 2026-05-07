@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { reportAPI } from '../api/api';
 
 const generateMockData = () => {
   const revenueProfit30Days = [];
@@ -105,12 +106,20 @@ export const useDashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        setTimeout(() => {
-          setData(generateMockData());
-          setLoading(false);
-        }, 800);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        // Gọi API backend thật
+        const res = await reportAPI.getDashboard();
+        // Validate response có đúng shape không
+        if (res.data && res.data.kpi) {
+          setData(res.data);
+        } else {
+          // Response không đúng format => dùng mock
+          throw new Error('Invalid dashboard response shape');
+        }
+      } catch {
+        // Backend chưa implement endpoint report => dùng mock data
+        console.warn('Dashboard API chưa sẵn sàng, dùng dữ liệu mẫu.');
+        setData(generateMockData());
+      } finally {
         setLoading(false);
       }
     };
