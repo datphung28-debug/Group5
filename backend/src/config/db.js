@@ -1,13 +1,11 @@
 import mongoose from "mongoose";
 
 export const connectDB = async () => {
-    try {
-        await mongoose.connect("mongodb://localhost:27017/data_pharmacy");
-
-        console.log("Lien ket CSDL thanh cong");
-
-    } catch (error) {
-        console.error("Loi khi ket noi CSDL", error);
-        process.exit(1); // dong cong trinh khi ket noi CSDL that bai   
-    }
-}        
+  try {
+    const conn = await mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/data_pharmacy");
+    console.log(`✅ Kết nối MongoDB thành công: ${conn.connection.host}`);
+  } catch (error) {
+    console.error("❌ Lỗi kết nối MongoDB:", error.message);
+    process.exit(1);
+  }
+};
