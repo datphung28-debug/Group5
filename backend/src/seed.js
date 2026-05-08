@@ -20,28 +20,20 @@ const seed = async () => {
     await mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/data_pharmacy");
     console.log("✅ Kết nối MongoDB thành công");
 
-    // Xóa dữ liệu cũ
     await Promise.all([
-      User.deleteMany({}),
-      Category.deleteMany({}),
-      Unit.deleteMany({}),
-      Supplier.deleteMany({}),
-      Medicine.deleteMany({}),
-      Customer.deleteMany({}),
-      Sale.deleteMany({}),
-      Import.deleteMany({}),
+      User.deleteMany({}), Category.deleteMany({}), Unit.deleteMany({}),
+      Supplier.deleteMany({}), Medicine.deleteMany({}), Customer.deleteMany({}),
+      Sale.deleteMany({}), Import.deleteMany({}),
     ]);
     console.log("🗑️  Đã xóa dữ liệu cũ");
 
-    // ── USERS ──────────────────────────────────────────────
     const users = await User.create([
       { name: "Admin GPP", email: "admin@pharmacy.com", password: "123456", role: "admin", phone: "0901234567" },
       { name: "Dược sĩ Minh", email: "duocsi@pharmacy.com", password: "123456", role: "pharmacist", phone: "0912345678" },
     ]);
-    console.log("👤 Đã tạo người dùng");
     const adminId = users[0]._id;
+    console.log("👤 Đã tạo người dùng");
 
-    // ── CATEGORIES ─────────────────────────────────────────
     const categories = await Category.create([
       { name: "Kháng sinh", description: "Thuốc kháng sinh các loại" },
       { name: "Giảm đau - Hạ sốt", description: "Thuốc giảm đau, hạ sốt" },
@@ -52,61 +44,65 @@ const seed = async () => {
       { name: "Da liễu", description: "Thuốc điều trị bệnh da" },
       { name: "Thần kinh", description: "Thuốc hỗ trợ thần kinh" },
     ]);
-    console.log("📂 Đã tạo nhóm thuốc");
     const [catKS, catGD, catTH, catVit, catTM, catHH, catDL, catTK] = categories;
+    console.log("📂 Đã tạo nhóm thuốc");
 
-    // ── UNITS ──────────────────────────────────────────────
     const units = await Unit.create([
       { name: "Viên" }, { name: "Hộp" }, { name: "Chai" },
       { name: "Gói" }, { name: "Ống" }, { name: "Tuýp" },
     ]);
-    console.log("📏 Đã tạo đơn vị tính");
     const [uVien, uHop, uChai, uGoi, uOng, uTuyp] = units;
+    console.log("📏 Đã tạo đơn vị tính");
 
-    // ── SUPPLIERS ──────────────────────────────────────────
     const suppliers = await Supplier.create([
       { name: "Dược Hậu Giang (DHG)", phone: "02923891433", email: "info@dhg.com.vn", address: "TP. Cần Thơ", contactPerson: "Nguyễn Văn A" },
       { name: "Traphaco", phone: "02438581001", email: "info@traphaco.com.vn", address: "Hà Nội", contactPerson: "Trần Thị B" },
       { name: "IMEXPHARM", phone: "02773979149", email: "info@imexpharm.com", address: "TP. HCM", contactPerson: "Lê Văn C" },
       { name: "Mekophar", phone: "02838640818", email: "info@mekophar.com", address: "TP. HCM", contactPerson: "Phạm Thị D" },
     ]);
-    console.log("🏭 Đã tạo nhà cung cấp");
     const [supDHG, supTra, supIME, supMek] = suppliers;
+    console.log("🏭 Đã tạo nhà cung cấp");
 
-    // ── MEDICINES (20 thuốc) ───────────────────────────────
+    // Helper tạo label
+    const loc = (zone, shelf, row, col, storage = "room_temp", notes = "") => ({
+      storageType: storage,
+      zone, shelf, row, column: col,
+      label: `${zone}-${String(shelf).padStart(2, "0")}-${row}-${col}`,
+      notes,
+    });
+
     const medicines = await Medicine.create([
-      // Kháng sinh
-      { code: "AMX500", name: "Amoxicillin 500mg", category: catKS._id, unit: uHop._id, supplier: supIME._id, ingredients: "Amoxicillin trihydrate 500mg", requiresPrescription: true, importPrice: 25000, sellPrice: 35000, stock: 150, minStock: 20, expiryDate: new Date("2026-12-31") },
-      { code: "AZI500", name: "Azithromycin 500mg", category: catKS._id, unit: uHop._id, supplier: supIME._id, ingredients: "Azithromycin 500mg", requiresPrescription: true, importPrice: 45000, sellPrice: 65000, stock: 80, minStock: 15, expiryDate: new Date("2026-10-31") },
-      { code: "CIP500", name: "Ciprofloxacin 500mg", category: catKS._id, unit: uHop._id, supplier: supDHG._id, ingredients: "Ciprofloxacin hydrochloride", requiresPrescription: true, importPrice: 30000, sellPrice: 42000, stock: 60, minStock: 10, expiryDate: new Date("2027-03-31") },
-      // Giảm đau
-      { code: "PARA500", name: "Paracetamol 500mg", category: catGD._id, unit: uHop._id, supplier: supTra._id, ingredients: "Paracetamol 500mg", requiresPrescription: false, importPrice: 15000, sellPrice: 22000, stock: 500, minStock: 50, expiryDate: new Date("2027-06-30") },
-      { code: "IBU400", name: "Ibuprofen 400mg", category: catGD._id, unit: uHop._id, supplier: supMek._id, ingredients: "Ibuprofen 400mg", requiresPrescription: false, importPrice: 18000, sellPrice: 28000, stock: 200, minStock: 30, expiryDate: new Date("2027-01-31") },
-      { code: "MEF500", name: "Mefenamic Acid 500mg", category: catGD._id, unit: uHop._id, supplier: supDHG._id, ingredients: "Mefenamic acid 500mg", requiresPrescription: true, importPrice: 22000, sellPrice: 32000, stock: 120, minStock: 20, expiryDate: new Date("2026-09-30") },
-      // Tiêu hóa
-      { code: "OMP20", name: "Omeprazole 20mg", category: catTH._id, unit: uHop._id, supplier: supIME._id, ingredients: "Omeprazole 20mg", requiresPrescription: true, importPrice: 30000, sellPrice: 45000, stock: 5, minStock: 20, expiryDate: new Date("2026-03-31") },
-      { code: "MET10", name: "Metoclopramide 10mg", category: catTH._id, unit: uHop._id, supplier: supMek._id, ingredients: "Metoclopramide hydrochloride", requiresPrescription: true, importPrice: 12000, sellPrice: 18000, stock: 90, minStock: 15, expiryDate: new Date("2026-11-30") },
-      { code: "BIS262", name: "Bismuth Subsalicylate", category: catTH._id, unit: uChai._id, supplier: supTra._id, ingredients: "Bismuth subsalicylate 262mg/15ml", requiresPrescription: false, importPrice: 55000, sellPrice: 78000, stock: 40, minStock: 10, expiryDate: new Date("2027-04-30") },
-      // Vitamin
-      { code: "VITC500", name: "Vitamin C 500mg", category: catVit._id, unit: uHop._id, supplier: supDHG._id, ingredients: "Ascorbic acid 500mg", requiresPrescription: false, importPrice: 8000, sellPrice: 15000, stock: 600, minStock: 100, expiryDate: new Date("2027-12-31") },
-      { code: "VITB12", name: "Vitamin B12 500mcg", category: catVit._id, unit: uHop._id, supplier: supTra._id, ingredients: "Cyanocobalamin 500mcg", requiresPrescription: false, importPrice: 20000, sellPrice: 32000, stock: 180, minStock: 30, expiryDate: new Date("2027-08-31") },
-      { code: "CALCI", name: "Calcium 500mg + Vit D3", category: catVit._id, unit: uHop._id, supplier: supMek._id, ingredients: "Calcium carbonate 1250mg, Vit D3", requiresPrescription: false, importPrice: 35000, sellPrice: 52000, stock: 250, minStock: 40, expiryDate: new Date("2027-05-31") },
-      // Tim mạch
-      { code: "AMLO5", name: "Amlodipine 5mg", category: catTM._id, unit: uHop._id, supplier: supIME._id, ingredients: "Amlodipine besylate 6.93mg", requiresPrescription: true, importPrice: 40000, sellPrice: 58000, stock: 100, minStock: 20, expiryDate: new Date("2026-08-31") },
-      { code: "ATR25", name: "Atorvastatin 25mg", category: catTM._id, unit: uHop._id, supplier: supDHG._id, ingredients: "Atorvastatin calcium 25mg", requiresPrescription: true, importPrice: 55000, sellPrice: 78000, stock: 70, minStock: 15, expiryDate: new Date("2026-07-31") },
-      // Hô hấp
-      { code: "SAL200", name: "Salbutamol 2mg", category: catHH._id, unit: uHop._id, supplier: supMek._id, ingredients: "Salbutamol sulphate 2.4mg", requiresPrescription: true, importPrice: 15000, sellPrice: 22000, stock: 130, minStock: 25, expiryDate: new Date("2027-02-28") },
-      { code: "ACC600", name: "Acetylcysteine 600mg", category: catHH._id, unit: uGoi._id, supplier: supTra._id, ingredients: "Acetylcysteine 600mg", requiresPrescription: false, importPrice: 28000, sellPrice: 42000, stock: 200, minStock: 30, expiryDate: new Date("2027-06-30") },
-      // Da liễu
-      { code: "CLO1", name: "Clotrimazole 1% cream", category: catDL._id, unit: uTuyp._id, supplier: supIME._id, ingredients: "Clotrimazole 10mg/g", requiresPrescription: false, importPrice: 18000, sellPrice: 28000, stock: 85, minStock: 15, expiryDate: new Date("2026-06-30") },
-      { code: "BET05", name: "Betamethasone 0.5mg", category: catDL._id, unit: uHop._id, supplier: supDHG._id, ingredients: "Betamethasone 0.5mg", requiresPrescription: true, importPrice: 22000, sellPrice: 35000, stock: 50, minStock: 10, expiryDate: new Date("2026-11-30") },
-      // Thần kinh
-      { code: "DIA5", name: "Diazepam 5mg", category: catTK._id, unit: uHop._id, supplier: supMek._id, ingredients: "Diazepam 5mg", requiresPrescription: true, importPrice: 8000, sellPrice: 13000, stock: 40, minStock: 10, expiryDate: new Date("2027-01-31") },
-      { code: "MEM10", name: "Memantine 10mg", category: catTK._id, unit: uHop._id, supplier: supIME._id, ingredients: "Memantine hydrochloride 10mg", requiresPrescription: true, importPrice: 85000, sellPrice: 125000, stock: 25, minStock: 5, expiryDate: new Date("2026-09-30") },
+      // KHU A — KHÁNG SINH
+      { code: "AMX500", name: "Amoxicillin 500mg", category: catKS._id, unit: uHop._id, supplier: supIME._id, ingredients: "Amoxicillin trihydrate 500mg", requiresPrescription: true, importPrice: 25000, sellPrice: 35000, stock: 150, minStock: 20, expiryDate: new Date("2026-12-31"), location: loc("A", 2, 3, 1) },
+      { code: "AZI500", name: "Azithromycin 500mg", category: catKS._id, unit: uHop._id, supplier: supIME._id, ingredients: "Azithromycin 500mg", requiresPrescription: true, importPrice: 45000, sellPrice: 65000, stock: 80, minStock: 15, expiryDate: new Date("2026-10-31"), location: loc("A", 2, 3, 2) },
+      { code: "CIP500", name: "Ciprofloxacin 500mg", category: catKS._id, unit: uHop._id, supplier: supDHG._id, ingredients: "Ciprofloxacin hydrochloride", requiresPrescription: true, importPrice: 30000, sellPrice: 42000, stock: 60, minStock: 10, expiryDate: new Date("2027-03-31"), location: loc("A", 3, 1, 1) },
+      // KHU B — GIẢM ĐAU
+      { code: "PARA500", name: "Paracetamol 500mg", category: catGD._id, unit: uHop._id, supplier: supTra._id, ingredients: "Paracetamol 500mg", requiresPrescription: false, importPrice: 15000, sellPrice: 22000, stock: 500, minStock: 50, expiryDate: new Date("2027-06-30"), location: loc("B", 1, 1, 1) },
+      { code: "IBU400", name: "Ibuprofen 400mg", category: catGD._id, unit: uHop._id, supplier: supMek._id, ingredients: "Ibuprofen 400mg", requiresPrescription: false, importPrice: 18000, sellPrice: 28000, stock: 200, minStock: 30, expiryDate: new Date("2027-01-31"), location: loc("B", 1, 1, 2) },
+      { code: "MEF500", name: "Mefenamic Acid 500mg", category: catGD._id, unit: uHop._id, supplier: supDHG._id, ingredients: "Mefenamic acid 500mg", requiresPrescription: true, importPrice: 22000, sellPrice: 32000, stock: 120, minStock: 20, expiryDate: new Date("2026-09-30"), location: loc("B", 1, 2, 1) },
+      // KHU C — TIÊU HÓA
+      { code: "OMP20", name: "Omeprazole 20mg", category: catTH._id, unit: uHop._id, supplier: supIME._id, ingredients: "Omeprazole 20mg", requiresPrescription: true, importPrice: 30000, sellPrice: 45000, stock: 5, minStock: 20, expiryDate: new Date("2026-03-31"), location: loc("C", 1, 1, 1) },
+      { code: "MET10", name: "Metoclopramide 10mg", category: catTH._id, unit: uHop._id, supplier: supMek._id, ingredients: "Metoclopramide hydrochloride", requiresPrescription: true, importPrice: 12000, sellPrice: 18000, stock: 90, minStock: 15, expiryDate: new Date("2026-11-30"), location: loc("C", 1, 1, 2) },
+      { code: "BIS262", name: "Bismuth Subsalicylate", category: catTH._id, unit: uChai._id, supplier: supTra._id, ingredients: "Bismuth subsalicylate 262mg/15ml", requiresPrescription: false, importPrice: 55000, sellPrice: 78000, stock: 40, minStock: 10, expiryDate: new Date("2027-04-30"), location: loc("C", 2, 1, 1) },
+      // KHU D — VITAMIN
+      { code: "VITC500", name: "Vitamin C 500mg", category: catVit._id, unit: uHop._id, supplier: supDHG._id, ingredients: "Ascorbic acid 500mg", requiresPrescription: false, importPrice: 8000, sellPrice: 15000, stock: 600, minStock: 100, expiryDate: new Date("2027-12-31"), location: loc("D", 1, 1, 1) },
+      { code: "VITB12", name: "Vitamin B12 500mcg", category: catVit._id, unit: uHop._id, supplier: supTra._id, ingredients: "Cyanocobalamin 500mcg", requiresPrescription: false, importPrice: 20000, sellPrice: 32000, stock: 180, minStock: 30, expiryDate: new Date("2027-08-31"), location: loc("D", 1, 1, 2) },
+      { code: "CALCI", name: "Calcium 500mg + Vit D3", category: catVit._id, unit: uHop._id, supplier: supMek._id, ingredients: "Calcium carbonate 1250mg, Vit D3", requiresPrescription: false, importPrice: 35000, sellPrice: 52000, stock: 250, minStock: 40, expiryDate: new Date("2027-05-31"), location: loc("D", 1, 2, 1) },
+      // KHU E — TIM MẠCH
+      { code: "AMLO5", name: "Amlodipine 5mg", category: catTM._id, unit: uHop._id, supplier: supIME._id, ingredients: "Amlodipine besylate 6.93mg", requiresPrescription: true, importPrice: 40000, sellPrice: 58000, stock: 100, minStock: 20, expiryDate: new Date("2026-08-31"), location: loc("E", 1, 1, 1) },
+      { code: "ATR25", name: "Atorvastatin 25mg", category: catTM._id, unit: uHop._id, supplier: supDHG._id, ingredients: "Atorvastatin calcium 25mg", requiresPrescription: true, importPrice: 55000, sellPrice: 78000, stock: 70, minStock: 15, expiryDate: new Date("2026-07-31"), location: loc("E", 1, 1, 2) },
+      // KHU B — HÔ HẤP (thêm kệ 2)
+      { code: "SAL200", name: "Salbutamol 2mg", category: catHH._id, unit: uHop._id, supplier: supMek._id, ingredients: "Salbutamol sulphate 2.4mg", requiresPrescription: true, importPrice: 15000, sellPrice: 22000, stock: 130, minStock: 25, expiryDate: new Date("2027-02-28"), location: loc("B", 2, 1, 1) },
+      { code: "ACC600", name: "Acetylcysteine 600mg", category: catHH._id, unit: uGoi._id, supplier: supTra._id, ingredients: "Acetylcysteine 600mg", requiresPrescription: false, importPrice: 28000, sellPrice: 42000, stock: 200, minStock: 30, expiryDate: new Date("2027-06-30"), location: loc("B", 2, 1, 2) },
+      // KHU C — DA LIỄU (kệ 3)
+      { code: "CLO1", name: "Clotrimazole 1% cream", category: catDL._id, unit: uTuyp._id, supplier: supIME._id, ingredients: "Clotrimazole 10mg/g", requiresPrescription: false, importPrice: 18000, sellPrice: 28000, stock: 85, minStock: 15, expiryDate: new Date("2026-06-30"), location: loc("C", 3, 1, 1) },
+      { code: "BET05", name: "Betamethasone 0.5mg", category: catDL._id, unit: uHop._id, supplier: supDHG._id, ingredients: "Betamethasone 0.5mg", requiresPrescription: true, importPrice: 22000, sellPrice: 35000, stock: 50, minStock: 10, expiryDate: new Date("2026-11-30"), location: loc("C", 3, 1, 2) },
+      // KHU E — THẦN KINH (kệ 2)
+      { code: "DIA5", name: "Diazepam 5mg", category: catTK._id, unit: uHop._id, supplier: supMek._id, ingredients: "Diazepam 5mg", requiresPrescription: true, importPrice: 8000, sellPrice: 13000, stock: 40, minStock: 10, expiryDate: new Date("2027-01-31"), location: loc("E", 2, 1, 1) },
+      { code: "MEM10", name: "Memantine 10mg", category: catTK._id, unit: uHop._id, supplier: supIME._id, ingredients: "Memantine hydrochloride 10mg", requiresPrescription: true, importPrice: 85000, sellPrice: 125000, stock: 25, minStock: 5, expiryDate: new Date("2026-09-30"), location: loc("E", 2, 1, 2) },
     ]);
-    console.log("💊 Đã tạo 20 thuốc");
+    console.log("💊 Đã tạo 20 thuốc với vị trí kho");
 
-    // ── CUSTOMERS (10 khách hàng) ──────────────────────────
     const customers = await Customer.create([
       { name: "Nguyễn Văn An", phone: "0901111111", email: "an@gmail.com", address: "123 Lê Lợi, TP.HCM", gender: "male", dateOfBirth: new Date("1985-03-15") },
       { name: "Trần Thị Bình", phone: "0902222222", email: "binh@gmail.com", address: "456 Nguyễn Trãi, Hà Nội", gender: "female", dateOfBirth: new Date("1992-07-20") },
@@ -121,51 +117,31 @@ const seed = async () => {
     ]);
     console.log("👥 Đã tạo 10 khách hàng");
 
-    // ── HELPER: tạo ngày trong quá khứ ────────────────────
-    const daysAgo = (n) => {
-      const d = new Date();
-      d.setDate(d.getDate() - n);
-      return d;
-    };
-
-    // ── IMPORT RECORDS (5 phiếu nhập) ─────────────────────
+    // Import records
     await Import.create([
       {
-        code: "PN20260501001",
-        supplier: supDHG._id,
+        code: "PN20260501001", supplier: supDHG._id,
         items: [
           { medicine: medicines[0]._id, quantity: 50, importPrice: 25000, batchNumber: "DHG2026A", expiryDate: new Date("2026-12-31"), total: 1250000 },
           { medicine: medicines[3]._id, quantity: 100, importPrice: 15000, batchNumber: "DHG2026B", expiryDate: new Date("2027-06-30"), total: 1500000 },
         ],
-        totalAmount: 2750000,
-        paymentStatus: "paid",
-        importDate: daysAgo(30),
-        createdBy: adminId,
-        notes: "Nhập hàng tháng 4",
+        totalAmount: 2750000, paymentStatus: "paid", importDate: new Date(Date.now() - 30 * 864e5), createdBy: adminId,
       },
       {
-        code: "PN20260508001",
-        supplier: supIME._id,
+        code: "PN20260508001", supplier: supIME._id,
         items: [
           { medicine: medicines[6]._id, quantity: 30, importPrice: 30000, batchNumber: "IME2026A", expiryDate: new Date("2026-03-31"), total: 900000 },
           { medicine: medicines[12]._id, quantity: 40, importPrice: 40000, batchNumber: "IME2026B", expiryDate: new Date("2026-08-31"), total: 1600000 },
         ],
-        totalAmount: 2500000,
-        paymentStatus: "unpaid",
-        importDate: daysAgo(7),
-        createdBy: adminId,
+        totalAmount: 2500000, paymentStatus: "unpaid", importDate: new Date(Date.now() - 7 * 864e5), createdBy: adminId,
       },
     ]);
     console.log("📦 Đã tạo phiếu nhập hàng");
 
-    // ── SALES (30 hóa đơn trải 30 ngày) ───────────────────
-    const salesData = [];
-    const med = medicines; // shorthand
-    const cust = customers;
-
-    // Mảng các giao dịch mẫu theo từng ngày
+    // Sales — 30 hóa đơn
+    const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d; };
+    const med = medicines, cust = customers;
     const salesTemplate = [
-      // [daysAgo, customerId, items: [{medIdx, qty}], discount, paymentMethod]
       [1, cust[0]._id, [{ m: med[3], q: 2 }, { m: med[9], q: 1 }], 0, "cash"],
       [1, null, [{ m: med[3], q: 1 }, { m: med[4], q: 1 }], 0, "cash"],
       [2, cust[1]._id, [{ m: med[0], q: 1 }, { m: med[9], q: 2 }], 5000, "transfer"],
@@ -198,62 +174,28 @@ const seed = async () => {
       [30, cust[7]._id, [{ m: med[9], q: 1 }, { m: med[10], q: 1 }], 0, "cash"],
     ];
 
-    for (let i = 0; i < salesTemplate.length; i++) {
-      const [day, customerId, itemDefs, discount, payMethod] = salesTemplate[i];
-      const items = itemDefs.map(({ m, q }) => ({
-        medicine: m._id,
-        quantity: q,
-        unitPrice: m.sellPrice,
-        discount: 0,
-        total: m.sellPrice * q,
-      }));
+    const salesData = salesTemplate.map(([day, customerId, itemDefs, discount, payMethod], i) => {
+      const createdAt = daysAgo(day);
+      const items = itemDefs.map(({ m, q }) => ({ medicine: m._id, quantity: q, unitPrice: m.sellPrice, discount: 0, total: m.sellPrice * q }));
       const subTotal = items.reduce((s, it) => s + it.total, 0);
       const totalAmount = subTotal - discount;
-      const createdAt = daysAgo(day);
-
-      salesData.push({
+      return {
         code: `HD${createdAt.getFullYear()}${String(createdAt.getMonth() + 1).padStart(2, '0')}${String(createdAt.getDate()).padStart(2, '0')}${String(i + 1).padStart(4, '0')}`,
-        customer: customerId || undefined,
-        items,
-        subTotal,
-        discount,
-        totalAmount,
-        paymentMethod: payMethod,
-        amountPaid: totalAmount,
-        changeAmount: 0,
-        status: "completed",
-        createdBy: adminId,
-        createdAt,
-        updatedAt: createdAt,
-      });
-    }
+        customer: customerId || undefined, items, subTotal, discount, totalAmount,
+        paymentMethod: payMethod, amountPaid: totalAmount, changeAmount: 0,
+        status: "completed", createdBy: adminId, createdAt, updatedAt: createdAt,
+      };
+    });
 
     await Sale.insertMany(salesData);
+    const customerSpend = {};
+    salesData.forEach(s => { if (s.customer) { const id = s.customer.toString(); customerSpend[id] = (customerSpend[id] || 0) + s.totalAmount; } });
+    for (const [id, total] of Object.entries(customerSpend)) { await Customer.findByIdAndUpdate(id, { totalSpent: total }); }
     console.log(`🧾 Đã tạo ${salesData.length} hóa đơn bán hàng`);
 
-    // Tính tổng tiền từng khách hàng
-    const customerSpend = {};
-    salesData.forEach(s => {
-      if (s.customer) {
-        const id = s.customer.toString();
-        customerSpend[id] = (customerSpend[id] || 0) + s.totalAmount;
-      }
-    });
-    for (const [id, total] of Object.entries(customerSpend)) {
-      await Customer.findByIdAndUpdate(id, { totalSpent: total });
-    }
-    console.log("💰 Đã cập nhật tổng chi tiêu khách hàng");
-
     console.log("\n🎉 Seed dữ liệu hoàn tất!");
-    console.log("================================");
     console.log("📧 Admin:    admin@pharmacy.com / 123456");
     console.log("📧 Dược sĩ: duocsi@pharmacy.com / 123456");
-    console.log("================================");
-    console.log("📊 Dữ liệu đã tạo:");
-    console.log("   - 2 users, 8 nhóm thuốc, 6 đơn vị, 4 NCC");
-    console.log("   - 20 thuốc, 10 khách hàng");
-    console.log("   - 2 phiếu nhập, 30 hóa đơn bán hàng");
-
     process.exit(0);
   } catch (error) {
     console.error("❌ Lỗi seed:", error.message);

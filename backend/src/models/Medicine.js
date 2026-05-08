@@ -21,6 +21,16 @@ const medicineSchema = new mongoose.Schema(
     manufacturingDate: { type: Date },                      // ngày sản xuất
     imageUrl: { type: String },
     isActive: { type: Boolean, default: true },
+    // Vị trí trong kho thuốc
+    location: {
+      storageType: { type: String, enum: ["room_temp", "cool", "cold", "freezer"], default: "room_temp" },
+      zone: { type: String, default: "A" },   // Khu vực: A, B, C, D, E
+      shelf: { type: Number, default: 1 },      // Số kệ: 1-10
+      row: { type: Number, default: 1 },      // Hàng: 1-5
+      column: { type: Number, default: 1 },      // Cột: 1-10
+      label: { type: String },                  // Mã nhãn: "A-02-3-1"
+      notes: { type: String },                  // Ghi chú bổ sung
+    },
   },
   { timestamps: true }
 );
