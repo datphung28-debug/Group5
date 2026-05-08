@@ -7,12 +7,19 @@ import {
   PowerOff,
   CheckCircle,
   Warehouse,
-  Trash2
+  Trash2,
+  MapPin
 } from 'lucide-react';
 import useMedicineStore from '../../../stores/useMedicineStore';
+import { Form, Input, Select, InputNumber, Modal as AntModal } from 'antd';
 
 const MedicineTable = () => {
   const { medicines, loading, error, total, params, setParams, fetchMedicines, deleteMedicine, updateMedicine } = useMedicineStore();
+  
+  // State quản lý Modal cập nhật vị trí
+  const [isLocModalVisible, setIsLocModalVisible] = React.useState(false);
+  const [editingMedicine, setEditingMedicine] = React.useState(null);
+  const [locForm] = Form.useForm();
 
   const handleDelete = async (record) => {
     const res = await deleteMedicine(record._id || record.id);
@@ -37,6 +44,36 @@ const MedicineTable = () => {
   const handlePageChange = (page, pageSize) => {
     setParams({ page, limit: pageSize });
     fetchMedicines({ page, limit: pageSize });
+  };
+
+  const handleOpenLocationModal = (record) => {
+    setEditingMedicine(record);
+    const loc = record.location || {};
+    locForm.setFieldsValue({
+      storageType: loc.storageType || 'room_temp',
+      zone: loc.zone || 'A',
+      shelf: loc.shelf || 1,
+      row: loc.row || 1,
+      column: loc.column || 1,
+    });
+    setIsLocModalVisible(true);
+  };
+
+  const handleSaveLocation = async () => {
+    try {
+      const values = await locForm.validateFields();
+      values.label = `${values.zone}-${String(values.shelf).padStart(2,'0')}-${values.row}-${values.column}`;
+      
+      const res = await updateMedicine(editingMedicine._id || editingMedicine.id, { location: values });
+      if (res.success) {
+        message.success(`Đã cập nhật vị trí kho cho thuốc ${editingMedicine.name}`);
+        setIsLocModalVisible(false);
+      } else {
+        message.error('Lỗi khi cập nhật vị trí');
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   if (error) {
@@ -151,6 +188,24 @@ const MedicineTable = () => {
       },
     },
     {
+      title: 'Vị trí kho',
+      dataIndex: 'location',
+      key: 'location',
+      render: (loc) => {
+        if (!loc || !loc.zone) return <span className="text-[11px] text-slate-400 italic">Chưa xếp kho</span>;
+        return (
+          <div className="flex flex-col">
+            <Tag className="w-max mb-1 border-blue-200 bg-blue-50 text-blue-700 m-0 font-semibold">
+              Khu {loc.zone}
+            </Tag>
+            <span className="text-[10px] text-slate-500">
+              Kệ {loc.shelf} - Hàng {loc.row}
+            </span>
+          </div>
+        );
+      }
+    },
+    {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
@@ -177,6 +232,12 @@ const MedicineTable = () => {
             key: 'edit',
             label: 'Chỉnh sửa',
             icon: <Pencil size={16} />,
+          },
+          {
+            key: 'update_loc',
+            label: 'Cập nhật vị trí',
+            icon: <MapPin size={16} />,
+            onClick: () => handleOpenLocationModal(record),
           },
           {
             key: 'toggle',
@@ -252,11 +313,56 @@ const MedicineTable = () => {
         className="medicine-table"
         onRow={(record) => ({
           className: 'hover:bg-[var(--color-bg-app)] transition-colors cursor-pointer',
-          onClick: () => {
-            console.log('Row clicked:', record._id || record.id);
-          },
         })}
       />
+
+      <AntModal
+        title={
+          <div className="flex items-center gap-2 text-teal-700">
+            <MapPin size={20} />
+            <span>Xếp vị trí thuốc vào kho</span>
+          </div>
+        }
+        open={isLocModalVisible}
+        onOk={handleSaveLocation}
+        onCancel={() => setIsLocModalVisible(false)}
+        okText="Lưu vị trí"
+        cancelText="Hủy bỏ"
+        okButtonProps={{ className: "bg-teal-600 border-none" }}
+      >
+        {editingMedicine && (
+          <div className="mb-4 text-sm text-slate-500">
+            Đang xếp vị trí cho thuốc: <strong className="text-slate-800">{editingMedicine.name}</strong>
+          </div>
+        )}
+        <Form form={locForm} layout="vertical" className="grid grid-cols-2 gap-x-4">
+          <Form.Item name="storageType" label="Điều kiện bảo quản" className="col-span-2">
+            <Select>
+              <Select.Option value="room_temp">Nhiệt độ thường (15-30°C)</Select.Option>
+              <Select.Option value="cool">Mát (8-15°C)</Select.Option>
+              <Select.Option value="cold">Lạnh (2-8°C)</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="zone" label="Khu vực (Zone)">
+            <Select>
+              <Select.Option value="A">Khu A (Kháng sinh)</Select.Option>
+              <Select.Option value="B">Khu B (Giảm đau/Hô hấp)</Select.Option>
+              <Select.Option value="C">Khu C (Tiêu hóa/Da liễu)</Select.Option>
+              <Select.Option value="D">Khu D (Vitamin)</Select.Option>
+              <Select.Option value="E">Khu E (Tim mạch/Thần kinh)</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="shelf" label="Kệ số">
+            <InputNumber min={1} max={10} className="w-full" />
+          </Form.Item>
+          <Form.Item name="row" label="Hàng (Tầng) số">
+            <InputNumber min={1} max={10} className="w-full" />
+          </Form.Item>
+          <Form.Item name="column" label="Ô số">
+            <InputNumber min={1} max={10} className="w-full" />
+          </Form.Item>
+        </Form>
+      </AntModal>
     </div>
   );
 };
