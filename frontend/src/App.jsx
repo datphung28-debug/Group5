@@ -13,6 +13,8 @@ import MedicineGroupsPage from './pages/medicine-groups/MedicineGroupsPage';
 import InventoryPage from './pages/inventory/InventoryPage';
 import ExpiryWarningPage from './pages/inventory/ExpiryWarningPage';
 import PurchaseOrderPage from './pages/purchase/PurchaseOrderPage';
+import PrescriptionScanPage from './pages/prescriptions/PrescriptionScanPage';
+import POSPage from './pages/pos/POSPage';
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'antd';
 
@@ -78,7 +80,7 @@ function AppLayout() {
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/purchase-orders" element={<PurchaseOrders />} />
             <Route path="/purchase-orders/create" element={<PurchaseOrderPage />} />
-            <Route path="/pos" element={<div className="p-6"><Sales /></div>} />
+            <Route path="/prescriptions/new" element={<div className="p-6"><PrescriptionScanPage /></div>} />
             <Route path="/settings" element={<div className="p-6"><PageHeader title="Cài đặt hệ thống" subtitle="Tùy chỉnh cấu hình hệ thống" /></div>} />
           </Routes>
         </main>
@@ -92,6 +94,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/pos" element={<ProtectedRoute><POSPage /></ProtectedRoute>} />
         <Route
           path="/*"
           element={

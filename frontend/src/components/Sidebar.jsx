@@ -25,7 +25,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldPlus,
-  Settings
+  Settings,
+  FilePlus
 } from 'lucide-react';
 import useAuthStore from '../stores/useAuthStore';
 
