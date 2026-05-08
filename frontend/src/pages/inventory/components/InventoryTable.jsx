@@ -21,19 +21,20 @@ const InventoryTable = () => {
       try {
         const res = await medicineAPI.getAll({ limit: 50 });
         // Map API response to inventory format
-        const medicines = res.data?.data || res.data || [];
-        const inventoryData = medicines.map((m, idx) => ({
+        // Backend trả về: { medicines: [...], total, page, pages }
+        const medicines = res.data?.medicines || res.data?.data || res.data || [];
+        const inventoryData = (Array.isArray(medicines) ? medicines : []).map((m, idx) => ({
           id: m._id || String(idx),
           code: m.code,
           name: m.name,
-          ingredient: m.genericName || m.ingredient || '',
+          ingredient: m.ingredients || m.genericName || m.ingredient || '',
           manufacturer: m.manufacturer || '',
-          category: m.category?.name || m.category || '',
+          category: typeof m.category === 'object' ? (m.category?.name || '') : (m.category || ''),
           batches: m.batches || [],
           totalStock: m.stock ?? 0,
-          unit: m.unit || 'Viên',
-          nearestExpiry: m.nearestExpiry || null,
-          inventoryValue: (m.stock ?? 0) * (m.importPrice || m.retailPrice || 0),
+          unit: typeof m.unit === 'object' ? (m.unit?.name || 'Viên') : (m.unit || 'Viên'),
+          nearestExpiry: m.expiryDate || m.nearestExpiry || null,
+          inventoryValue: (m.stock ?? 0) * (m.importPrice || 0),
         }));
         setData(inventoryData);
         setTotal(inventoryData.length);

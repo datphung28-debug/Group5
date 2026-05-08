@@ -83,7 +83,7 @@ const MedicineTable = () => {
       key: 'category',
       render: (category) => (
         <Tag className="bg-[var(--color-bg-subtle)] border-[var(--color-primary-border)] text-[var(--color-primary-text)] rounded-[var(--radius-sm)]">
-          {category?.name || category || '—'}
+          {typeof category === 'object' ? (category?.name || '—') : (category || '—')}
         </Tag>
       ),
     },
@@ -114,7 +114,7 @@ const MedicineTable = () => {
           >
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
             <span className="font-medium" style={{ color: color }}>
-              {stock ?? 0} {record.unit || ''}
+              {stock ?? 0} {typeof record.unit === 'object' ? (record.unit?.name || '') : (record.unit || '')}
             </span>
           </div>
         );
