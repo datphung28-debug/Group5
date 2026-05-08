@@ -13,11 +13,16 @@
     "@ant-design/charts": "^2.6.7",
     "antd": "^6.3.6",
     "axios": "^1.15.2",
+    "fuzzysort": "^3.1.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^1.9.0",
+    "qrcode": "^1.5.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-hook-form": "^7.73.1",
     "react-router-dom": "^7.14.2",
+    "tesseract.js": "^7.0.0",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
