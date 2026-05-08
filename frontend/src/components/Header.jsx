@@ -8,25 +8,36 @@ export default function Header() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   return (
-    <header className="h-14 md:h-16 bg-white border-b border-[var(--color-border-light)] flex-shrink-0 relative z-10">
+    <header className="h-14 md:h-16 bg-white border-b border-[var(--color-border-light)] flex-shrink-0 relative z-20">
       {/* Main header row */}
-      <div className="h-full px-3 sm:px-4 md:px-6 flex items-center gap-2 sm:gap-3 md:gap-4">
-        {/* Left: Search Bar — fills available space, collapses on mobile */}
-        <div className="hidden sm:flex flex-1 min-w-0">
-          <div className="relative w-full max-w-lg">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={16} className="text-[var(--color-text-muted)]" />
+      <div className="h-full px-3 sm:px-4 md:px-6 flex items-center justify-between gap-4">
+        
+        {/* Left Section: Context/Status (Desktop only) */}
+        <div className="hidden lg:flex flex-1 items-center min-w-0">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] rounded-full">
+            <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-profit)] animate-pulse"></div>
+            <span className="text-[12px] font-medium text-[var(--color-text-secondary)] whitespace-nowrap">
+              Hệ thống trực tuyến
+            </span>
+          </div>
+        </div>
+
+        {/* Center Section: Search Bar (Desktop/Tablet) */}
+        <div className="hidden sm:flex flex-[2] md:flex-[2.5] lg:flex-[2] justify-center px-4">
+          <div className="relative w-full max-w-md lg:max-w-lg group">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <Search size={16} className="text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors" />
             </div>
             <input
               type="text"
-              placeholder="Tìm thuốc, hóa đơn, khách hàng..."
-              className="w-full bg-[var(--color-bg-app)] border border-transparent focus:border-[var(--color-primary-border)] focus:bg-white focus:ring-2 focus:ring-[var(--color-primary-light)] text-[13px] rounded-[var(--radius-md)] py-2 pl-10 pr-4 transition-all outline-none text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)]"
+              placeholder="Tìm kiếm thuốc, hóa đơn, khách hàng..."
+              className="w-full bg-[var(--color-bg-app)] border border-transparent focus:border-[var(--color-primary-border)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary-light)] text-[13px] rounded-[var(--radius-md)] py-2 pl-10 pr-4 transition-all duration-200 outline-none text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)]"
             />
           </div>
         </div>
 
-        {/* Right: Actions & User — never shrinks, items hide progressively */}
-        <div className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 md:gap-3 lg:gap-5 ml-auto">
+        {/* Right Section: Actions & User */}
+        <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-2 md:gap-3 lg:gap-5">
           {/* Mobile search toggle */}
           <button
             onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
@@ -38,7 +49,7 @@ export default function Header() {
           {/* "Bán hàng" CTA — icon-only on small screens */}
           <Link
             to="/pos"
-            className="flex items-center gap-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-[13px] font-medium px-2.5 sm:px-3 md:px-4 py-2 rounded-[var(--radius-md)] transition-colors flex-shrink-0"
+            className="flex items-center gap-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-[13px] font-medium px-2.5 sm:px-3 md:px-4 py-2 rounded-[var(--radius-md)] transition-all hover:shadow-md active:scale-95 flex-shrink-0"
           >
             <Plus size={16} />
             <span className="hidden md:inline">Bán hàng</span>
@@ -47,42 +58,43 @@ export default function Header() {
           {/* Bell notification */}
           <button className="relative flex items-center justify-center w-9 h-9 rounded-[var(--radius-md)] text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-subtle)] transition-colors cursor-pointer flex-shrink-0">
             <Bell size={20} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--color-debt)] border-2 border-white"></span>
+            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--color-debt)] border-2 border-white"></span>
           </button>
 
           {/* Divider */}
-          <div className="hidden sm:block h-6 w-px bg-[var(--color-border-light)]"></div>
+          <div className="hidden sm:block h-6 w-px bg-[var(--color-border-light)] mx-1"></div>
 
           {/* User avatar + info */}
-          <button className="flex items-center gap-2 md:gap-3 hover:bg-[var(--color-bg-subtle)] p-1.5 -m-1.5 rounded-[var(--radius-md)] transition-colors cursor-pointer text-left flex-shrink-0">
-            <div className="w-8 h-8 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center overflow-hidden flex-shrink-0">
+          <button className="flex items-center gap-2 md:gap-3 hover:bg-[var(--color-bg-subtle)] p-1.5 -m-1.5 rounded-[var(--radius-md)] transition-colors cursor-pointer text-left flex-shrink-0 group">
+            <div className="w-8 h-8 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center overflow-hidden flex-shrink-0 border border-transparent group-hover:border-[var(--color-primary-border)] transition-all">
               <User size={18} />
             </div>
             <div className="hidden lg:flex flex-col">
-              <span className="text-[13px] font-medium text-[var(--color-text-primary)] leading-tight whitespace-nowrap">
+              <span className="text-[13px] font-semibold text-[var(--color-text-primary)] leading-tight whitespace-nowrap">
                 {user?.name || 'Dược sĩ'}
               </span>
-              <span className="text-[11px] text-[var(--color-text-secondary)] leading-tight">
-                admin
+              <span className="text-[11px] text-[var(--color-text-secondary)] leading-tight uppercase tracking-wider font-medium">
+                Quản trị viên
               </span>
             </div>
-            <ChevronDown size={14} className="text-[var(--color-text-muted)] hidden lg:block" />
+            <ChevronDown size={14} className="text-[var(--color-text-muted)] hidden lg:block group-hover:text-[var(--color-primary)] transition-colors" />
           </button>
         </div>
       </div>
 
+
       {/* Mobile search dropdown */}
       {mobileSearchOpen && (
-        <div className="sm:hidden absolute top-full left-0 right-0 bg-white border-b border-[var(--color-border-light)] px-3 py-2.5 shadow-sm z-20">
+        <div className="sm:hidden absolute top-full left-0 right-0 bg-white border-b border-[var(--color-border-light)] px-3 py-2.5 shadow-lg z-20 animate-in slide-in-from-top-2 duration-200">
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={16} className="text-[var(--color-text-muted)]" />
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <Search size={16} className="text-[var(--color-primary)]" />
             </div>
             <input
               type="text"
-              placeholder="Tìm thuốc, hóa đơn, khách hàng..."
+              placeholder="Tìm kiếm thuốc, hóa đơn..."
               autoFocus
-              className="w-full bg-[var(--color-bg-app)] border border-transparent focus:border-[var(--color-primary-border)] focus:bg-white focus:ring-2 focus:ring-[var(--color-primary-light)] text-[13px] rounded-[var(--radius-md)] py-2.5 pl-10 pr-4 transition-all outline-none text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)]"
+              className="w-full bg-white border-none focus:ring-0 text-[14px] py-3 pl-10 pr-4 outline-none text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)]"
             />
           </div>
         </div>
