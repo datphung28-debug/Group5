@@ -94,8 +94,8 @@ const Dashboard = () => {
       {/* KPI Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <Card className="kpi-card revenue-card">
-          <div className="flex justify-between items-start">
-            <div>
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex-1">
               <p className="kpi-label">Doanh thu hôm nay</p>
               <h3 className="kpi-value text-[var(--color-revenue)]">{formatCurrency(data.kpi.revenueToday)}</h3>
               <div className="flex items-center gap-1 mt-1">
@@ -110,8 +110,8 @@ const Dashboard = () => {
         </Card>
 
         <Card className="kpi-card profit-card">
-          <div className="flex justify-between items-start">
-            <div>
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex-1">
               <p className="kpi-label">Lãi gộp hôm nay</p>
               <div className="flex items-baseline gap-2">
                 <h3 className="kpi-value text-[var(--color-profit)]">{formatCurrency(data.kpi.profitToday)}</h3>
@@ -127,8 +127,8 @@ const Dashboard = () => {
         </Card>
 
         <Card className="kpi-card neutral-card">
-          <div className="flex justify-between items-start">
-            <div>
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex-1">
               <p className="kpi-label">Hóa đơn hôm nay</p>
               <div className="flex items-baseline gap-2">
                 <h3 className="kpi-value text-[var(--color-text-primary)]">{formatNumber(data.kpi.invoicesToday)}</h3>
@@ -144,8 +144,8 @@ const Dashboard = () => {
         </Card>
 
         <Card className="kpi-card inventory-card">
-          <div className="flex justify-between items-start">
-            <div>
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex-1">
               <p className="kpi-label">Doanh thu tháng</p>
               <h3 className="kpi-value text-[var(--color-inventory)]">{formatCurrency(data.kpi.revenueMonth)}</h3>
             </div>
@@ -159,49 +159,49 @@ const Dashboard = () => {
       {/* KPI Row 2 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card className="kpi-card-mini">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
-              <Users size={16} className="text-red-500" />
-            </div>
-            <div>
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex-1">
               <p className="kpi-label">Công nợ khách hàng</p>
               <h4 className="kpi-value-mini text-[var(--color-debt)]">{formatCurrency(data.kpi.customerDebt)}</h4>
             </div>
+            <div className="kpi-icon-wrapper bg-red-50 text-red-500">
+              <Users size={20} />
+            </div>
           </div>
         </Card>
 
         <Card className="kpi-card-mini">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-              <ShoppingCart size={16} className="text-amber-500" />
-            </div>
-            <div>
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex-1">
               <p className="kpi-label">Công nợ nhà cung cấp</p>
               <h4 className="kpi-value-mini text-[var(--color-warning)]">{formatCurrency(data.kpi.supplierDebt)}</h4>
             </div>
+            <div className="kpi-icon-wrapper bg-amber-50 text-[var(--color-warning)]">
+              <ShoppingCart size={20} />
+            </div>
           </div>
         </Card>
 
         <Card className="kpi-card-mini">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-              <Package size={16} className="text-blue-500" />
-            </div>
-            <div>
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex-1">
               <p className="kpi-label">Giá trị tồn kho</p>
               <h4 className="kpi-value-mini text-[var(--color-inventory)]">{formatCurrency(data.kpi.inventoryValue)}</h4>
             </div>
+            <div className="kpi-icon-wrapper bg-blue-50 text-blue-500">
+              <Package size={20} />
+            </div>
           </div>
         </Card>
 
         <Card className="kpi-card-mini">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
-              <BarChart2 size={16} className="text-green-500" />
-            </div>
-            <div>
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex-1">
               <p className="kpi-label">Biên lãi gộp tháng</p>
               <h4 className="kpi-value-mini text-[var(--color-profit)]">{data.kpi.profitMarginMonth}%</h4>
+            </div>
+            <div className="kpi-icon-wrapper bg-green-50 text-[var(--color-profit)]">
+              <BarChart2 size={20} />
             </div>
           </div>
         </Card>
