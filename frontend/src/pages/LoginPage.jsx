@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { Button, Input, Checkbox, Typography, message, Divider } from 'antd';
-import { Lock, Mail, Pill } from 'lucide-react';
+import { Button, Input, Checkbox, Typography, message } from 'antd';
+import { Lock, Mail, Pill, ShieldCheck, Headphones, Package, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../stores/useAuthStore';
 
@@ -23,7 +23,7 @@ export default function LoginPage() {
     defaultValues: {
       email: '',
       password: '',
-      remember: false,
+      remember: true,
     },
   });
 
@@ -33,7 +33,6 @@ export default function LoginPage() {
       const result = await loginWithAPI(data.email, data.password);
       if (result.success) {
         messageApi.success('Đăng nhập thành công!');
-        // Chuyển sang Dashboard sau khi login thành công
         setTimeout(() => navigate('/'), 500);
       } else {
         messageApi.error(result.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
@@ -46,137 +45,200 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-50">
+    <div className="min-h-screen flex bg-[#F9F9FF] font-sans selection:bg-[#0058BD]/10">
       {contextHolder}
-      <div className="w-full max-w-md mx-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 sm:p-10">
-          {/* Logo & Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 mb-4">
-              <Pill size={32} className="text-white" />
+
+      {/* Left Side - Brand & Visuals */}
+      <div className="hidden lg:flex lg:w-[40%] xl:w-[35%] relative overflow-hidden bg-[#D8E2FF] items-center justify-center p-12">
+        {/* Decorative Blurs */}
+        <div className="absolute top-[80px] left-[-80px] w-80 h-80 bg-white/20 rounded-full blur-[32px]" />
+        <div className="absolute bottom-[80px] right-[-80px] w-96 h-96 bg-[#0058BD]/10 rounded-full blur-[32px]" />
+        
+        {/* Background Gradients from Figma */}
+        <div className="absolute inset-0 opacity-100 pointer-events-none" style={{ 
+          backgroundImage: `
+            radial-gradient(circle at 0% 0%, rgba(204,221,255,1) 0%, rgba(204,221,255,0) 50%),
+            radial-gradient(circle at 50% 0%, rgba(179,217,255,1) 0%, rgba(179,217,255,0) 50%),
+            radial-gradient(circle at 100% 0%, rgba(204,238,255,1) 0%, rgba(204,238,255,0) 50%),
+            radial-gradient(circle at 100% 100%, rgba(230,238,255,1) 0%, rgba(230,238,255,0) 50%),
+            radial-gradient(circle at 0% 100%, rgba(204,225,255,1) 0%, rgba(204,225,255,0) 50%)
+          `
+        }} />
+
+        <div className="relative z-10 w-full max-w-[420px] flex flex-col items-center">
+          {/* Logo Container */}
+          <div className="mb-8">
+            <div className="w-16 h-20 bg-white/80 backdrop-blur-[12px] border border-white/50 rounded-[32px] flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+              <Pill className="text-[#0058BD]" size={36} />
             </div>
-            <Title level={3} className="!mb-1">
-              GPP Manager
-            </Title>
-            <Text type="secondary">
-              Hệ thống quản lý Nhà thuốc GPP
-            </Text>
           </div>
 
-          <Divider className="!mt-0 !mb-6" />
+          <h1 className="text-[#001A41] text-[56px] font-extrabold leading-[64px] tracking-[-1.68px] text-center mb-4">
+            GPP Care
+          </h1>
+          
+          <p className="text-[#004494] text-[18px] leading-[29.25px] text-center opacity-80 mb-12">
+            Elevating your healthcare experience<br />
+            through precision, empathy, and innovation.
+          </p>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            {/* Email Field */}
-            <div className="mb-5">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Email
-              </label>
-              <Controller
-                name="email"
-                control={control}
-                rules={{
-                  required: 'Vui lòng nhập email',
-                  pattern: {
-                    value: EMAIL_REGEX,
-                    message: 'Email không hợp lệ',
-                  },
-                }}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    size="large"
-                    placeholder="admin@pharmacy.vn"
-                    prefix={<Mail size={18} className="text-gray-400" />}
-                    status={errors.email ? 'error' : ''}
-                    autoComplete="email"
-                  />
-                )}
-              />
-              {errors.email && (
-                <Text type="danger" className="text-xs mt-1 block">
-                  {errors.email.message}
-                </Text>
-              )}
-            </div>
-
-            {/* Password Field */}
-            <div className="mb-5">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Mật khẩu
-              </label>
-              <Controller
-                name="password"
-                control={control}
-                rules={{
-                  required: 'Vui lòng nhập mật khẩu',
-                  minLength: {
-                    value: 6,
-                    message: 'Mật khẩu tối thiểu 6 ký tự',
-                  },
-                }}
-                render={({ field }) => (
-                  <Input.Password
-                    {...field}
-                    size="large"
-                    placeholder="Nhập mật khẩu"
-                    prefix={<Lock size={18} className="text-gray-400" />}
-                    status={errors.password ? 'error' : ''}
-                    autoComplete="current-password"
-                  />
-                )}
-              />
-              {errors.password && (
-                <Text type="danger" className="text-xs mt-1 block">
-                  {errors.password.message}
-                </Text>
-              )}
-            </div>
-
-            {/* Remember Me */}
-            <div className="flex items-center justify-between mb-6">
-              <Controller
-                name="remember"
-                control={control}
-                render={({ field: { value, onChange, ...rest } }) => (
-                  <Checkbox
-                    {...rest}
-                    checked={value}
-                    onChange={(e) => onChange(e.target.checked)}
-                  >
-                    Ghi nhớ đăng nhập
-                  </Checkbox>
-                )}
-              />
-              <a
-                href="#"
-                className="text-sm text-blue-600 hover:text-blue-700"
-                onClick={(e) => e.preventDefault()}
-              >
-                Quên mật khẩu?
-              </a>
-            </div>
-
-            {/* Submit Button */}
-            <Button
-              type="primary"
-              htmlType="submit"
-              size="large"
-              block
-              loading={loading}
-              className="!h-11 !rounded-lg !font-medium"
-            >
-              Đăng nhập
-            </Button>
-          </form>
-
-          {/* Footer */}
-          <div className="text-center mt-6">
-            <Text type="secondary" className="text-xs">
-              &copy; {new Date().getFullYear()} GPP Manager. Hệ thống quản lý nhà thuốc.
-            </Text>
+          {/* Floating Glass Cards */}
+          <div className="space-y-6 w-full">
+            <GlassCard 
+              icon={<ShieldCheck className="text-[#006E2F]" size={20} />} 
+              iconBg="bg-[#006E2F]/10"
+              title="Certified GPP Pharmacy"
+              subtitle="Globally recognized standards"
+            />
+            <GlassCard 
+              icon={<Headphones className="text-[#0058BD]" size={20} />} 
+              iconBg="bg-[#0058BD]/10"
+              title="24/7 Pharmacist Support"
+              subtitle="Expert care whenever you need it"
+            />
+            <GlassCard 
+              icon={<Package className="text-[#964400]" size={20} />} 
+              iconBg="bg-[#964400]/10"
+              title="10,000+ Prescriptions Delivered"
+              subtitle="Trusted by thousands across the nation"
+            />
           </div>
         </div>
+      </div>
+
+      {/* Right Side - Login Form */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#F9F9FF]">
+        <div className="w-full max-w-[520px]">
+          {/* Login Card */}
+          <div className="bg-white/75 backdrop-blur-[10px] border border-white/80 rounded-[32px] shadow-[0_20px_40px_-10px_rgba(0,0,0,0.08),0_10px_15px_-5px_rgba(0,0,0,0.04)] p-[65px]">
+            <div className="mb-12">
+              <h2 className="text-[#191B23] text-[28px] font-semibold leading-[36px] mb-1">Sign In</h2>
+              <p className="text-[#414754] text-[16px] leading-[24px]">Access your medical dashboard and history.</p>
+            </div>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-10" noValidate>
+              {/* Email */}
+              <div className="space-y-3">
+                <label className="block text-[#191B23] text-[16px] font-semibold px-1">Email Address</label>
+                <Controller
+                  name="email"
+                  control={control}
+                  rules={{
+                    required: 'Email is required',
+                    pattern: { value: EMAIL_REGEX, message: 'Invalid email address' },
+                  }}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      size="large"
+                      placeholder="name@example.com"
+                      className="!h-[60px] !rounded-[24px] !bg-white !border-[rgba(193,198,214,0.6)] hover:!border-[#0058BD] focus:!border-[#0058BD] focus:!shadow-none !px-[25px] !text-[16px] placeholder:!text-[rgba(114,119,133,0.5)] transition-all"
+                      status={errors.email ? 'error' : ''}
+                    />
+                  )}
+                />
+                {errors.email && <p className="text-[#DC2626] text-xs px-1">{errors.email.message}</p>}
+              </div>
+
+              {/* Password */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center px-1">
+                  <label className="text-[#191B23] text-[16px] font-semibold">Password</label>
+                  <a href="#" className="text-[#0058BD] text-[16px] hover:underline transition-all">Forgot password?</a>
+                </div>
+                <Controller
+                  name="password"
+                  control={control}
+                  rules={{
+                    required: 'Password is required',
+                    minLength: { value: 6, message: 'Minimum 6 characters' },
+                  }}
+                  render={({ field }) => (
+                    <Input.Password
+                      {...field}
+                      size="large"
+                      placeholder="Enter your password"
+                      iconRender={(visible) => (visible ? <Eye size={18} className="text-[#727785]" /> : <EyeOff size={18} className="text-[#727785]" />)}
+                      className="!h-[60px] !rounded-[24px] !bg-white !border-[rgba(193,198,214,0.6)] hover:!border-[#0058BD] focus:!border-[#0058BD] focus:!shadow-none !px-[25px] !text-[16px] placeholder:!text-[rgba(114,119,133,0.5)] transition-all"
+                      status={errors.password ? 'error' : ''}
+                    />
+                  )}
+                />
+                {errors.password && <p className="text-[#DC2626] text-xs px-1">{errors.password.message}</p>}
+              </div>
+
+              {/* Remember Me */}
+              <div className="flex items-center px-1">
+                <Controller
+                  name="remember"
+                  control={control}
+                  render={({ field: { value, onChange, ...rest } }) => (
+                    <Checkbox
+                      {...rest}
+                      checked={value}
+                      onChange={(e) => onChange(e.target.checked)}
+                      className="text-[#414754] text-[15px]"
+                    >
+                      Keep me signed in
+                    </Checkbox>
+                  )}
+                />
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="large"
+                block
+                loading={loading}
+                icon={<ArrowRight size={18} className="mt-0.5" />}
+                iconPosition="end"
+                className="!h-[60px] !rounded-[24px] !text-[16px] !font-semibold !border-none shadow-lg transition-all flex items-center justify-center gap-2"
+                style={{ 
+                  background: 'linear-gradient(135deg, #0058BD 0%, #0C70EA 100%)',
+                }}
+              >
+                Sign in to Dashboard
+              </Button>
+            </form>
+
+            <div className="mt-[41px] pt-[41px] border-t border-[rgba(193,198,214,0.2)] text-center">
+              <p className="text-[#414754] text-[16px]">
+                Don't have an account?{' '}
+                <a href="#" className="text-[#0058BD] font-semibold hover:underline">Create Account</a>
+              </p>
+            </div>
+          </div>
+
+          {/* Footer Support */}
+          <footer className="mt-16 w-full max-w-[520px] flex flex-col md:flex-row items-center justify-between gap-6 pb-8">
+            <div className="text-[#64748B] text-[14px] font-medium leading-none">
+              © 2024 GPP Care. Premium Healthcare.
+            </div>
+            <div className="flex items-center gap-4 text-[#94A3B8] text-[14px] font-medium leading-none">
+              <a href="#" className="text-[#64748B] hover:text-[#0058BD] transition-colors duration-300">Privacy</a>
+              <span className="select-none text-[#CBD5E1]">&middot;</span>
+              <a href="#" className="text-[#64748B] hover:text-[#0058BD] transition-colors duration-300">Security</a>
+              <span className="select-none text-[#CBD5E1]">&middot;</span>
+              <a href="#" className="text-[#64748B] hover:text-[#0058BD] transition-colors duration-300">Support</a>
+            </div>
+          </footer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GlassCard({ icon, iconBg, title, subtitle }) {
+  return (
+    <div className="backdrop-blur-[10px] bg-white/75 border border-white/40 rounded-[24px] p-[25px] flex items-center gap-6 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.08),0_10px_15px_-5px_rgba(0,0,0,0.04)] relative">
+      <div className={`w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0`}>
+        {icon}
+      </div>
+      <div>
+        <h4 className="text-[#191B23] text-[16px] font-semibold leading-[24px]">{title}</h4>
+        <p className="text-[#414754] text-[12px] leading-[18px]">{subtitle}</p>
       </div>
     </div>
   );
