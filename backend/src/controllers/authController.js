@@ -1,9 +1,8 @@
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 
-// Tạo JWT token
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+  return jwt.sign({ id }, process.env.JWT_SECRET || "default_jwt_secret_key_gpp", {
     expiresIn: process.env.JWT_EXPIRE || "7d",
   });
 };
