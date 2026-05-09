@@ -1,11 +1,105 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Badge, Button, Empty, Popover, Tag } from 'antd';
 import { Search, Bell, Plus, ChevronDown, User, X } from 'lucide-react';
 import useAuthStore from '../stores/useAuthStore';
+
+const initialNotifications = [
+  {
+    id: 1,
+    title: '12 thuốc sắp hết tồn',
+    description: 'Kiểm tra tồn kho và tạo đơn nhập bổ sung.',
+    time: '5 phút trước',
+    type: 'Tồn kho',
+    unread: true,
+  },
+  {
+    id: 2,
+    title: '3 lô thuốc sắp hết hạn',
+    description: 'Cần rà soát hạn dùng trong 30 ngày tới.',
+    time: '18 phút trước',
+    type: 'Cảnh báo',
+    unread: true,
+  },
+  {
+    id: 3,
+    title: 'Đơn nhập PN-2409 đã hoàn tất',
+    description: 'Nhà cung cấp An Khang đã giao đủ hàng.',
+    time: '1 giờ trước',
+    type: 'Nhập hàng',
+    unread: false,
+  },
+];
 
 export default function Header() {
   const user = useAuthStore((state) => state.user);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState(initialNotifications);
+
+  const unreadCount = notifications.filter((notification) => notification.unread).length;
+
+  const handleNotificationOpenChange = (open) => {
+    setNotificationOpen(open);
+  };
+
+  const markAllAsRead = () => {
+    setNotifications((currentNotifications) => currentNotifications.map((notification) => ({
+      ...notification,
+      unread: false,
+    })));
+  };
+
+  const markAsRead = (notificationId) => {
+    setNotifications((currentNotifications) => currentNotifications.map((notification) => (
+      notification.id === notificationId ? { ...notification, unread: false } : notification
+    )));
+  };
+
+  const notificationContent = (
+    <div className="w-[calc(100vw-32px)] max-w-[360px]">
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border-light)] px-4 py-3">
+        <div>
+          <h3 className="m-0 text-[15px] font-semibold text-[var(--color-text-primary)]">Thông báo</h3>
+          <p className="m-0 mt-0.5 text-[12px] text-[var(--color-text-secondary)]">
+            {unreadCount > 0 ? `${unreadCount} thông báo chưa đọc` : 'Không có thông báo mới'}
+          </p>
+        </div>
+        {unreadCount > 0 && (
+          <Button type="link" size="small" onClick={markAllAsRead} className="p-0 text-[12px] font-medium">
+            Đã đọc
+          </Button>
+        )}
+      </div>
+
+      {notifications.length === 0 ? (
+        <div className="px-4 py-8">
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có thông báo" />
+        </div>
+      ) : (
+        <div className="max-h-[360px] overflow-y-auto py-2">
+          {notifications.map((notification) => (
+            <button
+              key={notification.id}
+              type="button"
+              onClick={() => markAsRead(notification.id)}
+              className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-bg-subtle)]"
+            >
+              <span className={`mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full ${notification.unread ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`} />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-start justify-between gap-2">
+                  <span className="text-[13px] font-semibold leading-5 text-[var(--color-text-primary)]">{notification.title}</span>
+                  <Tag className="m-0 rounded-full px-2 text-[11px]">{notification.type}</Tag>
+                </span>
+                <span className="mt-1 block text-[12px] leading-5 text-[var(--color-text-secondary)]">{notification.description}</span>
+                <span className="mt-1 block text-[11px] font-medium text-[var(--color-text-muted)]">{notification.time}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <header className="h-14 md:h-16 bg-white border-b border-[var(--color-border-light)] flex-shrink-0 relative z-20">
@@ -56,10 +150,21 @@ export default function Header() {
           </Link>
 
           {/* Bell notification */}
-          <button className="relative flex items-center justify-center w-9 h-9 rounded-[var(--radius-md)] text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-subtle)] transition-colors cursor-pointer flex-shrink-0">
-            <Bell size={20} />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--color-debt)] border-2 border-white"></span>
-          </button>
+          <Popover
+            trigger="click"
+            placement="bottomRight"
+            open={notificationOpen}
+            onOpenChange={handleNotificationOpenChange}
+            content={notificationContent}
+            arrow={false}
+            overlayInnerStyle={{ padding: 0, borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-dropdown)' }}
+          >
+            <button className={`relative flex items-center justify-center w-9 h-9 rounded-[var(--radius-md)] transition-colors cursor-pointer flex-shrink-0 ${notificationOpen ? 'bg-[var(--color-bg-subtle)] text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-subtle)]'}`}>
+              <Badge count={unreadCount} size="small" offset={[1, 2]} overflowCount={9}>
+                <Bell size={20} className={notificationOpen ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)]'} />
+              </Badge>
+            </button>
+          </Popover>
 
           {/* Divider */}
           <div className="hidden sm:block h-6 w-px bg-[var(--color-border-light)] mx-1"></div>

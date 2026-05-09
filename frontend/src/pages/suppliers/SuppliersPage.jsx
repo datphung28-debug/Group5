@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Button, Card, Input, Space, Table, Tag, Tooltip } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import {
   Building2,
   CircleDollarSign,
@@ -13,79 +14,10 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
+import SupplierEditDrawer from './SupplierEditDrawer';
+import useSupplierStore from '../../stores/useSupplierStore';
+import { formatCurrency, statusStyles } from './supplierData';
 import '../../styles/dashboard.css';
-
-const suppliers = [
-  {
-    id: 1,
-    name: 'Công ty Dược phẩm An Khang',
-    code: 'NCC-001',
-    taxCode: '0312456789',
-    phone: '028 3822 1456',
-    contactName: 'Nguyễn Minh Anh',
-    contactPhone: '0908 112 233',
-    currentDebt: 12500000,
-    debtLimit: 50000000,
-    status: 'Đang nợ',
-  },
-  {
-    id: 2,
-    name: 'Dược phẩm Bình Minh Pharma',
-    code: 'NCC-002',
-    taxCode: '0108765432',
-    phone: '024 3998 7788',
-    contactName: 'Trần Hoàng Long',
-    contactPhone: '0912 456 789',
-    currentDebt: 0,
-    debtLimit: 80000000,
-    status: 'Bình thường',
-  },
-  {
-    id: 3,
-    name: 'Công ty TNHH Medistar Việt Nam',
-    code: 'NCC-003',
-    taxCode: '0319988776',
-    phone: '028 3901 2244',
-    contactName: 'Lê Thu Hà',
-    contactPhone: '0933 552 188',
-    currentDebt: 36500000,
-    debtLimit: 40000000,
-    status: 'Quá hạn',
-  },
-  {
-    id: 4,
-    name: 'Nhà phân phối Thiên Phúc',
-    code: 'NCC-004',
-    taxCode: '3701122455',
-    phone: '0274 388 9900',
-    contactName: 'Phạm Quốc Việt',
-    contactPhone: '0987 001 122',
-    currentDebt: 0,
-    debtLimit: 25000000,
-    status: 'Tạm ngưng',
-  },
-  {
-    id: 5,
-    name: 'Công ty CP Dược liệu Sài Gòn',
-    code: 'NCC-005',
-    taxCode: '0315566778',
-    phone: '028 3777 8822',
-    contactName: 'Võ Thanh Tâm',
-    contactPhone: '0906 889 900',
-    currentDebt: 8500000,
-    debtLimit: 30000000,
-    status: 'Đang nợ',
-  },
-];
-
-const statusStyles = {
-  'Bình thường': 'success',
-  'Đang nợ': 'processing',
-  'Quá hạn': 'error',
-  'Tạm ngưng': 'default',
-};
-
-const formatCurrency = (value) => `${value.toLocaleString('vi-VN')}đ`;
 
 function SummaryCard({ icon: Icon, label, value, valueClassName, iconClassName }) {
   return (
@@ -104,7 +36,11 @@ function SummaryCard({ icon: Icon, label, value, valueClassName, iconClassName }
 }
 
 export default function SuppliersPage() {
+  const navigate = useNavigate();
+  const suppliers = useSupplierStore((state) => state.suppliers);
+  const updateSupplier = useSupplierStore((state) => state.updateSupplier);
   const [searchValue, setSearchValue] = useState('');
+  const [editingSupplier, setEditingSupplier] = useState(null);
 
   const filteredSuppliers = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase();
@@ -119,13 +55,18 @@ export default function SuppliersPage() {
       || supplier.phone.toLowerCase().includes(keyword)
       || supplier.taxCode.toLowerCase().includes(keyword)
     ));
-  }, [searchValue]);
+  }, [searchValue, suppliers]);
 
   const summary = useMemo(() => ({
     total: suppliers.length,
     totalDebt: suppliers.reduce((total, supplier) => total + supplier.currentDebt, 0),
     fullyPaid: suppliers.filter((supplier) => supplier.currentDebt === 0).length,
-  }), []);
+  }), [suppliers]);
+
+  const handleSave = (updatedSupplier) => {
+    updateSupplier(updatedSupplier);
+    setEditingSupplier(null);
+  };
 
   const columns = [
     {
@@ -191,13 +132,13 @@ export default function SuppliersPage() {
       key: 'actions',
       fixed: 'right',
       width: 110,
-      render: () => (
+      render: (_, record) => (
         <Space size={6}>
           <Tooltip title="Xem chi tiết nhà cung cấp">
-            <Button type="text" icon={<Eye size={17} />} className="text-[var(--color-primary)]" />
+            <Button type="text" icon={<Eye size={17} />} onClick={(event) => { event.stopPropagation(); navigate(`/suppliers/${record.id}`); }} className="text-[var(--color-primary)]" />
           </Tooltip>
           <Tooltip title="Chỉnh sửa thông tin">
-            <Button type="text" icon={<Pencil size={17} />} className="text-[var(--color-text-secondary)]" />
+            <Button type="text" icon={<Pencil size={17} />} onClick={(event) => { event.stopPropagation(); setEditingSupplier(record); }} className="text-[var(--color-text-secondary)]" />
           </Tooltip>
         </Space>
       ),
@@ -274,6 +215,7 @@ export default function SuppliersPage() {
           pagination={{ pageSize: 10, showSizeChanger: false }}
           scroll={{ x: 1180 }}
           rowClassName="cursor-pointer transition-colors hover:bg-[var(--color-bg-subtle)]"
+          onRow={(record) => ({ onClick: () => navigate(`/suppliers/${record.id}`) })}
         />
       </div>
 
@@ -303,13 +245,20 @@ export default function SuppliersPage() {
                 <span>{supplier.contactName} · {supplier.contactPhone}</span>
               </div>
               <Space size={4}>
-                <Button type="text" icon={<Eye size={17} />} className="text-[var(--color-primary)]" />
-                <Button type="text" icon={<Pencil size={17} />} className="text-[var(--color-text-secondary)]" />
+                <Button type="text" icon={<Eye size={17} />} onClick={() => navigate(`/suppliers/${supplier.id}`)} className="text-[var(--color-primary)]" />
+                <Button type="text" icon={<Pencil size={17} />} onClick={() => setEditingSupplier(supplier)} className="text-[var(--color-text-secondary)]" />
               </Space>
             </div>
           </div>
         ))}
       </div>
+
+      <SupplierEditDrawer
+        open={Boolean(editingSupplier)}
+        supplier={editingSupplier}
+        onClose={() => setEditingSupplier(null)}
+        onSave={handleSave}
+      />
     </div>
   );
 }

@@ -16,6 +16,7 @@ import PurchaseOrderPage from './pages/purchase/PurchaseOrderPage';
 import PrescriptionScanPage from './pages/prescriptions/PrescriptionScanPage';
 import POSPage from './pages/pos/POSPage';
 import SuppliersPage from './pages/suppliers/SuppliersPage';
+import SupplierDetailPage from './pages/suppliers/SupplierDetailPage';
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'antd';
 
@@ -82,6 +83,7 @@ function AppLayout() {
             <Route path="/purchase-orders" element={<PurchaseOrders />} />
             <Route path="/purchase-orders/create" element={<PurchaseOrderPage />} />
             <Route path="/suppliers" element={<SuppliersPage />} />
+            <Route path="/suppliers/:supplierId" element={<SupplierDetailPage />} />
             <Route path="/prescriptions/new" element={<div className="p-6"><PrescriptionScanPage /></div>} />
             <Route path="/settings" element={<div className="p-6"><PageHeader title="Cài đặt hệ thống" subtitle="Tùy chỉnh cấu hình hệ thống" /></div>} />
           </Routes>
