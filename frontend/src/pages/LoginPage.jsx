@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { Button, Input, Checkbox, Typography, message } from 'antd';
-import { Lock, Mail, Pill, ShieldCheck, Headphones, Package, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Button, Input, Checkbox, message } from 'antd';
+import { Pill, ShieldCheck, Headphones, Package, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../stores/useAuthStore';
-
-const { Title, Text } = Typography;
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -211,19 +209,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Footer Support */}
-          <footer className="mt-16 w-full max-w-[520px] flex flex-col md:flex-row items-center justify-between gap-6 pb-8">
-            <div className="text-[#64748B] text-[14px] font-medium leading-none">
-              © 2024 GPP Care. Premium Healthcare.
-            </div>
-            <div className="flex items-center gap-4 text-[#94A3B8] text-[14px] font-medium leading-none">
-              <a href="#" className="text-[#64748B] hover:text-[#0058BD] transition-colors duration-300">Privacy</a>
-              <span className="select-none text-[#CBD5E1]">&middot;</span>
-              <a href="#" className="text-[#64748B] hover:text-[#0058BD] transition-colors duration-300">Security</a>
-              <span className="select-none text-[#CBD5E1]">&middot;</span>
-              <a href="#" className="text-[#64748B] hover:text-[#0058BD] transition-colors duration-300">Support</a>
-            </div>
-          </footer>
         </div>
       </div>
     </div>

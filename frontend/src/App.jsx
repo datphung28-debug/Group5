@@ -15,6 +15,7 @@ import ExpiryWarningPage from './pages/inventory/ExpiryWarningPage';
 import PurchaseOrderPage from './pages/purchase/PurchaseOrderPage';
 import PrescriptionScanPage from './pages/prescriptions/PrescriptionScanPage';
 import POSPage from './pages/pos/POSPage';
+import SalesInvoicePage from './pages/invoices/SalesInvoicePage';
 import SuppliersPage from './pages/suppliers/SuppliersPage';
 import SupplierDetailPage from './pages/suppliers/SupplierDetailPage';
 import { useNavigate } from 'react-router-dom';
@@ -82,6 +83,7 @@ function AppLayout() {
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/purchase-orders" element={<PurchaseOrders />} />
             <Route path="/purchase-orders/create" element={<PurchaseOrderPage />} />
+            <Route path="/invoices" element={<SalesInvoicePage />} />
             <Route path="/suppliers" element={<SuppliersPage />} />
             <Route path="/suppliers/:supplierId" element={<SupplierDetailPage />} />
             <Route path="/prescriptions/new" element={<div className="p-6"><PrescriptionScanPage /></div>} />
