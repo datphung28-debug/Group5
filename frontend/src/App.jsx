@@ -20,6 +20,7 @@ import CustomersPage from './pages/customers/CustomersPage';
 import SuppliersPage from './pages/suppliers/SuppliersPage';
 import SupplierDetailPage from './pages/suppliers/SupplierDetailPage';
 import CashbookPage from './pages/cashbook/CashbookPage';
+import RevenueReportPage from './pages/reports/revenue/RevenueReportPage';
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'antd';
 
@@ -90,6 +91,7 @@ function AppLayout() {
             <Route path="/suppliers" element={<SuppliersPage />} />
             <Route path="/suppliers/:supplierId" element={<SupplierDetailPage />} />
             <Route path="/cash-book" element={<CashbookPage />} />
+            <Route path="/report-revenue" element={<RevenueReportPage />} />
             <Route path="/prescriptions/new" element={<div className="p-6"><PrescriptionScanPage /></div>} />
             <Route path="/settings" element={<div className="p-6"><PageHeader title="Cài đặt hệ thống" subtitle="Tùy chỉnh cấu hình hệ thống" /></div>} />
           </Routes>
