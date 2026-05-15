@@ -32,10 +32,8 @@ const useRevenueReportStore = create((set) => ({
     { date: '07/03', type: 'Lãi gộp', value: 3600000 },
   ],
   paymentData: [
-    { type: 'Tiền mặt', value: 250400000, count: 850 },
-    { type: 'Chuyển khoản', value: 125200000, count: 310 },
-    { type: 'QR Payment', value: 45200000, count: 78 },
-    { type: 'Ví điện tử', value: 5000000, count: 10 },
+    { type: 'Tiền mặt', value: 295600000, count: 928 },
+    { type: 'Chuyển khoản', value: 130200000, count: 320 },
   ],
   categoryData: [
     { category: 'Thuốc kháng sinh', revenue: 145000000 },

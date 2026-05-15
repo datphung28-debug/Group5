@@ -69,31 +69,28 @@ const RevenueCharts = () => {
     return [...categoryData].sort((a, b) => b.revenue - a.revenue);
   }, [categoryData]);
 
+  // Payment chart colors and calculations
+  const paymentColors = ['#16a34a', '#2563eb'];
+  const totalPaymentValue = useMemo(() => 
+    paymentData.reduce((sum, item) => sum + item.value, 0), 
+  [paymentData]);
+
   const paymentConfig = {
     data: paymentData,
     angleField: 'value',
     colorField: 'type',
-    radius: 0.85,
-    innerRadius: 0.65,
+    radius: 0.9,
+    innerRadius: 0.7,
     padding: 0,
+    legend: false, // Disable default legend to use custom one
     label: {
       text: 'value',
       position: 'outside',
       formatter: (v) => formatCompactNumber(v),
       style: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: 600,
-        fill: '#4a6080',
-      },
-    },
-    legend: {
-      color: {
-        position: 'bottom',
-        layout: {
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexDirection: 'row',
-        },
+        fill: '#94a3b8',
       },
     },
     tooltip: {
@@ -101,7 +98,7 @@ const RevenueCharts = () => {
         { channel: 'y', valueFormatter: (v) => v.toLocaleString() + 'đ' }
       ]
     },
-    color: ['#16a34a', '#2563eb', '#d97706', '#7c3aed'],
+    color: paymentColors,
     style: {
       stroke: '#fff',
       inset: 2,
@@ -130,7 +127,7 @@ const RevenueCharts = () => {
   return (
     <div className="mb-6">
       <Row gutter={[16, 16]}>
-        {/* Revenue Trend - Recharts ComposedChart */}
+        {/* Revenue Trend */}
         <Col xs={24} lg={16}>
           <Card 
             title={
@@ -142,7 +139,7 @@ const RevenueCharts = () => {
             className="shadow-[0_1px_3px_rgba(0,0,0,0.02),0_1px_2px_rgba(0,0,0,0.04)] border-slate-100 rounded-xl h-full"
             bodyStyle={{ padding: '24px 16px 12px 16px' }}
           >
-            <div className="h-[380px] w-full">
+            <div className="h-[400px] w-full">
               {renderLoadingOrEmpty(transformedTrendData) || (
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={transformedTrendData} margin={{ top: 10, right: 10, bottom: 0, left: -10 }}>
@@ -205,7 +202,7 @@ const RevenueCharts = () => {
           </Card>
         </Col>
 
-        {/* Payment Distribution - Ant Design Charts Pie (Unchanged) */}
+        {/* Payment Distribution with Custom Legend */}
         <Col xs={24} lg={8}>
           <Card 
             title={
@@ -215,9 +212,9 @@ const RevenueCharts = () => {
               </div>
             }
             className="shadow-[0_1px_3px_rgba(0,0,0,0.02),0_1px_2px_rgba(0,0,0,0.04)] border-slate-100 rounded-xl h-full"
-            bodyStyle={{ padding: '12px' }}
+            bodyStyle={{ padding: '20px 12px' }}
           >
-            <div className="h-[380px]">
+            <div className="h-[280px]">
               {loading ? (
                 <div className="flex items-center justify-center h-full">
                   <Spin size="large" />
@@ -230,10 +227,41 @@ const RevenueCharts = () => {
                 <Pie {...paymentConfig} />
               )}
             </div>
+
+            {/* Custom Legend */}
+            {!loading && paymentData && paymentData.length > 0 && (
+              <div className="mt-8 px-2 space-y-3">
+                {paymentData.map((item, index) => {
+                  const percentage = totalPaymentValue > 0 ? ((item.value / totalPaymentValue) * 100).toFixed(1) : 0;
+                  return (
+                    <div key={item.type} className="flex items-center justify-between group cursor-default">
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-3 h-3 rounded-full shrink-0 shadow-sm" 
+                          style={{ backgroundColor: paymentColors[index] }} 
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-semibold text-slate-700 leading-tight">{item.type}</span>
+                          <span className="text-[11px] text-slate-400 font-medium">{item.count} giao dịch</span>
+                        </div>
+                      </div>
+                      <div className="text-right flex flex-col">
+                        <span className="text-[13px] font-bold text-slate-800 leading-tight">
+                          {item.value.toLocaleString()}đ
+                        </span>
+                        <span className="text-[11px] font-bold text-[var(--color-primary)]">
+                          {percentage}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </Card>
         </Col>
 
-        {/* Revenue By Category - Recharts BarChart */}
+        {/* Revenue By Category */}
         <Col xs={24}>
           <Card 
             title={
