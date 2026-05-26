@@ -20,6 +20,7 @@ import CustomersPage from './pages/customers/CustomersPage';
 import SuppliersPage from './pages/suppliers/SuppliersPage';
 import SupplierDetailPage from './pages/suppliers/SupplierDetailPage';
 import CashbookPage from './pages/cashbook/CashbookPage';
+import ReturnsPage from './pages/returns/ReturnsPage';
 import RevenueReportPage from './pages/reports/revenue/RevenueReportPage';
 import InventoryFlowReportPage from './pages/reports/inventory-flow/InventoryFlowReportPage';
 import DebtReportPage from './pages/reports/debt/DebtReportPage';
@@ -96,6 +97,7 @@ function AppLayout() {
             <Route path="/report-revenue" element={<RevenueReportPage />} />
             <Route path="/report-io" element={<InventoryFlowReportPage />} />
             <Route path="/report-debt" element={<DebtReportPage />} />
+            <Route path="/returns" element={<ReturnsPage />} />
             <Route path="/prescriptions/new" element={<div className="p-6"><PrescriptionScanPage /></div>} />
             <Route path="/settings" element={<div className="p-6"><PageHeader title="Cài đặt hệ thống" subtitle="Tùy chỉnh cấu hình hệ thống" /></div>} />
           </Routes>
