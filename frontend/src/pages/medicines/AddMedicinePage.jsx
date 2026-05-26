@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { Card, Input, Select, InputNumber, Switch, Button, Space, Typography, Row, Col, Alert, message, Spin } from 'antd';
-import { Save, X, Info, Pill, DollarSign, FileText, Settings, ArrowLeft } from 'lucide-react';
+import { Save, X, Pill, DollarSign, FileText, Settings, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import useMedicineStore from '../../stores/useMedicineStore';
@@ -12,6 +12,15 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
+const SectionHeader = ({ icon, title }) => (
+  <div className="flex items-center gap-2 mb-4">
+    <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center">
+      {React.createElement(icon, { size: 18 })}
+    </div>
+    <Title level={5} className="m-0 !text-[var(--color-text-primary)]">{title}</Title>
+  </div>
+);
+
 const AddMedicinePage = () => {
   const navigate = useNavigate();
   const { createMedicine } = useMedicineStore();
@@ -21,6 +30,7 @@ const AddMedicinePage = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [unitLoading, setUnitLoading] = useState(false);
   const [supplierLoading, setSupplierLoading] = useState(false);
+  const [unitError, setUnitError] = useState('');
 
   const { control, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
@@ -51,18 +61,15 @@ const AddMedicinePage = () => {
 
     const loadUnits = async () => {
       setUnitLoading(true);
+      setUnitError('');
       try {
         const res = await unitAPI.getAll();
         setUnits(res.data || []);
-      } catch {
-        // Fallback hardcode
-        setUnits([
-          { _id: 'vien', name: 'Viên' },
-          { _id: 'chai', name: 'Chai' },
-          { _id: 'tuyp', name: 'Tuýp' },
-          { _id: 'hop', name: 'Hộp' },
-          { _id: 'goi', name: 'Gói' },
-        ]);
+      } catch (err) {
+        const msg = err.response?.data?.message || 'Không thể tải đơn vị tính';
+        setUnitError(msg);
+        setUnits([]);
+        message.error(msg);
       } finally {
         setUnitLoading(false);
       }
@@ -82,7 +89,7 @@ const AddMedicinePage = () => {
 
     loadUnits();
     loadSuppliers();
-  }, []);
+  }, [fetchCategories]);
 
   const onSubmit = async (formData) => {
     // Map tên field frontend → backend model
@@ -115,15 +122,6 @@ const AddMedicinePage = () => {
       message.error(result.message || 'Không thể thêm thuốc. Vui lòng thử lại.');
     }
   };
-
-  const SectionHeader = ({ icon: Icon, title }) => (
-    <div className="flex items-center gap-2 mb-4">
-      <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center">
-        <Icon size={18} />
-      </div>
-      <Title level={5} className="m-0 !text-[var(--color-text-primary)]">{title}</Title>
-    </div>
-  );
 
   return (
     <div className="p-6 bg-[var(--color-bg-app)] min-h-screen">
@@ -244,6 +242,7 @@ const AddMedicinePage = () => {
                         )}
                       />
                       {errors.unit && <Text type="danger" className="text-[11px]">{errors.unit.message}</Text>}
+                      {unitError && <Text type="danger" className="text-[11px]">{unitError}</Text>}
                     </div>
                   </Col>
 

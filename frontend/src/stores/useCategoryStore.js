@@ -32,7 +32,7 @@ const useCategoryStore = create((set, get) => ({
   addCategory: async (category) => {
     try {
       const res = await categoryAPI.create(category);
-      set((state) => ({ categories: [...state.categories, res.data] }));
+      await get().fetchCategories();
       return { success: true, data: res.data };
     } catch (err) {
       return { success: false, message: err.response?.data?.message || 'Lỗi tạo nhóm thuốc' };
@@ -42,11 +42,7 @@ const useCategoryStore = create((set, get) => ({
   updateCategory: async (id, updates) => {
     try {
       const res = await categoryAPI.update(id, updates);
-      set((state) => ({
-        categories: state.categories.map((c) =>
-          (c._id === id || c.id === id) ? res.data : c
-        ),
-      }));
+      await get().fetchCategories();
       return { success: true, data: res.data };
     } catch (err) {
       return { success: false, message: err.response?.data?.message || 'Lỗi cập nhật nhóm thuốc' };
@@ -67,4 +63,3 @@ const useCategoryStore = create((set, get) => ({
 }));
 
 export default useCategoryStore;
-

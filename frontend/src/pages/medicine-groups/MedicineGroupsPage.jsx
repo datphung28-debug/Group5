@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Modal, message } from 'antd';
+import { Alert, Button, Empty, Modal, Spin, message } from 'antd';
 import { Plus } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import useCategoryStore from '../../stores/useCategoryStore';
@@ -8,7 +8,7 @@ import CategoryCard from './components/CategoryCard';
 import CategoryModal from './components/CategoryModal';
 
 export default function MedicineGroupsPage() {
-  const { categories, fetchCategories, getSummary, addCategory, updateCategory, deleteCategory } = useCategoryStore();
+  const { categories, loading, error, fetchCategories, getSummary, addCategory, updateCategory, deleteCategory } = useCategoryStore();
   const summary = getSummary();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -17,7 +17,7 @@ export default function MedicineGroupsPage() {
   // Fetch categories từ API khi component mount
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [fetchCategories]);
 
   const handleAdd = () => {
     setEditingCategory(null);
@@ -37,22 +37,31 @@ export default function MedicineGroupsPage() {
       okType: 'danger',
       cancelText: 'Hủy',
       centered: true,
-      onOk: () => {
-        deleteCategory(category._id || category.id);
-        message.success('Đã xóa nhóm thuốc');
+      onOk: async () => {
+        const result = await deleteCategory(category._id || category.id);
+        if (result.success) {
+          message.success('Đã xóa nhóm thuốc');
+        } else {
+          message.error(result.message || 'Không thể xóa nhóm thuốc');
+        }
       },
     });
   };
 
-  const handleSave = (values) => {
+  const handleSave = async (values) => {
+    let result;
     if (editingCategory) {
-      updateCategory(editingCategory._id || editingCategory.id, values);
-      message.success('Đã cập nhật nhóm thuốc');
+      result = await updateCategory(editingCategory._id || editingCategory.id, values);
     } else {
-      addCategory(values);
-      message.success('Đã thêm nhóm thuốc mới');
+      result = await addCategory(values);
     }
-    setModalOpen(false);
+
+    if (result.success) {
+      message.success(editingCategory ? 'Đã cập nhật nhóm thuốc' : 'Đã thêm nhóm thuốc mới');
+      setModalOpen(false);
+    } else {
+      message.error(result.message || 'Không thể lưu nhóm thuốc');
+    }
   };
 
   return (
@@ -78,17 +87,31 @@ export default function MedicineGroupsPage() {
         emptyCount={summary.emptyCount} 
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {categories.map((category, index) => (
-          <CategoryCard
-            key={category.id}
-            category={category}
-            index={index}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
-        ))}
-      </div>
+      {error && (
+        <Alert type="error" showIcon message={error} className="mb-4 rounded-[var(--radius-md)]" />
+      )}
+
+      {loading ? (
+        <div className="flex min-h-[240px] items-center justify-center rounded-[var(--radius-lg)] border border-[var(--color-border-light)] bg-white">
+          <Spin />
+        </div>
+      ) : categories.length === 0 ? (
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border-light)] bg-white p-8">
+          <Empty description="Chưa có nhóm thuốc" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {categories.map((category, index) => (
+            <CategoryCard
+              key={category._id || category.id}
+              category={category}
+              index={index}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+      )}
 
       <CategoryModal
         open={modalOpen}

@@ -1,2 +1,8 @@
+.agents/
+.codex/
+PLAND.md
+AGENTS.md
+DESIGN.md
 .env
+.codegraph/
 node_modules

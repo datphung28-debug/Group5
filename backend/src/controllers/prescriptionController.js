@@ -1,4 +1,5 @@
 import Prescription from "../models/Prescription.js";
+import { sendErrorResponse } from "../utils/errorResponse.js";
 
 // Tạo mã đơn thuốc
 const generatePrescriptionCode = async () => {
@@ -26,7 +27,7 @@ export const getPrescriptions = async (req, res) => {
 
     res.json({ prescriptions, total, page: Number(page), pages: Math.ceil(total / limit) });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -40,7 +41,7 @@ export const getPrescriptionById = async (req, res) => {
     if (!prescription) return res.status(404).json({ message: "Không tìm thấy đơn thuốc" });
     res.json(prescription);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -55,7 +56,7 @@ export const createPrescription = async (req, res) => {
     });
     res.status(201).json(prescription);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -69,6 +70,6 @@ export const updatePrescription = async (req, res) => {
     if (!prescription) return res.status(404).json({ message: "Không tìm thấy đơn thuốc" });
     res.json(prescription);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };

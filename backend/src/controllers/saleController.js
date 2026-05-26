@@ -1,4 +1,5 @@
 import Sale from "../models/Sale.js";
+import { sendErrorResponse } from "../utils/errorResponse.js";
 import Medicine from "../models/Medicine.js";
 import Customer from "../models/Customer.js";
 
@@ -32,7 +33,7 @@ export const getSales = async (req, res) => {
 
     res.json({ sales, total, page: Number(page), pages: Math.ceil(total / limit) });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -47,7 +48,7 @@ export const getSaleById = async (req, res) => {
     if (!sale) return res.status(404).json({ message: "Không tìm thấy hóa đơn" });
     res.json(sale);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -121,7 +122,7 @@ export const createSale = async (req, res) => {
 
     res.status(201).json(sale);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -146,6 +147,6 @@ export const cancelSale = async (req, res) => {
 
     res.json({ message: "Hóa đơn đã được hủy" });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };

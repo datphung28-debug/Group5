@@ -44,7 +44,8 @@ export default function CategoryCard({ category, index, onEdit, onDelete }) {
   const navigate = useNavigate();
   const Icon = ICON_MAP[category.icon] || HelpCircle;
   const palette = COLOR_PALETTE[index % COLOR_PALETTE.length];
-  const isEmpty = category.status === 'empty';
+  const isEmpty = category.status === 'empty' || Number(category.medicineCount || 0) === 0;
+  const categoryId = category._id || category.id;
 
   return (
     <div
@@ -95,7 +96,7 @@ export default function CategoryCard({ category, index, onEdit, onDelete }) {
       <div className="px-5 py-3 border-t border-[var(--color-border-light)] flex items-center justify-between">
         <span className="text-[var(--font-size-sm)] text-[var(--color-text-secondary)]">
           <span className="font-semibold text-[var(--color-text-primary)]">
-            {category.medicineCount}
+            {category.medicineCount || 0}
           </span>{' '}
           loại thuốc
         </span>
@@ -124,7 +125,7 @@ export default function CategoryCard({ category, index, onEdit, onDelete }) {
           size="small"
           icon={<Eye size={14} />}
           className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-[var(--radius-sm)] text-[var(--font-size-sm)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]"
-          onClick={() => navigate(`/medicines?group=${category.id}`)}
+          onClick={() => navigate(`/medicines?group=${categoryId}`)}
         >
           Xem thuốc
         </Button>

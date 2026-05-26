@@ -1,4 +1,5 @@
 import Customer from "../models/Customer.js";
+import { sendErrorResponse } from "../utils/errorResponse.js";
 import Sale from "../models/Sale.js";
 
 // @GET /api/customers
@@ -21,7 +22,7 @@ export const getCustomers = async (req, res) => {
 
     res.json({ customers, total, page: Number(page), pages: Math.ceil(total / limit) });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -32,7 +33,7 @@ export const getCustomerById = async (req, res) => {
     if (!customer) return res.status(404).json({ message: "Không tìm thấy khách hàng" });
     res.json(customer);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -49,7 +50,7 @@ export const getCustomerHistory = async (req, res) => {
 
     res.json({ sales, total, page: Number(page), pages: Math.ceil(total / limit) });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -61,7 +62,7 @@ export const createCustomer = async (req, res) => {
     const customer = await Customer.create(req.body);
     res.status(201).json(customer);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -75,7 +76,7 @@ export const updateCustomer = async (req, res) => {
     if (!customer) return res.status(404).json({ message: "Không tìm thấy khách hàng" });
     res.json(customer);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -90,6 +91,6 @@ export const deleteCustomer = async (req, res) => {
     if (!customer) return res.status(404).json({ message: "Không tìm thấy khách hàng" });
     res.json({ message: "Đã xóa khách hàng" });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };

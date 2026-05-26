@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import { sendErrorResponse } from "../utils/errorResponse.js";
 
 // @GET /api/users - Lấy danh sách người dùng (admin)
 export const getUsers = async (req, res) => {
@@ -17,7 +18,7 @@ export const getUsers = async (req, res) => {
 
     res.json({ users, total, page: Number(page), pages: Math.ceil(total / limit) });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -28,7 +29,7 @@ export const getUserById = async (req, res) => {
     if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
     res.json(user);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -49,7 +50,7 @@ export const updateUser = async (req, res) => {
     const updated = await user.save();
     res.json({ ...updated._doc, password: undefined, message: "Cập nhật thành công" });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -62,6 +63,6 @@ export const deleteUser = async (req, res) => {
     await user.save();
     res.json({ message: "Tài khoản đã bị khóa" });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };

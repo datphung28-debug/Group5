@@ -1,4 +1,5 @@
 import Sale from "../models/Sale.js";
+import { sendErrorResponse } from "../utils/errorResponse.js";
 import Import from "../models/Import.js";
 import Medicine from "../models/Medicine.js";
 import Customer from "../models/Customer.js";
@@ -61,7 +62,7 @@ export const getDashboard = async (req, res) => {
       staff: totalStaff,
     });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -92,7 +93,7 @@ export const getRevenueReport = async (req, res) => {
 
     res.json(revenue);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -120,7 +121,7 @@ export const getTopMedicines = async (req, res) => {
 
     res.json(topMedicines);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -137,6 +138,6 @@ export const getInventoryReport = async (req, res) => {
 
     res.json({ medicines, totalValue });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };

@@ -1,4 +1,5 @@
 import Import from "../models/Import.js";
+import { sendErrorResponse } from "../utils/errorResponse.js";
 import Medicine from "../models/Medicine.js";
 
 // Tạo mã phiếu nhập
@@ -31,7 +32,7 @@ export const getImports = async (req, res) => {
 
     res.json({ imports, total, page: Number(page), pages: Math.ceil(total / limit) });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -45,7 +46,7 @@ export const getImportById = async (req, res) => {
     if (!importDoc) return res.status(404).json({ message: "Không tìm thấy phiếu nhập" });
     res.json(importDoc);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -102,6 +103,6 @@ export const createImport = async (req, res) => {
 
     res.status(201).json(importDoc);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };

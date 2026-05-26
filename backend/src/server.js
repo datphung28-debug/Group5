@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { connectDB } from "./config/db.js";
+import { sendErrorResponse } from "./utils/errorResponse.js";
 
 // Routes
 import authRoutes from "./routes/authRoutes.js";
@@ -53,8 +54,7 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: "Lỗi server", error: err.message });
+  return sendErrorResponse(res, err);
 });
 
 app.listen(PORT, () => {

@@ -1,4 +1,5 @@
 import Medicine from "../models/Medicine.js";
+import { sendErrorResponse } from "../utils/errorResponse.js";
 
 // @GET /api/medicines
 export const getMedicines = async (req, res) => {
@@ -22,7 +23,7 @@ export const getMedicines = async (req, res) => {
 
     res.json({ medicines, total, page: Number(page), pages: Math.ceil(total / limit) });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -36,7 +37,7 @@ export const getMedicineById = async (req, res) => {
     if (!medicine) return res.status(404).json({ message: "Không tìm thấy thuốc" });
     res.json(medicine);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -49,7 +50,7 @@ export const createMedicine = async (req, res) => {
     const medicine = await Medicine.create(req.body);
     res.status(201).json(medicine);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -63,7 +64,7 @@ export const updateMedicine = async (req, res) => {
     if (!medicine) return res.status(404).json({ message: "Không tìm thấy thuốc" });
     res.json(medicine);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -78,7 +79,7 @@ export const deleteMedicine = async (req, res) => {
     if (!medicine) return res.status(404).json({ message: "Không tìm thấy thuốc" });
     res.json({ message: "Đã xóa thuốc khỏi danh mục" });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -99,6 +100,6 @@ export const getExpiringMedicines = async (req, res) => {
 
     res.json(medicines);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };

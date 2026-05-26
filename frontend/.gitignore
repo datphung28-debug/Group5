@@ -1,21 +1,3 @@
-# Mardown
-DESIGN.md
-COMPONENTS.md
-STATUS.md
-
-
-# Gemini
-.gemini
-GEMINI.md
-
-# Claude
-.claude
-CLAUDE.md
-
-# Codex
-.codex/
-AGENTS.md
-
 # Logs
 logs
 *.log

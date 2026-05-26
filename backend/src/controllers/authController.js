@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import { sendErrorResponse } from "../utils/errorResponse.js";
 import jwt from "jsonwebtoken";
 
 const generateToken = (id) => {
@@ -34,7 +35,7 @@ export const login = async (req, res) => {
       token: generateToken(user._id),
     });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -61,7 +62,7 @@ export const register = async (req, res) => {
       message: "Tạo tài khoản thành công",
     });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };
 
@@ -85,6 +86,6 @@ export const changePassword = async (req, res) => {
     await user.save();
     res.json({ message: "Đổi mật khẩu thành công" });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    return sendErrorResponse(res, error);
   }
 };

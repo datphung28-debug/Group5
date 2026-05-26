@@ -22,6 +22,8 @@ import SupplierDetailPage from './pages/suppliers/SupplierDetailPage';
 import StaffPage from './pages/staff/StaffPage';
 import ActivityPage from './pages/activity/ActivityPage';
 import SchedulePage from './pages/schedule/SchedulePage';
+import TimesheetPage from './pages/timesheet/TimesheetPage';
+import PayrollPage from './pages/payroll/PayrollPage';
 import CashbookPage from './pages/cashbook/CashbookPage';
 import ReturnsPage from './pages/returns/ReturnsPage';
 import RevenueReportPage from './pages/reports/revenue/RevenueReportPage';
@@ -99,6 +101,8 @@ function AppLayout() {
             <Route path="/staff" element={<StaffPage />} />
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/schedule" element={<SchedulePage />} />
+            <Route path="/timesheet" element={<TimesheetPage />} />
+            <Route path="/payroll" element={<PayrollPage />} />
             <Route path="/cash-book" element={<CashbookPage />} />
             <Route path="/report-revenue" element={<RevenueReportPage />} />
             <Route path="/report-io" element={<InventoryFlowReportPage />} />
