@@ -14,7 +14,6 @@ import {
   TrendingUp,
   FileBox,
   BadgeAlert,
-  Archive,
   Undo2,
   ActivitySquare,
   UserSquare2,
@@ -77,8 +76,6 @@ export default function Sidebar({ collapsed, onCollapse, badges = {} }) {
         { path: '/report-revenue', icon: TrendingUp, label: 'Doanh thu' },
         { path: '/report-io', icon: FileBox, label: 'Báo cáo NXT' },
         { path: '/report-debt', icon: BadgeAlert, label: 'Công nợ' },
-        { path: '/report-inventory', icon: Archive, label: 'Sổ xuất nhập tồn' },
-        { path: '/report-debt-detail', icon: Receipt, label: 'Công nợ chi tiết' },
       ],
     },
     {
