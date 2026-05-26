@@ -52,6 +52,14 @@ export const authAPI = {
   changePassword: (data) => api.put('/auth/change-password', data),
 };
 
+// ─── Users ─────────────────────────────────────────────────────────────────
+export const userAPI = {
+  getAll: (params) => api.get('/users', { params }),
+  getById: (id) => api.get(`/users/${id}`),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  delete: (id) => api.delete(`/users/${id}`),
+};
+
 // ─── Medicines ─────────────────────────────────────────────────────────────
 export const medicineAPI = {
   getAll: (params) => api.get('/medicines', { params }),

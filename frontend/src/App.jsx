@@ -19,6 +19,8 @@ import SalesInvoicePage from './pages/invoices/SalesInvoicePage';
 import CustomersPage from './pages/customers/CustomersPage';
 import SuppliersPage from './pages/suppliers/SuppliersPage';
 import SupplierDetailPage from './pages/suppliers/SupplierDetailPage';
+import StaffPage from './pages/staff/StaffPage';
+import ActivityPage from './pages/activity/ActivityPage';
 import CashbookPage from './pages/cashbook/CashbookPage';
 import ReturnsPage from './pages/returns/ReturnsPage';
 import RevenueReportPage from './pages/reports/revenue/RevenueReportPage';
@@ -93,6 +95,8 @@ function AppLayout() {
             <Route path="/customers" element={<CustomersPage />} />
             <Route path="/suppliers" element={<SuppliersPage />} />
             <Route path="/suppliers/:supplierId" element={<SupplierDetailPage />} />
+            <Route path="/staff" element={<StaffPage />} />
+            <Route path="/activity" element={<ActivityPage />} />
             <Route path="/cash-book" element={<CashbookPage />} />
             <Route path="/report-revenue" element={<RevenueReportPage />} />
             <Route path="/report-io" element={<InventoryFlowReportPage />} />
