@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Card, DatePicker, Descriptions, Drawer, Dropdown, Empty, Input, Select, Space, Table, Tag, message } from 'antd';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Card, DatePicker, Descriptions, Drawer, Dropdown, Empty, Input, Select, Space, Table, Tag, message } from 'antd';
 import { Eye, Filter, MoreVertical, Plus, Printer, RotateCcw, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import { saleAPI } from '../../api/api';
+import { getSalesFromResponse, normalizeInvoice } from './salesInvoiceUtils';
 
 const { RangePicker } = DatePicker;
 
@@ -28,24 +29,6 @@ const PAYMENT_METHOD_LABELS = {
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 const formatDate = (value) => value ? new Date(value).toLocaleString('vi-VN') : '—';
-
-const normalizeInvoice = (sale = {}) => ({
-  ...sale,
-  id: sale._id || sale.id,
-  customerName: sale.customer?.name || 'Khách lẻ',
-  customerPhone: sale.customer?.phone || '—',
-  staff: sale.createdBy?.name || '—',
-  total: sale.totalAmount || 0,
-  paid: sale.amountPaid || sale.totalAmount || 0,
-  items: (sale.items || []).map((item, index) => ({
-    id: item._id || `${sale._id}-${index}`,
-    name: item.medicine?.name || 'Không rõ thuốc',
-    quantity: item.quantity || 0,
-    unitPrice: item.unitPrice || 0,
-    discount: item.discount || 0,
-    total: item.total || 0,
-  })),
-});
 
 const StatusTag = ({ status }) => {
   const meta = STATUS_META[status] || STATUS_META.completed;
@@ -72,10 +55,12 @@ const SalesInvoicePage = () => {
   const [activeFilters, setActiveFilters] = useState(filters);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
 
-  const fetchInvoices = async (nextFilters = activeFilters) => {
+  const fetchInvoices = useCallback(async (nextFilters = activeFilters) => {
     setLoading(true);
+    setError('');
     try {
       const params = {
         limit: 200,
@@ -85,20 +70,21 @@ const SalesInvoicePage = () => {
         } : {}),
       };
       const response = await saleAPI.getAll(params);
-      const sales = response.data?.sales || response.data || [];
-      setInvoices(Array.isArray(sales) ? sales.map(normalizeInvoice) : []);
+      const sales = getSalesFromResponse(response.data);
+      setInvoices(sales.map(normalizeInvoice));
     } catch (error) {
-      message.error(error.response?.data?.message || 'Không thể tải danh sách hóa đơn');
+      const messageText = error.response?.data?.message || 'Không thể tải danh sách hóa đơn';
+      setError(messageText);
+      message.error(messageText);
       setInvoices([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeFilters]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchInvoices();
-  }, []);
+    void Promise.resolve().then(() => fetchInvoices());
+  }, [fetchInvoices]);
 
   const filteredInvoices = useMemo(() => {
     return invoices.filter((invoice) => {
@@ -246,6 +232,20 @@ const SalesInvoicePage = () => {
           </Space>
         </div>
       </Card>
+
+      {error && (
+        <Alert
+          type="error"
+          message="Lỗi tải dữ liệu"
+          description={error}
+          className="mb-4"
+          action={
+            <Button size="small" onClick={() => fetchInvoices(activeFilters)} loading={loading}>
+              Thử lại
+            </Button>
+          }
+        />
+      )}
 
       <Table
         rowKey="id"
