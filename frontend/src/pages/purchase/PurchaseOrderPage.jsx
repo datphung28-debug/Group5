@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { 
   Button, 
   Card, 
@@ -26,6 +26,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import { importAPI, medicineAPI, supplierAPI } from '../../api/api';
+import { buildImportPayload, summarizePurchaseItems } from './purchaseOrderUtils';
 
 const { TextArea } = Input;
 
@@ -35,6 +36,7 @@ const PurchaseOrderPage = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [medicines, setMedicines] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
+  const [optionsError, setOptionsError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   
   const [items, setItems] = useState([
@@ -43,47 +45,38 @@ const PurchaseOrderPage = () => {
   
   const [discountPercent, setDiscountPercent] = useState(0);
 
-  useEffect(() => {
-    const fetchOptions = async () => {
-      setLoadingOptions(true);
-      try {
-        const [supplierRes, medicineRes] = await Promise.all([
-          supplierAPI.getAll({ limit: 500 }),
-          medicineAPI.getAll({ limit: 5000 }),
-        ]);
-        const supplierData = supplierRes.data?.suppliers || supplierRes.data || [];
-        const medicineData = medicineRes.data?.medicines || medicineRes.data?.data || medicineRes.data || [];
-        setSuppliers(Array.isArray(supplierData) ? supplierData : []);
-        setMedicines(Array.isArray(medicineData) ? medicineData : []);
-      } catch (error) {
-        message.error(error.response?.data?.message || 'Không thể tải dữ liệu nhà cung cấp/thuốc');
-        setSuppliers([]);
-        setMedicines([]);
-      } finally {
-        setLoadingOptions(false);
-      }
-    };
-
-    fetchOptions();
+  const fetchOptions = useCallback(async () => {
+    setLoadingOptions(true);
+    setOptionsError('');
+    try {
+      const [supplierRes, medicineRes] = await Promise.all([
+        supplierAPI.getAll({ limit: 500 }),
+        medicineAPI.getAll({ limit: 5000 }),
+      ]);
+      const supplierData = supplierRes.data?.suppliers || supplierRes.data || [];
+      const medicineData = medicineRes.data?.medicines || medicineRes.data?.data || medicineRes.data || [];
+      setSuppliers(Array.isArray(supplierData) ? supplierData : []);
+      setMedicines(Array.isArray(medicineData) ? medicineData : []);
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Không thể tải dữ liệu nhà cung cấp/thuốc';
+      setOptionsError(errorMessage);
+      message.error(errorMessage);
+      setSuppliers([]);
+      setMedicines([]);
+    } finally {
+      setLoadingOptions(false);
+    }
   }, []);
 
+  useEffect(() => {
+    void Promise.resolve().then(fetchOptions);
+  }, [fetchOptions]);
+
   // Auto Calculations
-  const summary = useMemo(() => {
-    const totalItems = items.filter(item => item.medicineId).length;
-    const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
-    const subtotal = items.reduce((sum, item) => {
-      const lineTotal = (item.quantity || 0) * (item.importPrice || 0) * (1 - (item.discount || 0) / 100);
-      return sum + lineTotal;
-    }, 0);
-    const total = subtotal * (1 - discountPercent / 100);
-    
-    return {
-      totalItems,
-      totalQuantity,
-      subtotal,
-      total
-    };
-  }, [items, discountPercent]);
+  const summary = useMemo(
+    () => summarizePurchaseItems({ items, discountPercent }),
+    [items, discountPercent]
+  );
 
   const handleAddRow = () => {
     setItems([
@@ -121,32 +114,14 @@ const PurchaseOrderPage = () => {
   };
 
   const handleFinish = async (values) => {
-    const validItems = items.filter(item => item.medicineId);
-
-    if (validItems.length === 0) {
-      message.error('Vui lòng thêm ít nhất một loại thuốc');
-      return;
-    }
-
     setSubmitting(true);
     try {
-      await importAPI.create({
-        supplier: values.supplierId,
-        paymentStatus: values.paymentMethod === 'debt' ? 'unpaid' : 'paid',
-        importDate: values.orderDate?.toISOString() || new Date().toISOString(),
-        notes: values.note,
-        items: validItems.map((item) => ({
-          medicine: item.medicineId,
-          quantity: item.quantity || 1,
-          importPrice: Math.round((item.importPrice || 0) * (1 - (item.discount || 0) / 100) * (1 - discountPercent / 100)),
-          batchNumber: item.batchNumber,
-          expiryDate: item.expiryDate?.toISOString(),
-        })),
-      });
+      const payload = buildImportPayload({ values, items, discountPercent });
+      await importAPI.create(payload);
       message.success('Đã lưu phiếu nhập hàng thành công');
       navigate('/purchase-orders');
     } catch (error) {
-      message.error(error.response?.data?.message || 'Không thể lưu phiếu nhập hàng');
+      message.error(error.response?.data?.message || error.message || 'Không thể lưu phiếu nhập hàng');
     } finally {
       setSubmitting(false);
     }
@@ -303,6 +278,20 @@ const PurchaseOrderPage = () => {
       />
 
       <Form form={form} layout="vertical" onFinish={handleFinish}>
+        {optionsError && (
+          <Alert
+            type="error"
+            message="Lỗi tải dữ liệu"
+            description={optionsError}
+            className="mb-4"
+            action={
+              <Button size="small" onClick={fetchOptions} loading={loadingOptions}>
+                Thử lại
+              </Button>
+            }
+          />
+        )}
+
         <div className="flex flex-col lg:flex-row gap-6">
           {/* LEFT SIDEBAR */}
           <div className="w-full lg:w-[320px] flex flex-col gap-6">
