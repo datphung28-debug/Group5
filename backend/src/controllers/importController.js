@@ -1,6 +1,7 @@
 import Import from "../models/Import.js";
 import { sendErrorResponse } from "../utils/errorResponse.js";
 import Medicine from "../models/Medicine.js";
+import Supplier from "../models/Supplier.js";
 
 // Tạo mã phiếu nhập
 const generateImportCode = async () => {
@@ -8,6 +9,43 @@ const generateImportCode = async () => {
   const prefix = `PN${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
   const count = await Import.countDocuments();
   return `${prefix}${String(count + 1).padStart(4, "0")}`;
+};
+
+export const validateCreateImportPayload = ({ supplier, items } = {}) => {
+  if (!supplier) return { message: "Vui lòng chọn nhà cung cấp" };
+  if (!Array.isArray(items) || items.length === 0) {
+    return { message: "Phiếu nhập phải có ít nhất một mặt hàng" };
+  }
+
+  for (const item of items) {
+    if (!item?.medicine) return { message: "Vui lòng chọn thuốc nhập" };
+    if (item.quantity === undefined || item.quantity === null || item.quantity === "") {
+      return { message: "Vui lòng nhập số lượng" };
+    }
+    if (item.importPrice === undefined || item.importPrice === null || item.importPrice === "") {
+      return { message: "Vui lòng nhập giá nhập" };
+    }
+    if (!Number.isFinite(Number(item.quantity))) return { message: "Số lượng nhập không hợp lệ" };
+    if (!Number.isFinite(Number(item.importPrice))) return { message: "Giá nhập không hợp lệ" };
+    if (Number(item.quantity) <= 0) return { message: "Số lượng nhập phải lớn hơn 0" };
+    if (Number(item.importPrice) < 0) return { message: "Giá nhập không được âm" };
+  }
+
+  return null;
+};
+
+export const buildMedicineImportUpdate = (item) => {
+  const update = {
+    $inc: { stock: Number(item.quantity) },
+  };
+
+  if (item.importPrice !== undefined && item.importPrice !== null) {
+    update.importPrice = Number(item.importPrice);
+  }
+  if (item.expiryDate) update.expiryDate = item.expiryDate;
+  if (item.manufacturingDate) update.manufacturingDate = item.manufacturingDate;
+
+  return update;
 };
 
 // @GET /api/imports
@@ -55,25 +93,29 @@ export const createImport = async (req, res) => {
   try {
     const { supplier, items, paymentStatus, importDate, notes } = req.body;
 
-    if (!items || items.length === 0) {
-      return res.status(400).json({ message: "Phiếu nhập phải có ít nhất một mặt hàng" });
-    }
+    const validationError = validateCreateImportPayload({ supplier, items });
+    if (validationError) return res.status(400).json(validationError);
+
+    const supplierExists = await Supplier.findOne({ _id: supplier, isActive: { $ne: false } });
+    if (!supplierExists) return res.status(400).json({ message: "Nhà cung cấp không tồn tại" });
 
     let totalAmount = 0;
     const processedItems = [];
 
     for (const item of items) {
-      const medicine = await Medicine.findById(item.medicine);
+      const medicine = await Medicine.findOne({ _id: item.medicine, isActive: true });
       if (!medicine) {
         return res.status(400).json({ message: `Thuốc không tồn tại: ${item.medicine}` });
       }
 
-      const itemTotal = item.importPrice * item.quantity;
+      const quantity = Number(item.quantity);
+      const importPrice = Number(item.importPrice);
+      const itemTotal = importPrice * quantity;
       totalAmount += itemTotal;
       processedItems.push({
         medicine: medicine._id,
-        quantity: item.quantity,
-        importPrice: item.importPrice,
+        quantity,
+        importPrice,
         expiryDate: item.expiryDate,
         manufacturingDate: item.manufacturingDate,
         batchNumber: item.batchNumber,
@@ -95,10 +137,9 @@ export const createImport = async (req, res) => {
 
     // Cộng tồn kho và cập nhật hạn dùng
     for (const item of processedItems) {
-      const update = { $inc: { stock: item.quantity } };
-      if (item.expiryDate) update.expiryDate = item.expiryDate;
-      if (item.importPrice) update.importPrice = item.importPrice;
-      await Medicine.findByIdAndUpdate(item.medicine, update);
+      await Medicine.findByIdAndUpdate(item.medicine, buildMedicineImportUpdate(item), {
+        runValidators: true,
+      });
     }
 
     res.status(201).json(importDoc);
