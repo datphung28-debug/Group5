@@ -8,39 +8,6 @@ import UserKPIs from './components/UserKPIs';
 import UserTable from './components/UserTable';
 import { ROLE_META } from './userData';
 
-const MOCK_USERS = [
-  {
-    id: 'mock-admin',
-    name: 'Admin GPP',
-    email: 'admin@pharmacy.com',
-    phone: '0901234567',
-    address: 'Văn phòng nhà thuốc',
-    role: 'admin',
-    isActive: true,
-    createdAt: '2026-05-01T08:00:00.000Z',
-  },
-  {
-    id: 'mock-pharmacist',
-    name: 'Dược sĩ Minh',
-    email: 'duocsi@pharmacy.com',
-    phone: '0912345678',
-    address: 'Quầy thuốc chính',
-    role: 'pharmacist',
-    isActive: true,
-    createdAt: '2026-05-03T08:00:00.000Z',
-  },
-  {
-    id: 'mock-customer',
-    name: 'Tài khoản khách hàng',
-    email: 'customer@example.com',
-    phone: '0909000000',
-    address: 'TP. Hồ Chí Minh',
-    role: 'customer',
-    isActive: false,
-    createdAt: '2026-05-10T08:00:00.000Z',
-  },
-];
-
 const initialFilters = {
   role: 'all',
   search: '',
@@ -57,6 +24,7 @@ const StaffPage = () => {
   const [filters, setFilters] = useState(initialFilters);
   const [activeFilters, setActiveFilters] = useState(initialFilters);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
@@ -68,8 +36,10 @@ const StaffPage = () => {
         const res = await userAPI.getAll({ limit: 100 });
         const nextUsers = normalizeUsers(res.data);
         setUsers(nextUsers);
-      } catch {
-        setUsers(MOCK_USERS);
+        setLoadError(null);
+      } catch (error) {
+        setUsers([]);
+        setLoadError(error.response?.data?.message || 'Không thể tải danh sách người dùng');
       } finally {
         setLoading(false);
       }
@@ -184,6 +154,12 @@ const StaffPage = () => {
           </Button>
         }
       />
+
+      {loadError && (
+        <div className="mb-4 rounded-[var(--radius-md)] border border-[var(--color-debt)] bg-[var(--color-debt-bg)] px-4 py-3 text-[13px] font-medium text-[var(--color-debt)]">
+          {loadError}
+        </div>
+      )}
 
       <UserFilter
         filters={filters}

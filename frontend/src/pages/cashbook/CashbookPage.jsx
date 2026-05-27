@@ -19,23 +19,22 @@ const CashbookPage = () => {
     fetchTransactions();
   }, [fetchTransactions]);
 
-  const handleFilter = () => {
-    message.loading('Đang cập nhật dữ liệu...');
-    fetchTransactions();
+  const handleFilter = (filters) => {
+    fetchTransactions(filters);
   };
 
   const handleReset = () => {
-    message.info('Đã đặt lại bộ lọc');
     fetchTransactions();
   };
 
-  const handleSaveTransaction = (data) => {
-    addTransaction({
-      ...data,
-      staff: 'Quản trị viên', // Mocking current user
-    });
-    setIsModalVisible(false);
-    message.success('Đã lưu giao dịch mới thành công');
+  const handleSaveTransaction = async (data) => {
+    const result = await addTransaction(data);
+    if (result.success) {
+      setIsModalVisible(false);
+      message.success('Đã lưu giao dịch mới thành công');
+      return;
+    }
+    message.error(result.message || 'Không thể lưu giao dịch');
   };
 
   const handleViewDetail = (transaction) => {

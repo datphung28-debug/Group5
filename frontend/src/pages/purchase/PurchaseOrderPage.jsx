@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   Button, 
   Card, 
@@ -14,48 +14,58 @@ import {
   Alert,
   Popconfirm,
   message,
-  Tooltip
+  Spin
 } from 'antd';
 import { 
   ArrowLeft, 
   Plus, 
   PlusSquare, 
-  Trash2, 
-  Calculator,
+  Trash2,
   Info
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
+import { importAPI, medicineAPI, supplierAPI } from '../../api/api';
 
 const { TextArea } = Input;
-
-// Mock Suppliers
-const SUPPLIERS = [
-  { id: 'S1', name: 'DHG Pharma (Dược Hậu Giang)' },
-  { id: 'S2', name: 'Imexpharm' },
-  { id: 'S3', name: 'Traphaco' },
-  { id: 'S4', name: 'Mekophar' },
-  { id: 'S5', name: 'DKSH Việt Nam' },
-];
-
-// Mock Medicines for select
-const MEDICINES = [
-  { id: '1', code: 'TH001', name: 'Paracetamol 500mg', unit: 'Viên', price: 1200 },
-  { id: '2', code: 'TH002', name: 'Amoxicillin 500mg', unit: 'Viên', price: 2800 },
-  { id: '3', code: 'TH003', name: 'Panadol Extra', unit: 'Viên', price: 2100 },
-  { id: '4', code: 'TH004', name: 'Berberin', unit: 'Viên', price: 400 },
-  { id: '5', code: 'TH005', name: 'Efferalgan 500mg', unit: 'Viên', price: 2500 },
-];
 
 const PurchaseOrderPage = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
+  const [suppliers, setSuppliers] = useState([]);
+  const [medicines, setMedicines] = useState([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   
   const [items, setItems] = useState([
     { key: 'first-row', medicineId: null, unit: '', quantity: 1, importPrice: 0, discount: 0, batchNumber: '', expiryDate: null }
   ]);
   
   const [discountPercent, setDiscountPercent] = useState(0);
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      setLoadingOptions(true);
+      try {
+        const [supplierRes, medicineRes] = await Promise.all([
+          supplierAPI.getAll({ limit: 500 }),
+          medicineAPI.getAll({ limit: 5000 }),
+        ]);
+        const supplierData = supplierRes.data?.suppliers || supplierRes.data || [];
+        const medicineData = medicineRes.data?.medicines || medicineRes.data?.data || medicineRes.data || [];
+        setSuppliers(Array.isArray(supplierData) ? supplierData : []);
+        setMedicines(Array.isArray(medicineData) ? medicineData : []);
+      } catch (error) {
+        message.error(error.response?.data?.message || 'Không thể tải dữ liệu nhà cung cấp/thuốc');
+        setSuppliers([]);
+        setMedicines([]);
+      } finally {
+        setLoadingOptions(false);
+      }
+    };
+
+    fetchOptions();
+  }, []);
 
   // Auto Calculations
   const summary = useMemo(() => {
@@ -97,10 +107,10 @@ const PurchaseOrderPage = () => {
         
         // Auto fill unit and price if medicine is selected
         if (field === 'medicineId') {
-          const medicine = MEDICINES.find(m => m.id === value);
+          const medicine = medicines.find(m => m._id === value);
           if (medicine) {
-            newItem.unit = medicine.unit;
-            newItem.importPrice = medicine.price;
+            newItem.unit = typeof medicine.unit === 'object' ? medicine.unit?.name : medicine.unit;
+            newItem.importPrice = medicine.importPrice || 0;
           }
         }
         
@@ -110,22 +120,36 @@ const PurchaseOrderPage = () => {
     }));
   };
 
-  const handleFinish = (values) => {
-    const orderData = {
-      ...values,
-      discountPercent,
-      items: items.filter(item => item.medicineId),
-      totalAmount: summary.total
-    };
-    
-    if (orderData.items.length === 0) {
+  const handleFinish = async (values) => {
+    const validItems = items.filter(item => item.medicineId);
+
+    if (validItems.length === 0) {
       message.error('Vui lòng thêm ít nhất một loại thuốc');
       return;
     }
-    
-    console.log('Order Data:', orderData);
-    message.success('Đã lưu đơn nhập hàng thành công');
-    navigate('/purchase-orders');
+
+    setSubmitting(true);
+    try {
+      await importAPI.create({
+        supplier: values.supplierId,
+        paymentStatus: values.paymentMethod === 'debt' ? 'unpaid' : 'paid',
+        importDate: values.orderDate?.toISOString() || new Date().toISOString(),
+        notes: values.note,
+        items: validItems.map((item) => ({
+          medicine: item.medicineId,
+          quantity: item.quantity || 1,
+          importPrice: Math.round((item.importPrice || 0) * (1 - (item.discount || 0) / 100) * (1 - discountPercent / 100)),
+          batchNumber: item.batchNumber,
+          expiryDate: item.expiryDate?.toISOString(),
+        })),
+      });
+      message.success('Đã lưu phiếu nhập hàng thành công');
+      navigate('/purchase-orders');
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Không thể lưu phiếu nhập hàng');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const columns = [
@@ -149,8 +173,8 @@ const PurchaseOrderPage = () => {
           value={value}
           onChange={(val) => handleItemChange(record.key, 'medicineId', val)}
         >
-          {MEDICINES.map(m => (
-            <Select.Option key={m.id} value={m.id}>
+          {medicines.map(m => (
+            <Select.Option key={m._id} value={m._id}>
               <div className="flex flex-col">
                 <span className="font-medium">{m.name}</span>
                 <span className="text-[11px] text-[var(--color-text-muted)]">{m.code}</span>
@@ -295,9 +319,10 @@ const PurchaseOrderPage = () => {
                   showSearch
                   placeholder="-- Chọn nhà cung cấp --"
                   optionFilterProp="children"
+                  loading={loadingOptions}
                 >
-                  {SUPPLIERS.map(s => (
-                    <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>
+                  {suppliers.map(s => (
+                    <Select.Option key={s._id} value={s._id}>{s.name}</Select.Option>
                   ))}
                 </Select>
               </Form.Item>
@@ -373,6 +398,8 @@ const PurchaseOrderPage = () => {
                     htmlType="submit"
                     size="large"
                     block
+                    loading={submitting}
+                    disabled={loadingOptions}
                     className="h-12 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] border-none shadow-md font-bold text-[var(--font-size-md)]"
                   >
                     HOÀN TẤT ĐƠN HÀNG
@@ -419,13 +446,16 @@ const PurchaseOrderPage = () => {
               </div>
 
               <div className="overflow-x-auto">
-                <Table
-                  dataSource={items}
-                  columns={columns}
-                  pagination={false}
-                  className="purchase-table"
-                  rowClassName="hover:bg-[var(--color-bg-app)] transition-colors"
-                />
+                <Spin spinning={loadingOptions}>
+                  <Table
+                    dataSource={items}
+                    columns={columns}
+                    pagination={false}
+                    rowKey="key"
+                    className="purchase-table"
+                    rowClassName="hover:bg-[var(--color-bg-app)] transition-colors"
+                  />
+                </Spin>
               </div>
 
               <div className="p-4 bg-[var(--color-bg-subtle)] border-t border-[var(--color-border-light)]">

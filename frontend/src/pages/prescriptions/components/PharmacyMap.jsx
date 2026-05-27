@@ -211,7 +211,6 @@ const ZoneBlock = ({ zone, medicineMap, highlightSet, highlightMedicines, getSto
                     isHighlighted={isHighlighted}
                     stockStatus={stockStatus}
                     highlightItem={highlightItem}
-                    zoneColor={zone.color}
                     onClick={() => onCellClick && onCellClick(medicine, key)}
                   />
                 );
@@ -224,7 +223,7 @@ const ZoneBlock = ({ zone, medicineMap, highlightSet, highlightMedicines, getSto
   );
 };
 
-const ShelfCell = ({ cellKey, medicine, isHighlighted, stockStatus, highlightItem, zoneColor, onClick }) => {
+const ShelfCell = ({ cellKey, medicine, isHighlighted, stockStatus, highlightItem, onClick }) => {
   const getStyle = () => {
     if (isHighlighted) return {
       backgroundColor: '#dbeafe',

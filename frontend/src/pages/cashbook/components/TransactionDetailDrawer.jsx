@@ -1,6 +1,6 @@
 import React from 'react';
 import { Drawer, Descriptions, Tag, Divider, Typography, Space } from 'antd';
-import { Calendar, User, CreditCard, Tag as TagIcon, FileText, History } from 'lucide-react';
+import { Calendar, User, Tag as TagIcon, FileText, History } from 'lucide-react';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -46,7 +46,7 @@ const TransactionDetailDrawer = ({ visible, transaction, onClose }) => {
               <Tag className="rounded-md">{transaction.category}</Tag>
             </Descriptions.Item>
             <Descriptions.Item label="Phương thức">
-              <Tag color="blue" className="rounded-md">{transaction.paymentMethod}</Tag>
+              <Tag color="blue" className="rounded-md">{transaction.paymentMethodLabel || transaction.paymentMethod}</Tag>
             </Descriptions.Item>
             {transaction.reference && (
               <Descriptions.Item label="Tham chiếu">

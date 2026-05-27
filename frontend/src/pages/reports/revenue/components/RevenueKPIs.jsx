@@ -5,7 +5,7 @@ import useRevenueReportStore from '../../../../stores/useRevenueReportStore';
 
 const { Text } = Typography;
 
-const KPICard = ({ title, value, subtitle, icon: Icon, color, bgColor, trend }) => (
+const KPICard = ({ title, value, subtitle, icon, color, bgColor, trend }) => (
   <Card className="shadow-[var(--shadow-card)] border-[var(--color-border-light)] rounded-[var(--radius-lg)] h-full overflow-hidden relative">
     <div className="flex items-start justify-between">
       <div className="flex items-center gap-4">
@@ -13,7 +13,7 @@ const KPICard = ({ title, value, subtitle, icon: Icon, color, bgColor, trend }) 
           className="w-12 h-12 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
           style={{ backgroundColor: bgColor }}
         >
-          <Icon size={24} style={{ color: color }} />
+          {React.createElement(icon, { size: 24, style: { color } })}
         </div>
         <div className="min-w-0">
           <div className="text-[var(--color-text-secondary)] text-[var(--font-size-sm)] font-medium mb-1">
@@ -40,7 +40,7 @@ const KPICard = ({ title, value, subtitle, icon: Icon, color, bgColor, trend }) 
 );
 
 const RevenueKPIs = () => {
-  const { kpis, loading } = useRevenueReportStore();
+  const { kpis } = useRevenueReportStore();
 
   const kpiData = [
     {

@@ -2,9 +2,31 @@ import React from 'react';
 import { Button, Select, DatePicker, Space, Row, Col, Segmented } from 'antd';
 import { Filter, RotateCcw, FileBarChart } from 'lucide-react';
 import useRevenueReportStore from '../../../../stores/useRevenueReportStore';
+import dayjs from 'dayjs';
 
-const CashbookFilter = () => {
+const RevenueFilter = () => {
   const { filters, setFilters, fetchReport, loading } = useRevenueReportStore();
+
+  const applyQuickRange = (value) => {
+    const today = dayjs();
+    const ranges = {
+      'Hôm nay': [today.startOf('day'), today.endOf('day')],
+      '7 ngày': [today.subtract(6, 'day').startOf('day'), today.endOf('day')],
+      'Tháng này': [today.startOf('month'), today.endOf('day')],
+      'Tháng trước': [today.subtract(1, 'month').startOf('month'), today.subtract(1, 'month').endOf('month')],
+      'Quý này': [today.month(Math.floor(today.month() / 3) * 3).startOf('month'), today.endOf('day')],
+    };
+    const [fromDate, toDate] = ranges[value] || [filters.fromDate, filters.toDate];
+    setFilters({ fromDate, toDate });
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      fromDate: dayjs().startOf('month'),
+      toDate: dayjs(),
+      comparePeriod: 'none',
+    });
+  };
 
   return (
     <div className="bg-white p-4 rounded-[var(--radius-lg)] border border-[var(--color-border-light)] shadow-[var(--shadow-card)] mb-6">
@@ -16,6 +38,7 @@ const CashbookFilter = () => {
               options={['Hôm nay', '7 ngày', 'Tháng này', 'Tháng trước', 'Quý này']}
               className="bg-[var(--color-bg-subtle)]"
               defaultValue="Tháng này"
+              onChange={applyQuickRange}
             />
           </div>
         </Col>
@@ -26,7 +49,8 @@ const CashbookFilter = () => {
               <span className="text-[var(--color-text-secondary)] text-[13px]">So sánh:</span>
               <Select
                 className="w-40 h-9"
-                defaultValue="none"
+                value={filters.comparePeriod}
+                onChange={(value) => setFilters({ comparePeriod: value })}
                 options={[
                   { value: 'none', label: 'Không so sánh' },
                   { value: 'previous_period', label: 'Kỳ trước' },
@@ -51,16 +75,27 @@ const CashbookFilter = () => {
           <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-[var(--color-border-light)]">
             <div className="flex items-center gap-2">
               <span className="text-[var(--color-text-secondary)] text-[13px]">Từ ngày:</span>
-              <DatePicker className="h-9 w-36" format="DD/MM/YYYY" defaultValue={filters.fromDate} />
+              <DatePicker
+                className="h-9 w-36"
+                format="DD/MM/YYYY"
+                value={filters.fromDate}
+                onChange={(date) => setFilters({ fromDate: date })}
+              />
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[var(--color-text-secondary)] text-[13px]">Đến ngày:</span>
-              <DatePicker className="h-9 w-36" format="DD/MM/YYYY" defaultValue={filters.toDate} />
+              <DatePicker
+                className="h-9 w-36"
+                format="DD/MM/YYYY"
+                value={filters.toDate}
+                onChange={(date) => setFilters({ toDate: date })}
+              />
             </div>
             <Button 
               type="text"
               icon={<RotateCcw size={14} className="mr-1 inline" />}
               className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] h-9 text-[13px]"
+              onClick={resetFilters}
             >
               Đặt lại
             </Button>
@@ -71,4 +106,4 @@ const CashbookFilter = () => {
   );
 };
 
-export default CashbookFilter;
+export default RevenueFilter;

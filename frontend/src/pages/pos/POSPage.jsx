@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Input, Button, Table, InputNumber, Modal, Drawer, message, Tooltip, Tag, Checkbox, Form, Select, Segmented } from 'antd';
+import { Input, Button, Table, InputNumber, Modal, Drawer, message, Tooltip, Tag, Checkbox, Form, Select } from 'antd';
 import { 
   SearchOutlined, ScanOutlined, UserAddOutlined, 
   DeleteOutlined, ShoppingCartOutlined, LogoutOutlined, 
   CreditCardOutlined, BankOutlined, WalletOutlined,
   HistoryOutlined, EnvironmentOutlined, PlusOutlined,
-  PrinterOutlined, FileSearchOutlined, MessageOutlined
+  PrinterOutlined, FileSearchOutlined
 } from '@ant-design/icons';
 import { Pill } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -46,71 +46,6 @@ const POSPage = () => {
   // Search state
   const [searchText, setSearchText] = useState('');
 
-  // ═══════════════════════════════════════════════════════════════════
-  // PHASE 4: PHÂN LUỒNG BÁN HÀNG (THEO ĐƠN vs TƯ VẤN OTC)
-  // ═══════════════════════════════════════════════════════════════════
-  const [posMode, setPosMode] = useState('prescription'); // 'prescription' | 'otc'
-  const [selectedSymptom, setSelectedSymptom] = useState(null);
-
-  const consultationCombos = [
-    {
-      id: 'camsot', name: 'Cảm, Sốt, Đau đầu', icon: '🤒',
-      items: [
-        { code: 'PND001', qty: 10, note: 'Sáng 1 viên, Chiều 1 viên sau ăn' },
-        { code: 'DEC001', qty: 10, note: 'Sáng 1 viên, Chiều 1 viên' },
-        { code: 'VTC500', qty: 1, note: 'Pha 1 viên/ngày uống tăng đề kháng' }
-      ]
-    },
-    {
-      id: 'tieuchay', name: 'Tiêu chảy, Rối loạn TH', icon: '🤢',
-      items: [
-        { code: 'SME001', qty: 6, note: 'Pha 1 gói uống sau khi đi ngoài' },
-        { code: 'BBR001', qty: 20, note: 'Sáng 2 viên, Chiều 2 viên' },
-        { code: 'ORS245', qty: 5, note: 'Pha 1 gói với 200ml nước bù điện giải' }
-      ]
-    },
-    {
-      id: 'daunhuc', name: 'Đau nhức cơ xương khớp', icon: '🤕',
-      items: [
-        { code: 'PND001', qty: 10, note: 'Sáng 1, Chiều 1 giảm đau' },
-        { code: 'SLP001', qty: 1, note: 'Bôi ngoài da chỗ đau 3-4 lần/ngày' }
-      ]
-    },
-    {
-      id: 'diung', name: 'Dị ứng, Mẩn ngứa', icon: '🤧',
-      items: [
-        { code: 'TET001', qty: 1, note: 'Bôi ngoài da vùng ngứa' },
-        { code: 'VTC500', qty: 1, note: 'Bổ sung vitamin C' }
-      ]
-    }
-  ];
-
-  const handleAddComboToCart = (combo) => {
-    let addedCount = 0;
-    const currentCart = [...activeOrder.cart];
-
-    combo.items.forEach(comboItem => {
-      const med = medicines.find(m => m.code === comboItem.code);
-      if (med) {
-        const existingIdx = currentCart.findIndex(item => item.medicine._id === med._id);
-        if (existingIdx >= 0) {
-           currentCart[existingIdx].quantity += comboItem.qty;
-        } else {
-           currentCart.unshift({ medicine: med, quantity: comboItem.qty, discount: 0, note: comboItem.note });
-        }
-        addedCount++;
-      }
-    });
-
-    updateActiveOrder({ cart: currentCart });
-    if (addedCount > 0) {
-      message.success(`Đã thêm liều "${combo.name}" vào giỏ hàng!`);
-      setSelectedSymptom(null);
-    } else {
-      message.error('Không tìm thấy thuốc trong kho cho liều này!');
-    }
-  };
-
   // Phase 2: Hóa đơn trong ca (live data)
   const [todayInvoices, setTodayInvoices] = useState([]);
   const [autoPrint, setAutoPrint] = useState(true);
@@ -134,48 +69,12 @@ const POSPage = () => {
     try {
       const res = await saleAPI.getAll({ customer: customerId, limit: 100 });
       setCustomerHistory(res.data?.sales || res.data?.data || res.data || []);
-    } catch (error) {
+    } catch {
       message.error('Không thể tải lịch sử hóa đơn của khách hàng này');
     } finally {
       setIsHistoryLoading(false);
     }
   };
-
-  // ═══════════════════════════════════════════════════════════════════
-  // PHASE 1: PHÍM TẮT TOÀN CỤC
-  // F2 = focus search, F9 = thanh toán, F10 = toggle in, ESC = clear
-  // ═══════════════════════════════════════════════════════════════════
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'F2') {
-        e.preventDefault();
-        searchRef.current?.focus();
-      }
-      if (e.key === 'F9') {
-        e.preventDefault();
-        handleCheckout();
-      }
-      if (e.key === 'F10') {
-        e.preventDefault();
-        setAutoPrint(prev => !prev);
-      }
-      if (e.key === 'Escape') {
-        setSearchText('');
-        searchRef.current?.blur();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Clock & Data fetching
-  useEffect(() => {
-    fetchMedicines();
-    fetchTodayInvoices();
-    fetchCustomers();
-    const timer = setInterval(() => setTime(dayjs()), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const fetchCustomers = async () => {
     try {
@@ -388,6 +287,43 @@ const POSPage = () => {
     }
   };
 
+  // ═══════════════════════════════════════════════════════════════════
+  // PHASE 1: PHÍM TẮT TOÀN CỤC
+  // F2 = focus search, F9 = thanh toán, F10 = toggle in, ESC = clear
+  // ═══════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+      if (e.key === 'F9') {
+        e.preventDefault();
+        handleCheckout();
+      }
+      if (e.key === 'F10') {
+        e.preventDefault();
+        setAutoPrint(prev => !prev);
+      }
+      if (e.key === 'Escape') {
+        setSearchText('');
+        searchRef.current?.blur();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleCheckout]);
+
+  // Clock & Data fetching
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchMedicines();
+    fetchTodayInvoices();
+    fetchCustomers();
+    const timer = setInterval(() => setTime(dayjs()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const handleCreateCustomer = async () => {
     try {
       const values = await customerForm.validateFields();
@@ -568,22 +504,14 @@ const POSPage = () => {
           {/* ═══ CỘT 1: GIỎ HÀNG (65%) ═══ */}
           <div className="flex-[65] flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
 
-            {/* ═══ KHU VỰC TÌM KIẾM / TƯ VẤN ═══ */}
+            {/* ═══ KHU VỰC TÌM KIẾM ═══ */}
             <div className="border-b border-slate-200 bg-white">
-              <div className="px-3 pt-3 pb-2 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                 <Segmented 
-                   options={[
-                     { label: <div className="px-2 py-0.5 flex items-center gap-2"><FileSearchOutlined />Bán theo đơn / Tìm lẻ</div>, value: 'prescription' },
-                     { label: <div className="px-2 py-0.5 flex items-center gap-2 font-medium text-blue-600"><MessageOutlined />Tư vấn triệu chứng (Cắt liều)</div>, value: 'otc' }
-                   ]} 
-                   value={posMode}
-                   onChange={setPosMode}
-                   className="shadow-sm"
-                 />
+              <div className="px-3 pt-3 pb-2 border-b border-slate-100 flex items-center gap-2 bg-slate-50 text-blue-600 font-medium">
+                 <FileSearchOutlined />
+                 <span>Bán thuốc từ dữ liệu kho</span>
               </div>
 
-              {posMode === 'prescription' ? (
-                <div className="p-3 flex gap-2 bg-slate-50">
+              <div className="p-3 flex gap-2 bg-slate-50">
                   <div className="relative flex-1">
                     <Input
                       ref={searchRef}
@@ -626,66 +554,7 @@ const POSPage = () => {
                       Scan Đơn Khách
                     </Button>
                   </Tooltip>
-                </div>
-              ) : (
-                <div className="p-4 bg-blue-50/40">
-                  <div className="text-[11px] font-bold text-slate-500 mb-3 uppercase tracking-wide flex items-center gap-2">
-                    <MessageOutlined className="text-blue-500" /> Chọn triệu chứng của bệnh nhân
-                  </div>
-                  <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
-                    {consultationCombos.map(combo => (
-                       <div 
-                         key={combo.id}
-                         onClick={() => setSelectedSymptom(combo.id)}
-                         className={`cursor-pointer px-4 py-2.5 rounded-xl border-2 transition-all flex items-center gap-2 min-w-max shadow-sm
-                           ${selectedSymptom === combo.id ? 'border-blue-500 bg-blue-50 text-blue-700 scale-105' : 'border-transparent bg-white hover:border-blue-200 text-slate-700 hover:scale-105'}`}
-                       >
-                         <span className="text-2xl">{combo.icon}</span>
-                         <span className="font-bold text-sm">{combo.name}</span>
-                       </div>
-                    ))}
-                  </div>
-                  
-                  {/* Phác đồ đề xuất */}
-                  {selectedSymptom && (
-                    <div className="mt-4 p-4 bg-white rounded-xl border border-blue-100 shadow-md">
-                      {(() => {
-                         const combo = consultationCombos.find(c => c.id === selectedSymptom);
-                         return (
-                           <div>
-                              <div className="flex justify-between items-center mb-3 border-b border-slate-100 pb-3">
-                                <h4 className="font-bold text-slate-800 text-base">Phác đồ đề xuất: <span className="text-blue-600">{combo.name}</span></h4>
-                                <Button type="primary" className="bg-blue-600 shadow-md font-semibold" icon={<ShoppingCartOutlined />} onClick={() => handleAddComboToCart(combo)}>
-                                  Bán toàn bộ liều này
-                                </Button>
-                              </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {combo.items.map((item, idx) => {
-                                   const med = medicines.find(m => m.code === item.code);
-                                   return (
-                                     <div key={idx} className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100 hover:border-blue-200 transition-colors">
-                                       <div className="flex flex-col">
-                                         <span className="font-bold text-slate-700">{med ? med.name : `Mã thuốc: ${item.code}`} 
-                                            <span className="text-blue-700 text-[10px] font-black bg-blue-100 px-1.5 py-0.5 rounded ml-2">x{item.qty}</span>
-                                         </span>
-                                         <span className="text-[11px] text-slate-500 font-medium mt-1 bg-white px-2 py-0.5 rounded border border-slate-200 inline-block w-fit">
-                                            HDSD: {item.note}
-                                         </span>
-                                       </div>
-                                       <span className="text-sm font-bold text-emerald-600">{med ? (med.sellPrice * item.qty).toLocaleString('vi-VN') + 'đ' : ''}</span>
-                                     </div>
-                                   );
-                                })}
-                              </div>
-                           </div>
-                         )
-                      })()}
-                    </div>
-                  )}
-                </div>
-              )}
-              {/* NOTE: Removed the early closing div here */}
-
+              </div>
               {/* ═══ PHASE 1: TAB TREO ĐƠN ═══ */}
               <div className="flex items-end px-3 gap-1 -mb-[1px]">
                 {orders.map((order, idx) => (

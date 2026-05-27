@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Descriptions, Drawer, Dropdown, Empty, Form, Input, Modal, Pagination, Select, Space, Table, Tag, message } from 'antd';
 import { Activity, CalendarClock, Edit3, Eye, Filter, HeartPulse, MoreVertical, Plus, ReceiptText, RotateCcw, Sparkles, Star, UserRound, Users } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
+import { customerAPI, saleAPI } from '../../api/api';
 
 const SEGMENT_FILTER_OPTIONS = [
   { value: 'all', label: 'Tất cả' },
@@ -16,130 +17,6 @@ const GENDER_OPTIONS = [
   { value: 'other', label: 'Khác' },
 ];
 
-const INITIAL_CUSTOMERS = [
-  {
-    id: '1',
-    code: 'KH-0001',
-    name: 'Nguyễn Hoàng Nam',
-    segment: 'regular',
-    gender: 'Nam',
-    dateOfBirth: '12/08/1984',
-    phone: '0908 245 668',
-    address: 'Quận Bình Thạnh, TP.HCM',
-    allergies: 'Dị ứng Penicillin',
-    chronicDiseases: 'Viêm dạ dày',
-    medicationWarnings: 'Tránh NSAID khi đau dạ dày',
-    medicalNotes: 'Ưu tiên thuốc ít kích ứng tiêu hóa',
-    loyaltyPoints: 1250,
-    totalSpending: 8650000,
-    monthlyPurchases: 3,
-    lastPurchase: '10/05/2026',
-    joinedThisMonth: false,
-    insight: 'Thường mua thuốc tiêu hóa và vitamin vào buổi sáng',
-    purchases: [
-      { id: 'INV-20260510-0002', date: '10/05/2026', total: 1265000, items: 5, status: 'Hoàn thành' },
-      { id: 'INV-20260422-0016', date: '22/04/2026', total: 450000, items: 2, status: 'Hoàn thành' },
-      { id: 'INV-20260410-0008', date: '10/04/2026', total: 680000, items: 4, status: 'Hoàn thành' },
-    ],
-  },
-  {
-    id: '2',
-    code: 'KH-0002',
-    name: 'Trần Thị Mai',
-    segment: 'loyal',
-    gender: 'Nữ',
-    dateOfBirth: '05/02/1991',
-    phone: '0912 771 904',
-    address: 'Quận 3, TP.HCM',
-    allergies: 'Không ghi nhận',
-    chronicDiseases: 'Không',
-    medicationWarnings: 'Theo dõi khi dùng thuốc cảm',
-    medicalNotes: 'Khách hàng ưu tiên tư vấn sản phẩm chăm sóc gia đình',
-    loyaltyPoints: 2480,
-    totalSpending: 4280000,
-    monthlyPurchases: 2,
-    lastPurchase: '09/05/2026',
-    joinedThisMonth: false,
-    insight: 'Phản hồi tốt với nhắc lịch tái mua sản phẩm hô hấp',
-    purchases: [
-      { id: 'INV-20260509-0018', date: '09/05/2026', total: 184000, items: 2, status: 'Hoàn tiền' },
-      { id: 'INV-20260418-0007', date: '18/04/2026', total: 320000, items: 3, status: 'Hoàn thành' },
-    ],
-  },
-  {
-    id: '3',
-    code: 'KH-0003',
-    name: 'Phạm Gia Hân',
-    segment: 'loyal',
-    gender: 'Nữ',
-    dateOfBirth: '21/11/1978',
-    phone: '0935 105 779',
-    address: 'TP. Thủ Đức, TP.HCM',
-    allergies: 'Dị ứng Aspirin',
-    chronicDiseases: 'Tăng huyết áp',
-    medicationWarnings: 'Kiểm tra tương tác thuốc tim mạch',
-    medicalNotes: 'Cần tư vấn kỹ liều dùng và thời điểm uống thuốc',
-    loyaltyPoints: 5360,
-    totalSpending: 12780000,
-    monthlyPurchases: 4,
-    lastPurchase: '08/05/2026',
-    joinedThisMonth: false,
-    insight: 'Nhóm khách giá trị cao, mua đều đơn chăm sóc huyết áp',
-    purchases: [
-      { id: 'INV-20260508-0011', date: '08/05/2026', total: 612000, items: 4, status: 'Hoàn thành' },
-      { id: 'INV-20260430-0009', date: '30/04/2026', total: 980000, items: 6, status: 'Hoàn thành' },
-      { id: 'INV-20260412-0004', date: '12/04/2026', total: 740000, items: 5, status: 'Hoàn thành' },
-    ],
-  },
-  {
-    id: '4',
-    code: 'KH-0004',
-    name: 'Lê Minh Khoa',
-    segment: 'regular',
-    gender: 'Nam',
-    dateOfBirth: '18/06/1966',
-    phone: '0986 334 120',
-    address: 'Quận Tân Bình, TP.HCM',
-    allergies: 'Không rõ',
-    chronicDiseases: 'Đái tháo đường type 2',
-    medicationWarnings: 'Tránh sản phẩm nhiều đường',
-    medicalNotes: 'Theo dõi đơn định kỳ hàng tháng',
-    loyaltyPoints: 3120,
-    totalSpending: 18540000,
-    monthlyPurchases: 2,
-    lastPurchase: '02/05/2026',
-    joinedThisMonth: false,
-    insight: 'Nên chủ động nhắc lịch mua sản phẩm kiểm soát đường huyết',
-    purchases: [
-      { id: 'INV-20260502-0005', date: '02/05/2026', total: 1380000, items: 7, status: 'Hoàn thành' },
-      { id: 'INV-20260402-0003', date: '02/04/2026', total: 920000, items: 5, status: 'Hoàn thành' },
-    ],
-  },
-  {
-    id: '5',
-    code: 'KH-0005',
-    name: 'Võ Thanh Bình',
-    segment: 'new',
-    gender: 'Nam',
-    dateOfBirth: '30/01/1995',
-    phone: '0977 420 318',
-    address: 'Quận 7, TP.HCM',
-    allergies: '',
-    chronicDiseases: '',
-    medicationWarnings: '',
-    medicalNotes: 'Không có ghi chú',
-    loyaltyPoints: 240,
-    totalSpending: 2160000,
-    monthlyPurchases: 1,
-    lastPurchase: '06/05/2026',
-    joinedThisMonth: true,
-    insight: 'Khách mới, phù hợp chương trình tích điểm lần mua tiếp theo',
-    purchases: [
-      { id: 'INV-20260506-0008', date: '06/05/2026', total: 240000, items: 3, status: 'Hoàn thành' },
-    ],
-  },
-];
-
 const SEGMENT_META = {
   new: { label: 'Khách mới', className: 'border-[var(--color-primary-border)] bg-[var(--color-primary-light)] text-[var(--color-primary-text)]' },
   loyal: { label: 'Thân thiết', className: 'border-[var(--color-profit)] bg-[var(--color-profit-bg)] text-[var(--color-profit)]' },
@@ -148,11 +25,39 @@ const SEGMENT_META = {
 
 const formatCurrency = (value) => `${value.toLocaleString('vi-VN')}đ`;
 
-const CustomerKpiCard = ({ label, value, icon: Icon, toneClass }) => (
+const normalizeCustomer = (customer = {}) => {
+  const totalSpending = Number(customer.totalSpent || 0);
+  const createdAt = customer.createdAt ? new Date(customer.createdAt) : null;
+  const joinedThisMonth = createdAt
+    ? createdAt.getMonth() === new Date().getMonth() && createdAt.getFullYear() === new Date().getFullYear()
+    : false;
+
+  return {
+    ...customer,
+    id: customer._id || customer.id,
+    code: customer.code || `KH-${String(customer._id || customer.id || '').slice(-6).toUpperCase()}`,
+    segment: totalSpending >= 5000000 ? 'loyal' : joinedThisMonth ? 'new' : 'regular',
+    gender: GENDER_OPTIONS.find((option) => option.value === customer.gender)?.label || 'Khác',
+    dateOfBirth: customer.dateOfBirth ? new Date(customer.dateOfBirth).toLocaleDateString('vi-VN') : '—',
+    allergies: '',
+    chronicDiseases: '',
+    medicationWarnings: '',
+    medicalNotes: customer.notes || '',
+    loyaltyPoints: 0,
+    totalSpending,
+    monthlyPurchases: 0,
+    lastPurchase: '—',
+    joinedThisMonth,
+    insight: customer.notes || 'Chưa có ghi chú chăm sóc',
+    purchases: [],
+  };
+};
+
+const CustomerKpiCard = ({ label, value, icon, toneClass }) => (
   <Card className="rounded-[var(--radius-lg)] border-[var(--color-border-light)] shadow-[var(--shadow-card)]">
     <div className="flex items-center gap-4">
       <div className={`flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] ${toneClass}`}>
-        <Icon size={21} />
+        {React.createElement(icon, { size: 21 })}
       </div>
       <div>
         <p className="text-[var(--font-size-sm)] font-medium text-[var(--color-text-muted)]">{label}</p>
@@ -191,14 +96,34 @@ const HealthNotes = ({ customer }) => {
 };
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
+  const [customers, setCustomers] = useState([]);
   const [filters, setFilters] = useState({ search: '', segment: 'all' });
   const [activeFilters, setActiveFilters] = useState(filters);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [mobilePage, setMobilePage] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [customerForm] = Form.useForm();
+
+  const fetchCustomers = async () => {
+    setLoading(true);
+    try {
+      const response = await customerAPI.getAll({ limit: 500 });
+      const data = response.data?.customers || response.data || [];
+      setCustomers(Array.isArray(data) ? data.map(normalizeCustomer) : []);
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Không thể tải danh sách khách hàng');
+      setCustomers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchCustomers();
+  }, []);
 
   const filteredCustomers = useMemo(() => {
     return customers.filter((customer) => {
@@ -256,52 +181,50 @@ export default function CustomersPage() {
 
   const handleSaveCustomer = async () => {
     const values = await customerForm.validateFields();
-    const genderLabel = GENDER_OPTIONS.find((option) => option.value === values.gender)?.label || 'Khác';
+    const payload = {
+      name: values.name,
+      phone: values.phone,
+      gender: values.gender,
+      address: values.address || '',
+      notes: values.notes || values.insight || '',
+    };
 
-    if (editingCustomer) {
-      const nextCustomers = customers.map((customer) => customer.id === editingCustomer.id ? {
-        ...customer,
-        name: values.name,
-        phone: values.phone,
-        gender: genderLabel,
-        segment: values.segment,
-        address: values.address || '',
-        allergies: values.allergies || '',
-        chronicDiseases: values.chronicDiseases || '',
-        medicationWarnings: values.medicationWarnings || '',
-        medicalNotes: values.notes || '',
-        insight: values.insight || customer.insight,
-      } : customer);
-      setCustomers(nextCustomers);
-      setSelectedCustomer(nextCustomers.find((customer) => customer.id === editingCustomer.id) || null);
-      message.success('Đã cập nhật khách hàng');
-    } else {
-      const newCustomer = {
-        id: String(Date.now()),
-        code: `KH-${String(customers.length + 1).padStart(4, '0')}`,
-        name: values.name,
-        segment: values.segment,
-        gender: genderLabel,
-        dateOfBirth: '—',
-        phone: values.phone,
-        address: values.address || '',
-        allergies: values.allergies || '',
-        chronicDiseases: values.chronicDiseases || '',
-        medicationWarnings: values.medicationWarnings || '',
-        medicalNotes: values.notes || '',
-        loyaltyPoints: 0,
-        totalSpending: 0,
-        monthlyPurchases: 0,
-        lastPurchase: '—',
-        joinedThisMonth: true,
-        insight: values.insight || 'Khách mới, cần theo dõi hành vi mua hàng sau lần đầu',
-        purchases: [],
-      };
-      setCustomers((prev) => [newCustomer, ...prev]);
-      message.success('Đã thêm khách hàng');
+    try {
+      if (editingCustomer) {
+        const response = await customerAPI.update(editingCustomer._id || editingCustomer.id, payload);
+        const updatedCustomer = normalizeCustomer(response.data);
+        setCustomers((current) => current.map((customer) => customer.id === updatedCustomer.id ? updatedCustomer : customer));
+        setSelectedCustomer(updatedCustomer);
+        message.success('Đã cập nhật khách hàng');
+      } else {
+        const response = await customerAPI.create(payload);
+        setCustomers((prev) => [normalizeCustomer(response.data), ...prev]);
+        message.success('Đã thêm khách hàng');
+      }
+      setCustomerModalOpen(false);
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Không thể lưu khách hàng');
     }
+  };
 
-    setCustomerModalOpen(false);
+  const handleViewCustomer = async (customer) => {
+    setSelectedCustomer(customer);
+    try {
+      const response = await saleAPI.getAll({ customer: customer._id || customer.id, limit: 10 });
+      const sales = response.data?.sales || response.data || [];
+      const purchases = Array.isArray(sales)
+        ? sales.map((sale) => ({
+            id: sale.code,
+            date: sale.createdAt ? new Date(sale.createdAt).toLocaleDateString('vi-VN') : '—',
+            total: sale.totalAmount || 0,
+            items: sale.items?.length || 0,
+            status: sale.status === 'completed' ? 'Hoàn thành' : sale.status,
+          }))
+        : [];
+      setSelectedCustomer({ ...customer, purchases });
+    } catch {
+      setSelectedCustomer({ ...customer, purchases: [] });
+    }
   };
 
   const purchaseColumns = [
@@ -323,7 +246,7 @@ export default function CustomersPage() {
           <button
             type="button"
             className="w-fit cursor-pointer border-0 bg-transparent p-0 text-left leading-5 font-semibold text-[var(--color-primary)]"
-            onClick={(event) => { event.stopPropagation(); setSelectedCustomer(customer); }}
+          onClick={(event) => { event.stopPropagation(); handleViewCustomer(customer); }}
           >
             {customer.name}
           </button>
@@ -346,13 +269,13 @@ export default function CustomersPage() {
       fixed: 'right',
       render: (_, customer) => {
         const items = [
-          { key: 'view', label: 'Xem chi tiết', icon: <Eye size={16} />, onClick: () => setSelectedCustomer(customer) },
+          { key: 'view', label: 'Xem chi tiết', icon: <Eye size={16} />, onClick: () => handleViewCustomer(customer) },
           { key: 'edit', label: 'Chỉnh sửa', icon: <Edit3 size={16} />, onClick: () => handleOpenEdit(customer) },
         ];
 
         return (
           <div className="flex min-h-12 items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
-            <Button type="text" aria-label="Xem khách hàng" icon={<Eye size={17} className="text-[var(--color-primary)]" />} className="rounded-full hover:bg-[var(--color-primary-light)]" onClick={() => setSelectedCustomer(customer)} />
+            <Button type="text" aria-label="Xem khách hàng" icon={<Eye size={17} className="text-[var(--color-primary)]" />} className="rounded-full hover:bg-[var(--color-primary-light)]" onClick={() => handleViewCustomer(customer)} />
             <Button type="text" aria-label="Sửa khách hàng" icon={<Edit3 size={17} className="text-[var(--color-text-secondary)]" />} className="rounded-full hover:bg-[var(--color-bg-subtle)]" onClick={() => handleOpenEdit(customer)} />
             <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
               <Button type="text" aria-label="Thêm thao tác" icon={<MoreVertical size={17} className="text-[var(--color-text-secondary)]" />} className="rounded-full hover:bg-[var(--color-bg-subtle)] sm:hidden" />
@@ -420,6 +343,7 @@ export default function CustomersPage() {
           rowKey="id"
           columns={columns}
           dataSource={filteredCustomers}
+          loading={loading}
           scroll={{ x: 1120 }}
           locale={{ emptyText: <Empty description="Không tìm thấy khách hàng phù hợp" /> }}
           pagination={{
@@ -431,7 +355,7 @@ export default function CustomersPage() {
             position: ['bottomRight'],
           }}
           rowClassName="cursor-pointer hover:bg-[var(--color-bg-app)] transition-colors"
-          onRow={(customer) => ({ onClick: () => setSelectedCustomer(customer) })}
+          onRow={(customer) => ({ onClick: () => handleViewCustomer(customer) })}
         />
       </div>
 
@@ -443,7 +367,7 @@ export default function CustomersPage() {
                 <p className="font-semibold text-[var(--color-text-primary)]">{customer.name}</p>
                 <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{customer.code} · {customer.phone}</p>
               </div>
-              <Dropdown menu={{ items: [{ key: 'view', label: 'Xem chi tiết', icon: <Eye size={16} />, onClick: () => setSelectedCustomer(customer) }, { key: 'edit', label: 'Chỉnh sửa', icon: <Edit3 size={16} />, onClick: () => handleOpenEdit(customer) }] }} trigger={['click']}>
+              <Dropdown menu={{ items: [{ key: 'view', label: 'Xem chi tiết', icon: <Eye size={16} />, onClick: () => handleViewCustomer(customer) }, { key: 'edit', label: 'Chỉnh sửa', icon: <Edit3 size={16} />, onClick: () => handleOpenEdit(customer) }] }} trigger={['click']}>
                 <Button type="text" icon={<MoreVertical size={18} className="text-[var(--color-text-secondary)]" />} />
               </Dropdown>
             </div>

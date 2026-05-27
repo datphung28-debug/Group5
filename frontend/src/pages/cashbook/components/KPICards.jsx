@@ -3,14 +3,14 @@ import { Card, Row, Col, Space } from 'antd';
 import { ArrowUpCircle, ArrowDownCircle, Wallet, Scale, CreditCard, Banknote } from 'lucide-react';
 import useCashbookStore from '../../../stores/useCashbookStore';
 
-const KPICard = ({ title, value, label, icon: Icon, color, bgColor }) => (
+const KPICard = ({ title, value, label, icon, color, bgColor }) => (
   <Card className="shadow-[var(--shadow-card)] border-[var(--color-border-light)] rounded-[var(--radius-lg)] h-full">
     <div className="flex items-center gap-4">
       <div 
         className="w-12 h-12 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
         style={{ backgroundColor: bgColor }}
       >
-        <Icon size={24} style={{ color: color }} />
+        {React.createElement(icon, { size: 24, style: { color } })}
       </div>
       <div className="min-w-0">
         <div className="text-[var(--color-text-primary)] text-[var(--font-size-kpi)] font-bold leading-tight truncate">
@@ -24,7 +24,7 @@ const KPICard = ({ title, value, label, icon: Icon, color, bgColor }) => (
   </Card>
 );
 
-const SummaryCard = ({ title, count, total, icon: Icon, color, bgColor }) => (
+const SummaryCard = ({ title, count, total, icon, color, bgColor }) => (
   <Card size="small" className="shadow-[var(--shadow-card)] border-[var(--color-border-light)] rounded-[var(--radius-md)]">
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -32,7 +32,7 @@ const SummaryCard = ({ title, count, total, icon: Icon, color, bgColor }) => (
           className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
           style={{ backgroundColor: bgColor }}
         >
-          <Icon size={16} style={{ color: color }} />
+          {React.createElement(icon, { size: 16, style: { color } })}
         </div>
         <span className="text-[var(--color-text-secondary)] font-medium">{title}</span>
       </div>

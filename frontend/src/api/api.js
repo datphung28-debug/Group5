@@ -116,6 +116,12 @@ export const importAPI = {
   create: (data) => api.post('/imports', data),
 };
 
+// ─── Cashbook ──────────────────────────────────────────────────────────────
+export const cashbookAPI = {
+  getAll: (params) => api.get('/cashbook', { params }),
+  create: (data) => api.post('/cashbook', data),
+};
+
 // ─── Prescriptions ─────────────────────────────────────────────────────────
 export const prescriptionAPI = {
   getAll: (params) => api.get('/prescriptions', { params }),

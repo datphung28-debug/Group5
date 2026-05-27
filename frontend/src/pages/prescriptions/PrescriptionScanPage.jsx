@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Form, Input, Button, Select, InputNumber, Row, Col, Card, Space, Divider, message, AutoComplete, Typography, Alert } from 'antd';
 import { PlusOutlined, DeleteOutlined, PrinterOutlined, ScanOutlined, WarningOutlined } from '@ant-design/icons';
 import { Map, Pill } from 'lucide-react';
@@ -16,10 +16,6 @@ const PrescriptionScanPage = () => {
   const [selectedItems, setSelectedItems] = useState([]);
   const [safetyCheck, setSafetyCheck] = useState({ interactions: [], dosageWarnings: [] });
 
-  useEffect(() => {
-    fetchMedicines();
-  }, []);
-
   const fetchMedicines = async () => {
     try {
       const res = await medicineAPI.getAll({ limit: 100 });
@@ -30,6 +26,11 @@ const PrescriptionScanPage = () => {
       message.error("Không thể lấy danh sách thuốc");
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchMedicines();
+  }, []);
 
   const handlePrint = async () => {
     try {

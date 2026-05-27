@@ -5,6 +5,126 @@ import Medicine from "../models/Medicine.js";
 import Customer from "../models/Customer.js";
 import User from "../models/User.js";
 
+const PAYMENT_LABELS = {
+  cash: "Tiền mặt",
+  card: "Thẻ",
+  transfer: "Chuyển khoản",
+};
+
+const formatTrendDate = (date, groupType) => {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  if (groupType === "monthly") return `${month}/${date.getFullYear()}`;
+  return `${day}/${month}`;
+};
+
+export const normalizeRevenueRange = (query = {}) => {
+  const now = new Date();
+  const groupType = query.type === "monthly" ? "monthly" : "daily";
+
+  if (query.fromDate || query.toDate) {
+    const start = query.fromDate
+      ? new Date(query.fromDate)
+      : new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = query.toDate
+      ? new Date(query.toDate)
+      : new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    return { start, end, groupType };
+  }
+
+  const year = Number(query.year) || now.getFullYear();
+  if (groupType === "monthly") {
+    return {
+      start: new Date(year, 0, 1),
+      end: new Date(year, 11, 31, 23, 59, 59, 999),
+      groupType,
+    };
+  }
+
+  const month = Number(query.month) || now.getMonth() + 1;
+  return {
+    start: new Date(year, month - 1, 1),
+    end: new Date(year, month, 0, 23, 59, 59, 999),
+    groupType,
+  };
+};
+
+const getMedicineCategoryName = (medicine) => {
+  if (!medicine?.category) return "Khác";
+  if (typeof medicine.category === "object") return medicine.category.name || "Khác";
+  return "Khác";
+};
+
+const getItemGrossProfit = (item) => {
+  const revenue = Number(item.total || 0);
+  const importPrice = Number(item.medicine?.importPrice || 0);
+  const quantity = Number(item.quantity || 0);
+  return revenue - importPrice * quantity;
+};
+
+export const buildRevenueReportPayload = ({ sales = [], groupType = "daily" } = {}) => {
+  const trendMap = new Map();
+  const paymentMap = new Map();
+  const categoryMap = new Map();
+
+  let totalRevenue = 0;
+  let grossProfit = 0;
+
+  sales.forEach((sale) => {
+    const saleTotal = Number(sale.totalAmount || 0);
+    totalRevenue += saleTotal;
+
+    const trendKey = formatTrendDate(new Date(sale.createdAt), groupType);
+    const currentTrend = trendMap.get(trendKey) || { revenue: 0, grossProfit: 0 };
+    currentTrend.revenue += saleTotal;
+
+    const paymentKey = sale.paymentMethod || "cash";
+    const currentPayment = paymentMap.get(paymentKey) || { value: 0, count: 0 };
+    currentPayment.value += saleTotal;
+    currentPayment.count += 1;
+    paymentMap.set(paymentKey, currentPayment);
+
+    (sale.items || []).forEach((item) => {
+      const itemRevenue = Number(item.total || 0);
+      const itemProfit = getItemGrossProfit(item);
+      grossProfit += itemProfit;
+      currentTrend.grossProfit += itemProfit;
+
+      const categoryName = getMedicineCategoryName(item.medicine);
+      categoryMap.set(categoryName, (categoryMap.get(categoryName) || 0) + itemRevenue);
+    });
+
+    trendMap.set(trendKey, currentTrend);
+  });
+
+  const trendData = [];
+  trendMap.forEach((value, date) => {
+    trendData.push({ date, type: "Doanh thu", value: value.revenue });
+    trendData.push({ date, type: "Lãi gộp", value: value.grossProfit });
+  });
+
+  return {
+    kpis: {
+      totalRevenue,
+      grossProfit,
+      margin: totalRevenue > 0 ? Number(((grossProfit / totalRevenue) * 100).toFixed(2)) : 0,
+      invoiceCount: sales.length,
+      avgOrderValue: sales.length > 0 ? Math.round(totalRevenue / sales.length) : 0,
+    },
+    trendData,
+    paymentData: Array.from(paymentMap.entries()).map(([method, value]) => ({
+      type: PAYMENT_LABELS[method] || method,
+      value: value.value,
+      count: value.count,
+    })),
+    categoryData: Array.from(categoryMap.entries())
+      .map(([category, revenue]) => ({ category, revenue }))
+      .sort((a, b) => b.revenue - a.revenue),
+  };
+};
+
 // @GET /api/reports/dashboard
 export const getDashboard = async (req, res) => {
   try {
@@ -69,29 +189,19 @@ export const getDashboard = async (req, res) => {
 // @GET /api/reports/revenue - Doanh thu theo ngày/tháng
 export const getRevenueReport = async (req, res) => {
   try {
-    const { type = "daily", year, month } = req.query;
-    const matchYear = Number(year) || new Date().getFullYear();
+    const { start, end, groupType } = normalizeRevenueRange(req.query);
+    const sales = await Sale.find({
+      status: "completed",
+      createdAt: { $gte: start, $lte: end },
+    })
+      .populate({
+        path: "items.medicine",
+        select: "name code importPrice category",
+        populate: { path: "category", select: "name" },
+      })
+      .sort({ createdAt: 1 });
 
-    let groupBy, matchFilter;
-
-    if (type === "monthly") {
-      matchFilter = { status: "completed", createdAt: { $gte: new Date(`${matchYear}-01-01`) } };
-      groupBy = { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } };
-    } else {
-      const matchMonth = Number(month) || new Date().getMonth() + 1;
-      const start = new Date(matchYear, matchMonth - 1, 1);
-      const end = new Date(matchYear, matchMonth, 0, 23, 59, 59);
-      matchFilter = { status: "completed", createdAt: { $gte: start, $lte: end } };
-      groupBy = { year: { $year: "$createdAt" }, month: { $month: "$createdAt" }, day: { $dayOfMonth: "$createdAt" } };
-    }
-
-    const revenue = await Sale.aggregate([
-      { $match: matchFilter },
-      { $group: { _id: groupBy, revenue: { $sum: "$totalAmount" }, orders: { $sum: 1 } } },
-      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
-    ]);
-
-    res.json(revenue);
+    res.json(buildRevenueReportPayload({ sales, groupType }));
   } catch (error) {
     return sendErrorResponse(res, error);
   }

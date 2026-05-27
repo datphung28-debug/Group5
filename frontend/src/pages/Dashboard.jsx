@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Card, Table, Button, Skeleton, Progress, Tag } from 'antd';
-import { TrendingUp, BarChart2, FileText, Calendar, Medal, ArrowUpRight, Package, Users, ShoppingCart } from 'lucide-react';
+import React from 'react';
+import { Card, Table, Button, Skeleton, Progress, Tag, Empty } from 'antd';
+import { TrendingUp, BarChart2, FileText, Calendar, Medal, Package, Users, ShoppingCart } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
 import PageHeader from '../components/PageHeader';
 import '../styles/dashboard.css';
@@ -79,10 +79,10 @@ const Dashboard = () => {
   ];
 
   // Tính max revenue để vẽ bar đơn giản
-  const maxRevenue = Math.max(...(data.revenueProfit30Days || []).map(d => d.revenue));
   const last7Days = (data.revenueProfit30Days || []).slice(-7);
   const last12Hours = (data.hourlyRevenueToday || []).slice(0, 12);
-  const maxHourly = Math.max(...last12Hours.map(d => d.revenue));
+  const maxRevenue = Math.max(1, ...last7Days.map(d => d.revenue || 0));
+  const maxHourly = Math.max(1, ...last12Hours.map(d => d.revenue || 0));
 
   return (
     <div className="p-6 w-full max-w-[1440px] mx-auto bg-[var(--color-bg-app)] min-h-full">
@@ -98,10 +98,6 @@ const Dashboard = () => {
             <div className="flex-1">
               <p className="kpi-label">Doanh thu hôm nay</p>
               <h3 className="kpi-value text-[var(--color-revenue)]">{formatCurrency(data.kpi.revenueToday)}</h3>
-              <div className="flex items-center gap-1 mt-1">
-                <ArrowUpRight size={12} className="text-green-500" />
-                <span className="text-xs text-green-500">+12.5% so hôm qua</span>
-              </div>
             </div>
             <div className="kpi-icon-wrapper text-[var(--color-revenue)] bg-[var(--color-revenue-bg)]">
               <TrendingUp size={20} />
@@ -220,37 +216,41 @@ const Dashboard = () => {
           }
         >
           <div className="space-y-3 pt-2">
-            {last7Days.map((day) => (
-              <div key={day.date} className="flex items-center gap-3">
-                <span className="text-xs text-[var(--color-text-secondary)] w-12 flex-shrink-0">{day.date}</span>
-                <div className="flex-1 flex flex-col gap-1">
-                  {/* Revenue bar */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-[var(--color-bg-subtle)] rounded-full h-2.5 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-blue-500 transition-all"
-                        style={{ width: `${(day.revenue / maxRevenue) * 100}%` }}
-                      />
+            {last7Days.length === 0 ? (
+              <Empty description="Chưa có dữ liệu doanh thu" />
+            ) : (
+              last7Days.map((day) => (
+                <div key={day.date} className="flex items-center gap-3">
+                  <span className="text-xs text-[var(--color-text-secondary)] w-12 flex-shrink-0">{day.date}</span>
+                  <div className="flex-1 flex flex-col gap-1">
+                    {/* Revenue bar */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-[var(--color-bg-subtle)] rounded-full h-2.5 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-blue-500 transition-all"
+                          style={{ width: `${(day.revenue / maxRevenue) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-[var(--color-text-primary)] w-20 text-right">
+                        {formatCurrency(day.revenue)}
+                      </span>
                     </div>
-                    <span className="text-xs font-medium text-[var(--color-text-primary)] w-20 text-right">
-                      {formatCurrency(day.revenue)}
-                    </span>
-                  </div>
-                  {/* Profit bar */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-[var(--color-bg-subtle)] rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-green-400 transition-all"
-                        style={{ width: `${(day.profit / maxRevenue) * 100}%` }}
-                      />
+                    {/* Profit bar */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-[var(--color-bg-subtle)] rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-green-400 transition-all"
+                          style={{ width: `${(day.profit / maxRevenue) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-green-600 w-20 text-right">
+                        +{formatCurrency(day.profit)}
+                      </span>
                     </div>
-                    <span className="text-xs text-green-600 w-20 text-right">
-                      +{formatCurrency(day.profit)}
-                    </span>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
           <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[var(--color-border-light)]">
             <div className="flex items-center gap-1.5">
@@ -267,16 +267,22 @@ const Dashboard = () => {
         {/* Doanh thu theo giờ */}
         <Card className="lg:col-span-1 chart-card" title="Doanh thu theo giờ hôm nay">
           <div className="flex items-end gap-1.5 h-[220px] pt-2">
-            {last12Hours.map((h) => (
-              <div key={h.hour} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                <div
-                  className="w-full rounded-t-sm bg-blue-500 opacity-80 hover:opacity-100 transition-opacity cursor-pointer min-h-[4px]"
-                  style={{ height: `${Math.max(4, (h.revenue / maxHourly) * 180)}px` }}
-                  title={formatCurrency(h.revenue)}
-                />
-                <span className="text-[10px] text-[var(--color-text-muted)] leading-none">{h.hour}</span>
+            {last12Hours.length === 0 ? (
+              <div className="w-full flex items-center justify-center">
+                <Empty description="Chưa có dữ liệu theo giờ" />
               </div>
-            ))}
+            ) : (
+              last12Hours.map((h) => (
+                <div key={h.hour} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                  <div
+                    className="w-full rounded-t-sm bg-blue-500 opacity-80 hover:opacity-100 transition-opacity cursor-pointer min-h-[4px]"
+                    style={{ height: `${Math.max(4, (h.revenue / maxHourly) * 180)}px` }}
+                    title={formatCurrency(h.revenue)}
+                  />
+                  <span className="text-[10px] text-[var(--color-text-muted)] leading-none">{h.hour}</span>
+                </div>
+              ))
+            )}
           </div>
         </Card>
       </div>
@@ -306,8 +312,8 @@ const Dashboard = () => {
           {/* Monthly breakdown */}
           <div className="space-y-2">
             {data.yearlyRevenue.map((m) => {
-              const maxYearly = Math.max(...data.yearlyRevenue.map(d => d.revenueThisYear));
-              const pct = Math.round((m.revenueThisYear / maxYearly) * 100);
+              const maxYearly = Math.max(1, ...data.yearlyRevenue.map(d => d.revenueThisYear || 0));
+              const pct = Math.round(((m.revenueThisYear || 0) / maxYearly) * 100);
               return (
                 <div key={m.month} className="flex items-center gap-3">
                   <span className="text-xs text-[var(--color-text-secondary)] w-8 flex-shrink-0">{m.month}</span>

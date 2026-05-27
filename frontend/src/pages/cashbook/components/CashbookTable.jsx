@@ -1,6 +1,6 @@
 import React from 'react';
 import { Table, Tag, Button, Space, Typography } from 'antd';
-import { Eye, Printer, Edit, Trash2 } from 'lucide-react';
+import { Eye, Printer } from 'lucide-react';
 import useCashbookStore from '../../../stores/useCashbookStore';
 import dayjs from 'dayjs';
 
@@ -48,9 +48,9 @@ const CashbookTable = ({ onViewDetail }) => {
       title: 'Thanh toán',
       dataIndex: 'paymentMethod',
       key: 'paymentMethod',
-      render: (method) => (
+      render: (method, record) => (
         <Tag className="border-[var(--color-primary-border)] text-[var(--color-primary)] bg-[var(--color-primary-light)] rounded-md">
-          {method}
+          {record.paymentMethodLabel || method}
         </Tag>
       ),
     },

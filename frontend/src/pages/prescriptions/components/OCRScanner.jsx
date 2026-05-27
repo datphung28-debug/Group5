@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Upload, Button, Progress, Modal, Spin, Table, Tag, message } from 'antd';
 import { InboxOutlined, ScanOutlined, CameraOutlined, CheckCircleOutlined, AlertOutlined } from '@ant-design/icons';
 import Tesseract from 'tesseract.js';
