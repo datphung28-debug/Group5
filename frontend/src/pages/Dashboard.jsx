@@ -1,14 +1,14 @@
 import React from 'react';
-import { Card, Table, Button, Skeleton, Progress, Tag, Empty } from 'antd';
+import { Alert, Card, Table, Button, Skeleton, Progress, Tag, Empty } from 'antd';
 import { TrendingUp, BarChart2, FileText, Calendar, Medal, Package, Users, ShoppingCart } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
 import PageHeader from '../components/PageHeader';
 import '../styles/dashboard.css';
 
 const Dashboard = () => {
-  const { data, loading, formatCurrency, formatNumber } = useDashboard();
+  const { data, loading, error, formatCurrency, formatNumber } = useDashboard();
 
-  if (loading || !data || !data.kpi) {
+  if (loading) {
     return (
       <div className="p-6 w-full max-w-[1440px] mx-auto bg-[var(--color-bg-app)] min-h-full">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -26,6 +26,24 @@ const Dashboard = () => {
             <Skeleton active paragraph={{ rows: 8 }} />
           </Card>
         </div>
+      </div>
+    );
+  }
+
+  if (error || !data || !data.kpi) {
+    return (
+      <div className="p-6 w-full max-w-[1440px] mx-auto bg-[var(--color-bg-app)] min-h-full">
+        <PageHeader
+          title="Dashboard"
+          subtitle="Tổng quan hoạt động kinh doanh"
+        />
+        <Alert
+          type="error"
+          showIcon
+          message="Không thể tải dashboard"
+          description={error || 'Backend chưa trả dữ liệu dashboard hợp lệ.'}
+          className="rounded-[var(--radius-lg)] border-[var(--color-debt)] bg-[var(--color-debt-bg)]"
+        />
       </div>
     );
   }

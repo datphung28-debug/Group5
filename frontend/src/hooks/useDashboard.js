@@ -79,10 +79,12 @@ const transformYearlyData = (trendData) => {
 export const useDashboard = () => {
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
       try {
         // Gọi song song dashboard + top medicines
         const now = new Date();
@@ -109,6 +111,7 @@ export const useDashboard = () => {
       } catch (err) {
         console.warn('Dashboard API lỗi:', err.message);
         setData(null);
+        setError(err.message || 'Không thể tải dữ liệu dashboard');
       } finally {
         setLoading(false);
       }
@@ -124,5 +127,5 @@ export const useDashboard = () => {
 
   const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(value);
 
-  return { data, loading, formatCurrency, formatNumber };
+  return { data, loading, error, formatCurrency, formatNumber };
 };
