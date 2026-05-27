@@ -11,6 +11,71 @@ const generateSaleCode = async () => {
   return `${prefix}${String(count + 1).padStart(4, "0")}`;
 };
 
+export const validateCreateSalePayload = ({ items, discount = 0 } = {}) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    return { message: "Hóa đơn phải có ít nhất một sản phẩm" };
+  }
+  if (!Number.isFinite(Number(discount))) return { message: "Chiết khấu hóa đơn không hợp lệ" };
+  if (Number(discount) < 0) return { message: "Chiết khấu hóa đơn không được âm" };
+
+  for (const item of items) {
+    if (!item?.medicine) return { message: "Vui lòng chọn thuốc bán" };
+    if (item.quantity === undefined || item.quantity === null || item.quantity === "") {
+      return { message: "Vui lòng nhập số lượng bán" };
+    }
+    if (!Number.isFinite(Number(item.quantity))) return { message: "Số lượng bán không hợp lệ" };
+    if (Number(item.quantity) <= 0) return { message: "Số lượng bán phải lớn hơn 0" };
+    if (!Number.isFinite(Number(item.discount || 0))) return { message: "Chiết khấu sản phẩm không hợp lệ" };
+    if (Number(item.discount || 0) < 0 || Number(item.discount || 0) > 100) {
+      return { message: "Chiết khấu sản phẩm phải từ 0 đến 100" };
+    }
+  }
+
+  return null;
+};
+
+export const buildProcessedSaleItem = (item, medicine) => {
+  const quantity = Number(item.quantity);
+  const discount = Number(item.discount || 0);
+  const unitPrice = Number(medicine.sellPrice || 0);
+
+  return {
+    medicine: medicine._id,
+    quantity,
+    unitPrice,
+    discount,
+    total: unitPrice * quantity * (1 - discount / 100),
+  };
+};
+
+export const calculateSalePayment = ({ subTotal, discount = 0, amountPaid } = {}) => {
+  const normalizedSubTotal = Number(subTotal || 0);
+  const normalizedDiscount = Number(discount || 0);
+  const totalAmount = normalizedSubTotal - normalizedDiscount;
+
+  if (normalizedDiscount > normalizedSubTotal) {
+    return { message: "Chiết khấu hóa đơn không được lớn hơn tổng tiền hàng" };
+  }
+  if (totalAmount < 0) return { message: "Tổng tiền hóa đơn không hợp lệ" };
+
+  const normalizedAmountPaid = amountPaid === undefined || amountPaid === null || amountPaid === ""
+    ? totalAmount
+    : Number(amountPaid);
+
+  if (!Number.isFinite(normalizedAmountPaid)) return { message: "Tiền khách đưa không hợp lệ" };
+  if (normalizedAmountPaid < totalAmount) return { message: "Tiền khách đưa không đủ thanh toán" };
+
+  return {
+    totalAmount,
+    amountPaid: normalizedAmountPaid,
+    changeAmount: normalizedAmountPaid - totalAmount,
+  };
+};
+
+export const buildMedicineStockDecreaseUpdate = (item) => ({
+  $inc: { stock: -Number(item.quantity) },
+});
+
 // @GET /api/sales
 export const getSales = async (req, res) => {
   try {
@@ -57,38 +122,31 @@ export const createSale = async (req, res) => {
   try {
     const { customer, prescription, items, discount = 0, paymentMethod, amountPaid, notes } = req.body;
 
-    if (!items || items.length === 0) {
-      return res.status(400).json({ message: "Hóa đơn phải có ít nhất một sản phẩm" });
-    }
+    const validationError = validateCreateSalePayload({ items, discount });
+    if (validationError) return res.status(400).json(validationError);
 
     // Kiểm tra tồn kho và tính tổng tiền
     let subTotal = 0;
     const processedItems = [];
 
     for (const item of items) {
-      const medicine = await Medicine.findById(item.medicine);
-      if (!medicine || !medicine.isActive) {
+      const medicine = await Medicine.findOne({ _id: item.medicine, isActive: true });
+      if (!medicine) {
         return res.status(400).json({ message: `Thuốc không tồn tại: ${item.medicine}` });
       }
-      if (medicine.stock < item.quantity) {
+      if (medicine.stock < Number(item.quantity)) {
         return res.status(400).json({
           message: `Thuốc "${medicine.name}" không đủ tồn kho. Còn lại: ${medicine.stock}`,
         });
       }
 
-      const itemTotal = medicine.sellPrice * item.quantity * (1 - (item.discount || 0) / 100);
-      subTotal += itemTotal;
-      processedItems.push({
-        medicine: medicine._id,
-        quantity: item.quantity,
-        unitPrice: medicine.sellPrice,
-        discount: item.discount || 0,
-        total: itemTotal,
-      });
+      const processedItem = buildProcessedSaleItem(item, medicine);
+      subTotal += processedItem.total;
+      processedItems.push(processedItem);
     }
 
-    const totalAmount = subTotal - discount;
-    const changeAmount = amountPaid ? amountPaid - totalAmount : 0;
+    const payment = calculateSalePayment({ subTotal, discount, amountPaid });
+    if (payment.message) return res.status(400).json(payment);
 
     const code = await generateSaleCode();
     const sale = await Sale.create({
@@ -97,26 +155,26 @@ export const createSale = async (req, res) => {
       prescription,
       items: processedItems,
       subTotal,
-      discount,
-      totalAmount,
+      discount: Number(discount || 0),
+      totalAmount: payment.totalAmount,
       paymentMethod,
-      amountPaid,
-      changeAmount,
+      amountPaid: payment.amountPaid,
+      changeAmount: payment.changeAmount,
       notes,
       createdBy: req.user._id,
     });
 
     // Trừ tồn kho
     for (const item of processedItems) {
-      await Medicine.findByIdAndUpdate(item.medicine, {
-        $inc: { stock: -item.quantity },
+      await Medicine.findByIdAndUpdate(item.medicine, buildMedicineStockDecreaseUpdate(item), {
+        runValidators: true,
       });
     }
 
     // Cộng tổng chi tiêu khách hàng
     if (customer) {
       await Customer.findByIdAndUpdate(customer, {
-        $inc: { totalSpent: totalAmount },
+        $inc: { totalSpent: payment.totalAmount },
       });
     }
 
