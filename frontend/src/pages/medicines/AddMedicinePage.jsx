@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { Card, Input, Select, InputNumber, Switch, Button, Space, Typography, Row, Col, Alert, message, Spin, DatePicker } from 'antd';
+import { Card, Input, Select, InputNumber, Switch, Button, Space, Typography, Row, Col, Alert, message, Spin } from 'antd';
 import { Save, X, Pill, DollarSign, FileText, Settings, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
@@ -42,9 +42,7 @@ const AddMedicinePage = () => {
       supplier: '',          // ObjectId của supplier
       unit: '',              // ObjectId của unit
       manufacturer: '',
-      stock: 0,
       minStock: 10,
-      expiryDate: null,
       importPrice: 0,
       sellPrice: 0,          // đây là tên đúng backend
       description: '',
@@ -117,9 +115,7 @@ const AddMedicinePage = () => {
       isNarcotic: formData.isNarcotic,
       importPrice: formData.importPrice || 0,
       sellPrice: formData.sellPrice,      // đúng tên backend (không phải retailPrice)
-      stock: formData.stock || 0,
       minStock: formData.minStock,
-      expiryDate: formData.expiryDate ? formData.expiryDate.toISOString() : undefined,
     };
 
     // Bỏ các field undefined
@@ -297,43 +293,12 @@ const AddMedicinePage = () => {
 
                   <Col span={12}>
                     <div className="flex flex-col gap-1">
-                      <Text className="text-[var(--font-size-sm)] font-medium text-[var(--color-text-secondary)]">Tồn kho ban đầu</Text>
-                      <Controller
-                        name="stock"
-                        control={control}
-                        render={({ field }) => (
-                          <InputNumber {...field} min={0} className="w-full rounded-[var(--radius-md)] h-10 flex items-center" />
-                        )}
-                      />
-                    </div>
-                  </Col>
-
-                  <Col span={12}>
-                    <div className="flex flex-col gap-1">
                       <Text className="text-[var(--font-size-sm)] font-medium text-[var(--color-text-secondary)]">Tồn kho tối thiểu</Text>
                       <Controller
                         name="minStock"
                         control={control}
                         render={({ field }) => (
                           <InputNumber {...field} min={0} className="w-full rounded-[var(--radius-md)] h-10 flex items-center" />
-                        )}
-                      />
-                    </div>
-                  </Col>
-
-                  <Col span={12}>
-                    <div className="flex flex-col gap-1">
-                      <Text className="text-[var(--font-size-sm)] font-medium text-[var(--color-text-secondary)]">Hạn sử dụng</Text>
-                      <Controller
-                        name="expiryDate"
-                        control={control}
-                        render={({ field }) => (
-                          <DatePicker
-                            {...field}
-                            format="DD/MM/YYYY"
-                            placeholder="Chọn hạn sử dụng"
-                            className="w-full rounded-[var(--radius-md)] h-10"
-                          />
                         )}
                       />
                     </div>

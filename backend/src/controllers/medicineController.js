@@ -6,6 +6,12 @@ const populateMedicineQuery = (query) => query
   .populate("unit", "name")
   .populate("supplier", "name phone");
 
+const INVENTORY_MANAGED_FIELDS = new Set(["stock", "expiryDate", "manufacturingDate"]);
+
+export const sanitizeMedicineCatalogPayload = (payload = {}) => Object.fromEntries(
+  Object.entries(payload).filter(([key]) => !INVENTORY_MANAGED_FIELDS.has(key))
+);
+
 export const buildMedicineFilter = (query = {}) => {
   const { search, category, requiresPrescription, lowStock } = query;
   const filter = { isActive: true };
@@ -66,7 +72,7 @@ export const createMedicine = async (req, res) => {
     const exists = await Medicine.findOne({ code: req.body.code });
     if (exists) return res.status(400).json({ message: "Mã thuốc đã tồn tại" });
 
-    const medicine = await Medicine.create(req.body);
+    const medicine = await Medicine.create(sanitizeMedicineCatalogPayload(req.body));
     const populatedMedicine = await populateMedicineQuery(Medicine.findById(medicine._id));
     res.status(201).json(populatedMedicine);
   } catch (error) {
@@ -79,7 +85,7 @@ export const updateMedicine = async (req, res) => {
   try {
     const medicine = await populateMedicineQuery(Medicine.findOneAndUpdate(
       { _id: req.params.id, isActive: true },
-      req.body,
+      sanitizeMedicineCatalogPayload(req.body),
       {
         returnDocument: "after",
         runValidators: true,
