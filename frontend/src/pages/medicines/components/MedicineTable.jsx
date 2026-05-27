@@ -4,8 +4,6 @@ import {
   MoreVertical,
   Eye,
   Pencil,
-  PowerOff,
-  CheckCircle,
   Warehouse,
   Trash2,
   MapPin
@@ -18,8 +16,10 @@ const MedicineTable = () => {
   
   // State quản lý Modal cập nhật vị trí
   const [isLocModalVisible, setIsLocModalVisible] = React.useState(false);
+  const [isPriceModalVisible, setIsPriceModalVisible] = React.useState(false);
   const [editingMedicine, setEditingMedicine] = React.useState(null);
   const [locForm] = Form.useForm();
+  const [priceForm] = Form.useForm();
 
   const handleDelete = async (record) => {
     const res = await deleteMedicine(record._id || record.id);
@@ -30,20 +30,35 @@ const MedicineTable = () => {
     }
   };
 
-  const handleToggleStatus = async (record) => {
-    const newStatus = record.status === 'active' ? 'inactive' : 'active';
-    const res = await updateMedicine(record._id || record.id, { status: newStatus });
-    if (res.success) {
-      const action = newStatus === 'active' ? 'kích hoạt' : 'ngừng bán';
-      message.success(`Đã ${action} thuốc ${record.code}`);
-    } else {
-      message.error(res.message || 'Cập nhật trạng thái thất bại');
-    }
-  };
-
   const handlePageChange = (page, pageSize) => {
     setParams({ page, limit: pageSize });
     fetchMedicines({ page, limit: pageSize });
+  };
+
+  const handleOpenPriceModal = (record) => {
+    setEditingMedicine(record);
+    priceForm.setFieldsValue({
+      importPrice: Number(record.importPrice || 0),
+      sellPrice: Number(record.sellPrice || 0),
+      minStock: Number(record.minStock || 0),
+    });
+    setIsPriceModalVisible(true);
+  };
+
+  const handleSavePrice = async () => {
+    try {
+      const values = await priceForm.validateFields();
+      const res = await updateMedicine(editingMedicine._id || editingMedicine.id, values);
+      if (res.success) {
+        message.success(`Đã cập nhật giá bán thuốc ${editingMedicine.code}`);
+        setIsPriceModalVisible(false);
+        return;
+      }
+
+      message.error(res.message || 'Cập nhật giá bán thất bại');
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleOpenLocationModal = (record) => {
@@ -135,7 +150,7 @@ const MedicineTable = () => {
         if (stock === 0) {
           color = 'var(--color-debt)';
           bgColor = 'var(--color-debt-bg)';
-        } else if (stock < 10) {
+        } else if (stock <= Number(record.minStock || 0)) {
           color = 'var(--color-warning)';
           bgColor = 'var(--color-warning-bg)';
         }
@@ -207,13 +222,13 @@ const MedicineTable = () => {
     },
     {
       title: 'Trạng thái',
-      dataIndex: 'status',
+      dataIndex: 'isActive',
       key: 'status',
       render: (status) => (
         <Badge
-          status={status === 'active' ? 'success' : 'default'}
-          text={status === 'active' ? 'Đang bán' : 'Ngừng bán'}
-          className={status === 'active' ? 'text-[var(--color-profit)]' : 'text-[var(--color-text-muted)]'}
+          status={status === false ? 'default' : 'success'}
+          text={status === false ? 'Ngừng bán' : 'Đang bán'}
+          className={status === false ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-profit)]'}
         />
       ),
     },
@@ -232,18 +247,13 @@ const MedicineTable = () => {
             key: 'edit',
             label: 'Chỉnh sửa',
             icon: <Pencil size={16} />,
+            onClick: () => handleOpenPriceModal(record),
           },
           {
             key: 'update_loc',
             label: 'Cập nhật vị trí',
             icon: <MapPin size={16} />,
             onClick: () => handleOpenLocationModal(record),
-          },
-          {
-            key: 'toggle',
-            label: record.status === 'active' ? 'Ngừng bán' : 'Kích hoạt',
-            icon: record.status === 'active' ? <PowerOff size={16} /> : <CheckCircle size={16} />,
-            onClick: () => handleToggleStatus(record),
           },
           {
             key: 'inventory',
@@ -311,7 +321,7 @@ const MedicineTable = () => {
           position: ['bottomRight'],
         }}
         className="medicine-table"
-        onRow={(record) => ({
+        onRow={() => ({
           className: 'hover:bg-[var(--color-bg-app)] transition-colors cursor-pointer',
         })}
       />
@@ -360,6 +370,57 @@ const MedicineTable = () => {
           </Form.Item>
           <Form.Item name="column" label="Ô số">
             <InputNumber min={1} max={10} className="w-full" />
+          </Form.Item>
+        </Form>
+      </AntModal>
+
+      <AntModal
+        title={
+          <div className="flex items-center gap-2 text-[var(--color-primary)]">
+            <Pencil size={20} />
+            <span>Chỉnh sửa giá thuốc</span>
+          </div>
+        }
+        open={isPriceModalVisible}
+        onOk={handleSavePrice}
+        onCancel={() => setIsPriceModalVisible(false)}
+        okText="Lưu thay đổi"
+        cancelText="Hủy bỏ"
+        okButtonProps={{ className: "bg-[var(--color-primary)] border-none" }}
+      >
+        {editingMedicine && (
+          <div className="mb-4 text-sm text-[var(--color-text-secondary)]">
+            Thuốc: <strong className="text-[var(--color-text-primary)]">{editingMedicine.name}</strong>
+          </div>
+        )}
+        <Form form={priceForm} layout="vertical">
+          <Form.Item name="importPrice" label="Giá nhập" rules={[{ type: 'number', min: 0, message: 'Giá nhập không được âm' }]}>
+            <InputNumber
+              min={0}
+              className="w-full"
+              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              parser={(value) => value.replace(/,/g, '')}
+              addonAfter="đ"
+            />
+          </Form.Item>
+          <Form.Item
+            name="sellPrice"
+            label="Giá bán"
+            rules={[
+              { required: true, message: 'Vui lòng nhập giá bán' },
+              { type: 'number', min: 1, message: 'Giá bán phải lớn hơn 0' },
+            ]}
+          >
+            <InputNumber
+              min={1}
+              className="w-full"
+              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              parser={(value) => value.replace(/,/g, '')}
+              addonAfter="đ"
+            />
+          </Form.Item>
+          <Form.Item name="minStock" label="Tồn kho tối thiểu" rules={[{ type: 'number', min: 0, message: 'Tồn tối thiểu không được âm' }]}>
+            <InputNumber min={0} className="w-full" />
           </Form.Item>
         </Form>
       </AntModal>

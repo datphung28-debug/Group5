@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Button } from 'antd';
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -10,22 +10,19 @@ import useMedicineStore from '../../stores/useMedicineStore';
 const MedicineListPage = () => {
   const navigate = useNavigate();
   const { fetchMedicines, setParams, total, loading } = useMedicineStore();
-  const [filters, setFilters] = useState({ search: '', category: '', status: '' });
 
   // Fetch khi component mount
   useEffect(() => {
     fetchMedicines();
-  }, []);
+  }, [fetchMedicines]);
 
   const handleFilter = (values) => {
-    setFilters(values);
     setParams({ ...values, page: 1 });
     fetchMedicines({ ...values, page: 1 });
   };
 
   const handleReset = () => {
-    const reset = { search: '', category: '', status: '' };
-    setFilters(reset);
+    const reset = { search: '', category: '', requiresPrescription: '', lowStock: '' };
     setParams({ ...reset, page: 1 });
     fetchMedicines({ ...reset, page: 1 });
   };

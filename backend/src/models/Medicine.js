@@ -9,10 +9,13 @@ const medicineSchema = new mongoose.Schema(
     supplier: { type: mongoose.Schema.Types.ObjectId, ref: "Supplier" },
     description: { type: String, trim: true },
     ingredients: { type: String, trim: true },         // thành phần
+    manufacturer: { type: String, trim: true },        // nhà sản xuất
     usage: { type: String, trim: true },               // cách dùng
     sideEffects: { type: String, trim: true },         // tác dụng phụ
     contraindications: { type: String, trim: true },   // chống chỉ định
     requiresPrescription: { type: Boolean, default: false }, // cần đơn thuốc?
+    isAntibiotic: { type: Boolean, default: false },
+    isNarcotic: { type: Boolean, default: false },
     importPrice: { type: Number, required: true, min: 0 },  // giá nhập
     sellPrice: { type: Number, required: true, min: 0 },    // giá bán
     stock: { type: Number, default: 0, min: 0 },            // tồn kho

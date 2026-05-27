@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { medicineAPI } from '../api/api';
 
+const getMedicineId = (medicine) => medicine?._id || medicine?.id;
+
+const getErrorMessage = (err, fallback) => err.response?.data?.message || fallback;
+
 const useMedicineStore = create((set, get) => ({
   medicines: [],
   total: 0,
@@ -13,7 +17,8 @@ const useMedicineStore = create((set, get) => ({
     limit: 10,
     search: '',
     category: '',
-    status: '',
+    requiresPrescription: '',
+    lowStock: '',
   },
 
   setParams: (newParams) => {
@@ -36,54 +41,64 @@ const useMedicineStore = create((set, get) => ({
         total,
         loading: false,
       });
+      return { success: true, data: medicines };
     } catch (err) {
+      const message = getErrorMessage(err, 'Lỗi khi tải danh sách thuốc');
       set({
-        error: err.response?.data?.message || 'Lỗi khi tải danh sách thuốc',
+        error: message,
         loading: false,
       });
+      return { success: false, message };
     }
   },
 
   // Tạo thuốc mới
   createMedicine: async (formData) => {
+    set({ loading: true, error: null });
     try {
       const res = await medicineAPI.create(formData);
-      // Làm mới danh sách
-      get().fetchMedicines();
+      await get().fetchMedicines();
       return { success: true, data: res.data };
     } catch (err) {
-      const msg = err.response?.data?.message || 'Không thể thêm thuốc';
+      const msg = getErrorMessage(err, 'Không thể thêm thuốc');
+      set({ error: msg, loading: false });
       return { success: false, message: msg };
     }
   },
 
   // Cập nhật thuốc
   updateMedicine: async (id, formData) => {
+    set({ loading: true, error: null });
     try {
       const res = await medicineAPI.update(id, formData);
       set((state) => ({
         medicines: state.medicines.map((m) =>
-          m._id === id ? res.data : m
+          String(getMedicineId(m)) === String(id) ? res.data : m
         ),
+        loading: false,
       }));
       return { success: true, data: res.data };
     } catch (err) {
-      const msg = err.response?.data?.message || 'Không thể cập nhật thuốc';
+      const msg = getErrorMessage(err, 'Không thể cập nhật thuốc');
+      set({ error: msg, loading: false });
       return { success: false, message: msg };
     }
   },
 
   // Xóa thuốc
   deleteMedicine: async (id) => {
+    set({ loading: true, error: null });
     try {
       await medicineAPI.delete(id);
       set((state) => ({
-        medicines: state.medicines.filter((m) => m._id !== id),
-        total: state.total - 1,
+        medicines: state.medicines.filter((m) => String(getMedicineId(m)) !== String(id)),
+        total: Math.max(0, state.total - 1),
+        loading: false,
       }));
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.message || 'Không thể xóa thuốc';
+      const msg = getErrorMessage(err, 'Không thể xóa thuốc');
+      set({ error: msg, loading: false });
       return { success: false, message: msg };
     }
   },
