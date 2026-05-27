@@ -1,7 +1,7 @@
 import express from "express";
 import {
   getCategories, createCategory, updateCategory, deleteCategory,
-  getSuppliers, createSupplier, updateSupplier, deleteSupplier,
+  getSuppliers, getSupplierById, createSupplier, updateSupplier, deleteSupplier,
   getUnits, createUnit, updateUnit, deleteUnit,
 } from "../controllers/configController.js";
 import { protect, adminOnly, staffOnly } from "../middlewares/authMiddleware.js";
@@ -16,6 +16,7 @@ router.delete("/categories/:id", protect, adminOnly, deleteCategory);
 
 // Nhà cung cấp
 router.get("/suppliers", protect, staffOnly, getSuppliers);
+router.get("/suppliers/:id", protect, staffOnly, getSupplierById);
 router.post("/suppliers", protect, adminOnly, createSupplier);
 router.put("/suppliers/:id", protect, adminOnly, updateSupplier);
 router.delete("/suppliers/:id", protect, adminOnly, deleteSupplier);

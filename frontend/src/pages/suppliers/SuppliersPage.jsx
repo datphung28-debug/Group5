@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Button, Card, Input, Space, Table, Tag, Tooltip } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Card, Empty, Input, Space, Spin, Table, Tag, Tooltip, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
   Building2,
@@ -19,7 +19,9 @@ import useSupplierStore from '../../stores/useSupplierStore';
 import { formatCurrency, statusStyles } from './supplierData';
 import '../../styles/dashboard.css';
 
-function SummaryCard({ icon: Icon, label, value, valueClassName, iconClassName }) {
+function SummaryCard({ icon, label, value, valueClassName, iconClassName }) {
+  const IconComponent = icon;
+
   return (
     <Card className="kpi-card">
       <div className="flex items-center justify-between gap-4">
@@ -28,7 +30,7 @@ function SummaryCard({ icon: Icon, label, value, valueClassName, iconClassName }
           <h3 className={`kpi-value truncate ${valueClassName}`}>{value}</h3>
         </div>
         <div className={`kpi-icon-wrapper ${iconClassName}`}>
-          <Icon size={20} />
+          <IconComponent size={20} />
         </div>
       </div>
     </Card>
@@ -38,9 +40,19 @@ function SummaryCard({ icon: Icon, label, value, valueClassName, iconClassName }
 export default function SuppliersPage() {
   const navigate = useNavigate();
   const suppliers = useSupplierStore((state) => state.suppliers);
+  const loading = useSupplierStore((state) => state.loading);
+  const error = useSupplierStore((state) => state.error);
+  const fetchSuppliers = useSupplierStore((state) => state.fetchSuppliers);
+  const createSupplier = useSupplierStore((state) => state.createSupplier);
   const updateSupplier = useSupplierStore((state) => state.updateSupplier);
   const [searchValue, setSearchValue] = useState('');
   const [editingSupplier, setEditingSupplier] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [messageApi, contextHolder] = message.useMessage();
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, [fetchSuppliers]);
 
   const filteredSuppliers = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase();
@@ -63,9 +75,19 @@ export default function SuppliersPage() {
     fullyPaid: suppliers.filter((supplier) => supplier.currentDebt === 0).length,
   }), [suppliers]);
 
-  const handleSave = (updatedSupplier) => {
-    updateSupplier(updatedSupplier);
+  const handleSave = async (values) => {
+    const result = editingSupplier
+      ? await updateSupplier(editingSupplier.id, values)
+      : await createSupplier(values);
+
+    if (!result.success) {
+      messageApi.error(result.message);
+      return;
+    }
+
     setEditingSupplier(null);
+    setDrawerOpen(false);
+    messageApi.success(editingSupplier ? 'Đã cập nhật nhà cung cấp' : 'Đã thêm nhà cung cấp');
   };
 
   const columns = [
@@ -135,10 +157,10 @@ export default function SuppliersPage() {
       render: (_, record) => (
         <Space size={6}>
           <Tooltip title="Xem chi tiết nhà cung cấp">
-            <Button type="text" icon={<Eye size={17} />} onClick={(event) => { event.stopPropagation(); navigate(`/suppliers/${record.id}`); }} className="text-[var(--color-primary)]" />
+            <Button type="text" icon={<Eye size={17} />} onClick={(event) => { event.stopPropagation(); navigate(`/suppliers/${record._id || record.id}`); }} className="text-[var(--color-primary)]" />
           </Tooltip>
           <Tooltip title="Chỉnh sửa thông tin">
-            <Button type="text" icon={<Pencil size={17} />} onClick={(event) => { event.stopPropagation(); setEditingSupplier(record); }} className="text-[var(--color-text-secondary)]" />
+            <Button type="text" icon={<Pencil size={17} />} onClick={(event) => { event.stopPropagation(); setEditingSupplier(record); setDrawerOpen(true); }} className="text-[var(--color-text-secondary)]" />
           </Tooltip>
         </Space>
       ),
@@ -147,6 +169,7 @@ export default function SuppliersPage() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-app)] p-6">
+      {contextHolder}
       <PageHeader
         title="Nhà cung cấp"
         subtitle="Quản lý danh sách nhà cung cấp thuốc"
@@ -154,6 +177,7 @@ export default function SuppliersPage() {
           <Button
             type="primary"
             icon={<Plus size={18} />}
+            onClick={() => { setEditingSupplier(null); setDrawerOpen(true); }}
             className="flex h-10 items-center gap-2 rounded-[var(--radius-md)] border-none bg-[var(--color-primary)] px-5 font-medium shadow-[var(--shadow-card)] hover:bg-[var(--color-primary-hover)]"
           >
             Thêm nhà cung cấp
@@ -207,21 +231,42 @@ export default function SuppliersPage() {
         </div>
       </div>
 
+      {error && (
+        <Alert
+          type="error"
+          showIcon
+          message={error}
+          className="mb-4 rounded-[var(--radius-md)]"
+        />
+      )}
+
       <div className="hidden rounded-[var(--radius-lg)] border border-[var(--color-border-light)] bg-white shadow-[var(--shadow-card)] md:block">
         <Table
-          rowKey="id"
+          rowKey={(record) => record._id || record.id}
           columns={columns}
           dataSource={filteredSuppliers}
+          loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: false }}
           scroll={{ x: 1180 }}
+          locale={{ emptyText: <Empty description="Chưa có nhà cung cấp" /> }}
           rowClassName="cursor-pointer transition-colors hover:bg-[var(--color-bg-subtle)]"
-          onRow={(record) => ({ onClick: () => navigate(`/suppliers/${record.id}`) })}
+          onRow={(record) => ({ onClick: () => navigate(`/suppliers/${record._id || record.id}`) })}
         />
       </div>
 
       <div className="space-y-3 md:hidden">
+        {loading && (
+          <div className="rounded-[var(--radius-lg)] bg-white p-8 text-center shadow-[var(--shadow-card)]">
+            <Spin />
+          </div>
+        )}
+        {!loading && filteredSuppliers.length === 0 && (
+          <div className="rounded-[var(--radius-lg)] bg-white p-8 shadow-[var(--shadow-card)]">
+            <Empty description="Chưa có nhà cung cấp" />
+          </div>
+        )}
         {filteredSuppliers.map((supplier) => (
-          <div key={supplier.id} className="rounded-[var(--radius-lg)] border border-[var(--color-border-light)] bg-white p-4 shadow-[var(--shadow-card)]">
+          <div key={supplier._id || supplier.id} className="rounded-[var(--radius-lg)] border border-[var(--color-border-light)] bg-white p-4 shadow-[var(--shadow-card)]">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="font-semibold text-[var(--color-text-primary)]">{supplier.name}</h3>
@@ -245,8 +290,8 @@ export default function SuppliersPage() {
                 <span>{supplier.contactName} · {supplier.contactPhone}</span>
               </div>
               <Space size={4}>
-                <Button type="text" icon={<Eye size={17} />} onClick={() => navigate(`/suppliers/${supplier.id}`)} className="text-[var(--color-primary)]" />
-                <Button type="text" icon={<Pencil size={17} />} onClick={() => setEditingSupplier(supplier)} className="text-[var(--color-text-secondary)]" />
+                <Button type="text" icon={<Eye size={17} />} onClick={() => navigate(`/suppliers/${supplier._id || supplier.id}`)} className="text-[var(--color-primary)]" />
+                <Button type="text" icon={<Pencil size={17} />} onClick={() => { setEditingSupplier(supplier); setDrawerOpen(true); }} className="text-[var(--color-text-secondary)]" />
               </Space>
             </div>
           </div>
@@ -254,9 +299,10 @@ export default function SuppliersPage() {
       </div>
 
       <SupplierEditDrawer
-        open={Boolean(editingSupplier)}
+        open={drawerOpen}
         supplier={editingSupplier}
-        onClose={() => setEditingSupplier(null)}
+        confirmLoading={loading}
+        onClose={() => { setEditingSupplier(null); setDrawerOpen(false); }}
         onSave={handleSave}
       />
     </div>

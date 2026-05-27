@@ -79,7 +79,8 @@ export const categoryAPI = {
 };
 
 export const supplierAPI = {
-  getAll: () => api.get('/config/suppliers'),
+  getAll: (params) => api.get('/config/suppliers', { params }),
+  getById: (id) => api.get(`/config/suppliers/${id}`),
   create: (data) => api.post('/config/suppliers', data),
   update: (id, data) => api.put(`/config/suppliers/${id}`, data),
   delete: (id) => api.delete(`/config/suppliers/${id}`),

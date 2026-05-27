@@ -2,17 +2,28 @@ import { useEffect } from 'react';
 import { Button, Drawer, Form, Input, InputNumber, Select } from 'antd';
 import { supplierStatusOptions } from './supplierData';
 
-export default function SupplierEditDrawer({ open, supplier, onClose, onSave }) {
+export default function SupplierEditDrawer({ open, supplier, confirmLoading = false, onClose, onSave }) {
   const [form] = Form.useForm();
 
   useEffect(() => {
     if (open && supplier) {
       form.setFieldsValue(supplier);
+      return;
+    }
+
+    if (open) {
+      form.setFieldsValue({
+        status: 'Bình thường',
+        currentDebt: 0,
+        debtLimit: 0,
+        purchaseHistory: [],
+        debtHistory: [],
+      });
     }
   }, [form, open, supplier]);
 
   const handleFinish = (values) => {
-    onSave({ ...supplier, ...values });
+    onSave(values);
   };
 
   return (
@@ -28,8 +39,8 @@ export default function SupplierEditDrawer({ open, supplier, onClose, onSave }) 
           <Button onClick={onClose} className="h-10 rounded-[var(--radius-md)] px-5 font-medium">
             Hủy
           </Button>
-          <Button type="primary" onClick={() => form.submit()} className="h-10 rounded-[var(--radius-md)] border-none bg-[var(--color-primary)] px-5 font-medium">
-            Lưu thay đổi
+          <Button type="primary" loading={confirmLoading} onClick={() => form.submit()} className="h-10 rounded-[var(--radius-md)] border-none bg-[var(--color-primary)] px-5 font-medium">
+            {supplier ? 'Lưu thay đổi' : 'Thêm nhà cung cấp'}
           </Button>
         </div>
       }
@@ -67,6 +78,9 @@ export default function SupplierEditDrawer({ open, supplier, onClose, onSave }) 
             </Form.Item>
             <Form.Item label="SĐT người liên hệ" name="contactPhone">
               <Input className="h-10 rounded-[var(--radius-md)]" />
+            </Form.Item>
+            <Form.Item label="Tên người liên hệ cũ" name="contactPerson" hidden>
+              <Input />
             </Form.Item>
           </div>
         </div>

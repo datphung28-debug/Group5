@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Card, DatePicker, Descriptions, Empty, Form, Input, InputNumber, Select, Space, Table, Tag, message } from 'antd';
+import { Alert, Button, Card, DatePicker, Descriptions, Empty, Form, Input, InputNumber, Select, Space, Spin, Table, Tag, message } from 'antd';
 import dayjs from 'dayjs';
 import { ArrowLeft, CircleDollarSign, Mail, MapPin, Pencil, Phone, ReceiptText, ShieldCheck, UserRound, WalletCards } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
@@ -9,7 +9,9 @@ import useSupplierStore from '../../stores/useSupplierStore';
 import { formatCurrency, statusStyles } from './supplierData';
 import '../../styles/dashboard.css';
 
-function MetricCard({ icon: Icon, label, value, valueClassName, iconClassName }) {
+function MetricCard({ icon, label, value, valueClassName, iconClassName }) {
+  const IconComponent = icon;
+
   return (
     <Card className="kpi-card">
       <div className="flex items-center justify-between gap-4">
@@ -18,7 +20,7 @@ function MetricCard({ icon: Icon, label, value, valueClassName, iconClassName })
           <h3 className={`kpi-value truncate ${valueClassName}`}>{value}</h3>
         </div>
         <div className={`kpi-icon-wrapper ${iconClassName}`}>
-          <Icon size={20} />
+          <IconComponent size={20} />
         </div>
       </div>
     </Card>
@@ -29,6 +31,9 @@ export default function SupplierDetailPage() {
   const { supplierId } = useParams();
   const navigate = useNavigate();
   const supplier = useSupplierStore((state) => state.getSupplierById(supplierId));
+  const loading = useSupplierStore((state) => state.loading);
+  const error = useSupplierStore((state) => state.error);
+  const fetchSupplierById = useSupplierStore((state) => state.fetchSupplierById);
   const updateSupplier = useSupplierStore((state) => state.updateSupplier);
   const recordPayment = useSupplierStore((state) => state.recordPayment);
   const [editOpen, setEditOpen] = useState(false);
@@ -37,18 +42,22 @@ export default function SupplierDetailPage() {
   const [paymentForm] = Form.useForm();
 
   useEffect(() => {
-    if (supplier && supplier.currentDebt === 0) {
-      setPaymentOpen(false);
-    }
-  }, [supplier]);
+    fetchSupplierById(supplierId);
+  }, [fetchSupplierById, supplierId]);
 
-  const handleSave = (updatedSupplier) => {
-    updateSupplier(updatedSupplier);
+  const handleSave = async (values) => {
+    const result = await updateSupplier(supplier.id, values);
+
+    if (!result.success) {
+      message.error(result.message);
+      return;
+    }
+
     setEditOpen(false);
     message.success('Đã cập nhật thông tin nhà cung cấp');
   };
 
-  const handlePaymentSubmit = (values) => {
+  const handlePaymentSubmit = async (values) => {
     const amount = Number(values.amount || 0);
 
     if (amount > supplier.currentDebt) {
@@ -56,12 +65,18 @@ export default function SupplierDetailPage() {
       return;
     }
 
-    recordPayment(supplier.id, {
+    const result = await recordPayment(supplier.id, {
       amount,
       method: values.method,
       note: values.note,
       date: values.date.format('DD/MM/YYYY'),
     });
+
+    if (!result.success) {
+      message.error(result.message);
+      return;
+    }
+
     paymentForm.resetFields();
     paymentForm.setFieldsValue({ date: dayjs(), method: 'Chuyển khoản' });
     setPaymentOpen(false);
@@ -75,12 +90,26 @@ export default function SupplierDetailPage() {
     }, 0);
   };
 
+  if (loading && !supplier) {
+    return (
+      <div className="min-h-screen bg-[var(--color-bg-app)] p-6">
+        <Button icon={<ArrowLeft size={17} />} onClick={() => navigate('/suppliers')} className="mb-4 h-10 rounded-[var(--radius-md)]">
+          Quay lại
+        </Button>
+        <div className="rounded-[var(--radius-lg)] bg-white p-10 text-center shadow-[var(--shadow-card)]">
+          <Spin />
+        </div>
+      </div>
+    );
+  }
+
   if (!supplier) {
     return (
       <div className="min-h-screen bg-[var(--color-bg-app)] p-6">
         <Button icon={<ArrowLeft size={17} />} onClick={() => navigate('/suppliers')} className="mb-4 h-10 rounded-[var(--radius-md)]">
           Quay lại
         </Button>
+        {error && <Alert type="error" showIcon message={error} className="mb-4 rounded-[var(--radius-md)]" />}
         <Empty description="Không tìm thấy nhà cung cấp" className="rounded-[var(--radius-lg)] bg-white p-10 shadow-[var(--shadow-card)]" />
       </div>
     );
@@ -131,6 +160,8 @@ export default function SupplierDetailPage() {
           </Space>
         }
       />
+
+      {error && <Alert type="error" showIcon message={error} className="mb-4 rounded-[var(--radius-md)]" />}
 
       <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
         <MetricCard icon={CircleDollarSign} label="Nợ hiện tại" value={formatCurrency(supplier.currentDebt)} valueClassName={supplier.currentDebt > 0 ? 'text-[var(--color-debt)]' : 'text-[var(--color-profit)]'} iconClassName={supplier.currentDebt > 0 ? 'bg-[var(--color-debt-bg)] text-[var(--color-debt)]' : 'bg-[var(--color-profit-bg)] text-[var(--color-profit)]'} />
@@ -269,7 +300,7 @@ export default function SupplierDetailPage() {
         </Card>
       )}
 
-      <SupplierEditDrawer open={editOpen} supplier={supplier} onClose={() => setEditOpen(false)} onSave={handleSave} />
+      <SupplierEditDrawer open={editOpen} supplier={supplier} confirmLoading={loading} onClose={() => setEditOpen(false)} onSave={handleSave} />
     </div>
   );
 }

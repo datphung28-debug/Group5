@@ -66,10 +66,27 @@ export const deleteCategory = async (req, res) => {
 export const getSuppliers = async (req, res) => {
   try {
     const { search } = req.query;
-    const filter = { isActive: true };
-    if (search) filter.name = { $regex: search, $options: "i" };
+    const filter = { isActive: { $ne: false } };
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { code: { $regex: search, $options: "i" } },
+        { phone: { $regex: search, $options: "i" } },
+        { taxCode: { $regex: search, $options: "i" } },
+      ];
+    }
     const suppliers = await Supplier.find(filter).sort({ name: 1 });
     res.json(suppliers);
+  } catch (error) {
+    return sendErrorResponse(res, error);
+  }
+};
+
+export const getSupplierById = async (req, res) => {
+  try {
+    const supplier = await Supplier.findOne({ _id: req.params.id, isActive: { $ne: false } });
+    if (!supplier) return res.status(404).json({ message: "Không tìm thấy nhà cung cấp" });
+    res.json(supplier);
   } catch (error) {
     return sendErrorResponse(res, error);
   }
@@ -86,7 +103,11 @@ export const createSupplier = async (req, res) => {
 
 export const updateSupplier = async (req, res) => {
   try {
-    const supplier = await Supplier.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const supplier = await Supplier.findOneAndUpdate(
+      { _id: req.params.id, isActive: { $ne: false } },
+      req.body,
+      { returnDocument: "after", runValidators: true }
+    );
     if (!supplier) return res.status(404).json({ message: "Không tìm thấy nhà cung cấp" });
     res.json(supplier);
   } catch (error) {
@@ -96,7 +117,8 @@ export const updateSupplier = async (req, res) => {
 
 export const deleteSupplier = async (req, res) => {
   try {
-    await Supplier.findByIdAndUpdate(req.params.id, { isActive: false });
+    const supplier = await Supplier.findByIdAndUpdate(req.params.id, { isActive: false }, { returnDocument: "after" });
+    if (!supplier) return res.status(404).json({ message: "Không tìm thấy nhà cung cấp" });
     res.json({ message: "Đã xóa nhà cung cấp" });
   } catch (error) {
     return sendErrorResponse(res, error);
