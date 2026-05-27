@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Input, Button, Table, InputNumber, Modal, Drawer, message, Tooltip, Tag, Checkbox, Form, Select } from 'antd';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Input, Button, Table, InputNumber, Modal, Drawer, message, Tooltip, Tag, Checkbox, Form, Select, Alert } from 'antd';
 import { 
   SearchOutlined, ScanOutlined, UserAddOutlined, 
   DeleteOutlined, ShoppingCartOutlined, LogoutOutlined, 
@@ -17,6 +17,7 @@ import PharmacyMap from '../prescriptions/components/PharmacyMap';
 import ReceiptPrint from './components/ReceiptPrint';
 import { medicineAPI, saleAPI, customerAPI, prescriptionAPI } from '../../api/api';
 import { checkPrescriptionSafety } from '../../utils/drugSafety';
+import { buildSalePayload, getCartStockIssue, getCashPaymentIssue } from './posSaleUtils';
 
 const POSPage = () => {
   const navigate = useNavigate();
@@ -24,6 +25,8 @@ const POSPage = () => {
   const searchRef = useRef(null);
   const [time, setTime] = useState(dayjs());
   const [medicines, setMedicines] = useState([]);
+  const [medicineError, setMedicineError] = useState('');
+  const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
 
   // ═══════════════════════════════════════════════════════════════════
   // PHASE 1: TREO ĐƠN — Quản lý nhiều đơn hàng cùng lúc
@@ -35,9 +38,9 @@ const POSPage = () => {
   const activeOrder = orders[activeOrderIdx] || orders[0];
 
   // Hàm cập nhật đơn hàng đang active
-  const updateActiveOrder = (updates) => {
+  const updateActiveOrder = useCallback((updates) => {
     setOrders(prev => prev.map((o, i) => i === activeOrderIdx ? { ...o, ...updates } : o));
-  };
+  }, [activeOrderIdx]);
 
   // States cho OCR & Map
   const [isOCRModalOpen, setIsOCRModalOpen] = useState(false);
@@ -62,7 +65,7 @@ const POSPage = () => {
   const [customerHistory, setCustomerHistory] = useState([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
-  const fetchCustomerHistory = async (customerId) => {
+  const fetchCustomerHistory = useCallback(async (customerId) => {
     if (!customerId) return;
     setIsHistoryLoading(true);
     setIsCustomerHistoryOpen(true);
@@ -74,9 +77,9 @@ const POSPage = () => {
     } finally {
       setIsHistoryLoading(false);
     }
-  };
+  }, []);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     try {
       const res = await customerAPI.getAll({ limit: 500 });
       const data = res.data?.customers || res.data || [];
@@ -84,19 +87,23 @@ const POSPage = () => {
     } catch (error) {
       console.error('Không thể tải khách hàng:', error);
     }
-  };
+  }, []);
 
-  const fetchMedicines = async () => {
+  const fetchMedicines = useCallback(async () => {
+    setMedicineError('');
     try {
       const res = await medicineAPI.getAll({ limit: 5000 });
       const meds = res.data?.medicines || res.data?.data || res.data || [];
       setMedicines(Array.isArray(meds) ? meds : []);
     } catch (error) {
-      console.error(error);
+      const errorMessage = error.response?.data?.message || 'Không thể tải danh sách thuốc';
+      setMedicineError(errorMessage);
+      setMedicines([]);
+      message.error(errorMessage);
     }
-  };
+  }, []);
 
-  const fetchTodayInvoices = async () => {
+  const fetchTodayInvoices = useCallback(async () => {
     try {
       const today = dayjs().startOf('day').toISOString();
       const res = await saleAPI.getAll({ startDate: today, limit: 50 });
@@ -105,15 +112,15 @@ const POSPage = () => {
     } catch (error) {
       console.error('Không thể tải hóa đơn:', error);
     }
-  };
+  }, []);
 
   // ═══════════════════════════════════════════════════════════════════
   // TÍNH TOÁN TIỀN (có Giảm giá từng dòng + Giảm giá đơn)
   // ═══════════════════════════════════════════════════════════════════
-  const cart = activeOrder?.cart || [];
-  const subTotal = cart.reduce((sum, item) => {
+  const cart = useMemo(() => activeOrder?.cart || [], [activeOrder]);
+  const subTotal = useMemo(() => cart.reduce((sum, item) => {
     return sum + (item.medicine.sellPrice * item.quantity * (1 - (item.discount || 0) / 100));
-  }, 0);
+  }, 0), [cart]);
   const orderDiscount = activeOrder?.discount || 0;
   const total = Math.max(0, subTotal - orderDiscount);
   const customerGiven = activeOrder?.customerGiven;
@@ -121,10 +128,10 @@ const POSPage = () => {
   const paymentMethod = activeOrder?.paymentMethod || 'cash';
 
   // Doanh thu ca (Phase 2)
-  const totalRevenue = todayInvoices.reduce((sum, inv) => {
+  const totalRevenue = useMemo(() => todayInvoices.reduce((sum, inv) => {
     if (inv.status !== 'cancelled') return sum + (inv.totalAmount || 0);
     return sum;
-  }, 0);
+  }, 0), [todayInvoices]);
 
   // ═══════════════════════════════════════════════════════════════════
   // TREO ĐƠN: Thêm / Xóa Tab
@@ -155,10 +162,22 @@ const POSPage = () => {
   const addToCart = (med, qty = 1) => {
     const currentCart = activeOrder.cart;
     const existing = currentCart.find(item => item.medicine._id === med._id);
+    const currentQuantity = existing?.quantity || 0;
+    const nextQuantity = currentQuantity + qty;
+
+    if (Number(med.stock || 0) <= 0) {
+      message.error(`Thuốc "${med.name}" đã hết hàng`);
+      return;
+    }
+    if (nextQuantity > Number(med.stock || 0)) {
+      message.error(`Thuốc "${med.name}" không đủ tồn kho. Còn lại: ${med.stock}`);
+      return;
+    }
+
     if (existing) {
       updateActiveOrder({
         cart: currentCart.map(item =>
-          item.medicine._id === med._id ? { ...item, quantity: item.quantity + qty } : item
+          item.medicine._id === med._id ? { ...item, quantity: nextQuantity } : item
         )
       });
     } else {
@@ -240,32 +259,36 @@ const POSPage = () => {
   // ═══════════════════════════════════════════════════════════════════
   // PHASE 2: THANH TOÁN THẬT — Gọi POST /api/sales
   // ═══════════════════════════════════════════════════════════════════
-  const handleCheckout = async () => {
+  const handleCheckout = useCallback(async () => {
+    if (checkoutSubmitting) return;
+
     if (cart.length === 0) {
       message.warning('Giỏ hàng trống!');
       return;
     }
-    
-    // Kiểm tra xem giỏ hàng có chứa thuốc ngoài danh mục (isExternal) không
-    const hasExternalMedicines = cart.some(item => item.medicine.isExternal);
-    if (hasExternalMedicines) {
-      message.error('Giỏ hàng chứa thuốc không nằm trong danh mục hệ thống. Vui lòng xóa các thuốc này (màu đỏ) trước khi thanh toán!');
+
+    const stockIssue = getCartStockIssue(cart);
+    if (stockIssue) {
+      message.error(stockIssue);
       return;
     }
 
+    const cashIssue = getCashPaymentIssue({ paymentMethod, amountPaid: customerGiven, total });
+    if (cashIssue) {
+      message.error(cashIssue);
+      return;
+    }
+
+    setCheckoutSubmitting(true);
     try {
-      const payload = {
-        items: cart.map(item => ({
-          medicine: item.medicine._id,
-          quantity: item.quantity,
-          discount: item.discount || 0,
-        })),
-        customer: activeOrder.customer || undefined,
-        prescription: activeOrder.prescription || undefined,
+      const payload = buildSalePayload({
+        cart,
+        customer: activeOrder.customer,
+        prescription: activeOrder.prescription,
         discount: orderDiscount,
-        paymentMethod: paymentMethod,
-        amountPaid: paymentMethod === 'cash' ? (customerGiven || 0) : total,
-      };
+        paymentMethod,
+        amountPaid: paymentMethod === 'cash' ? customerGiven : total,
+      });
       const res = await saleAPI.create(payload);
       message.success(`✅ Thanh toán thành công! Mã HĐ: ${res.data?.code || 'OK'}`);
 
@@ -284,8 +307,10 @@ const POSPage = () => {
     } catch (error) {
       const errMsg = error.response?.data?.message || 'Lỗi khi thanh toán!';
       message.error(errMsg);
+    } finally {
+      setCheckoutSubmitting(false);
     }
-  };
+  }, [activeOrder.customer, activeOrder.prescription, autoPrint, cart, checkoutSubmitting, customerGiven, fetchMedicines, fetchTodayInvoices, orderDiscount, paymentMethod, total, updateActiveOrder]);
 
   // ═══════════════════════════════════════════════════════════════════
   // PHASE 1: PHÍM TẮT TOÀN CỤC
@@ -322,7 +347,7 @@ const POSPage = () => {
     fetchCustomers();
     const timer = setInterval(() => setTime(dayjs()), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [fetchCustomers, fetchMedicines, fetchTodayInvoices]);
 
   const handleCreateCustomer = async () => {
     try {
@@ -513,6 +538,19 @@ const POSPage = () => {
 
               <div className="p-3 flex gap-2 bg-slate-50">
                   <div className="relative flex-1">
+                    {medicineError && (
+                      <Alert
+                        type="error"
+                        message={medicineError}
+                        showIcon
+                        action={
+                          <Button size="small" onClick={fetchMedicines}>
+                            Thử lại
+                          </Button>
+                        }
+                        className="mb-2"
+                      />
+                    )}
                     <Input
                       ref={searchRef}
                       size="large"
@@ -700,7 +738,6 @@ const POSPage = () => {
                     { id: 'cash', label: 'Tiền mặt', icon: <WalletOutlined /> },
                     { id: 'card', label: 'Thẻ/ATM', icon: <CreditCardOutlined /> },
                     { id: 'transfer', label: 'Chuyển khoản', icon: <BankOutlined /> },
-                    { id: 'debt', label: 'Ghi nợ', icon: <HistoryOutlined /> },
                   ].map(method => (
                     <div
                       key={method.id}
@@ -774,6 +811,7 @@ const POSPage = () => {
                 block
                 className="bg-blue-600 hover:bg-blue-700 h-14 text-lg font-black shadow-lg rounded-xl border-none tracking-wide"
                 disabled={cart.length === 0}
+                loading={checkoutSubmitting}
                 onClick={handleCheckout}
               >
                 THANH TOÁN <kbd className="bg-white/20 px-2 py-0.5 rounded ml-2 text-sm font-mono">F9</kbd>
