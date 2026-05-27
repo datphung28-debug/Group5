@@ -134,5 +134,6 @@ export const prescriptionAPI = {
 export const reportAPI = {
   getDashboard: (params) => api.get('/reports/dashboard', { params }),
   getRevenue: (params) => api.get('/reports/revenue', { params }),
+  getTopMedicines: (params) => api.get('/reports/top-medicines', { params }),
   getInventory: (params) => api.get('/reports/inventory', { params }),
 };
