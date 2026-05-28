@@ -1,38 +1,48 @@
-import { useState } from 'react';
+import { useState, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Spin } from 'antd';
 import useAuthStore from './stores/useAuthStore';
-import LoginPage from './pages/LoginPage';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import PageHeader from './components/PageHeader';
-import Dashboard from './pages/Dashboard';
 
-import MedicineListPage from './pages/medicines/MedicineListPage';
-import AddMedicinePage from './pages/medicines/AddMedicinePage';
-import MedicineGroupsPage from './pages/medicine-groups/MedicineGroupsPage';
-import InventoryPage from './pages/inventory/InventoryPage';
-import ExpiryWarningPage from './pages/inventory/ExpiryWarningPage';
-import PurchaseOrdersPage from './pages/purchase/PurchaseOrdersPage';
-import PurchaseOrderPage from './pages/purchase/PurchaseOrderPage';
-import PrescriptionScanPage from './pages/prescriptions/PrescriptionScanPage';
-import POSPage from './pages/pos/POSPage';
-import SalesInvoicePage from './pages/invoices/SalesInvoicePage';
-import CustomersPage from './pages/customers/CustomersPage';
-import SuppliersPage from './pages/suppliers/SuppliersPage';
-import SupplierDetailPage from './pages/suppliers/SupplierDetailPage';
-import StaffPage from './pages/staff/StaffPage';
-import ActivityPage from './pages/activity/ActivityPage';
-import SchedulePage from './pages/schedule/SchedulePage';
-import TimesheetPage from './pages/timesheet/TimesheetPage';
-import PayrollPage from './pages/payroll/PayrollPage';
-import CashbookPage from './pages/cashbook/CashbookPage';
-import ReturnsPage from './pages/returns/ReturnsPage';
-import RevenueReportPage from './pages/reports/revenue/RevenueReportPage';
-import InventoryFlowReportPage from './pages/reports/inventory-flow/InventoryFlowReportPage';
-import DebtReportPage from './pages/reports/debt/DebtReportPage';
+// Phân tách Code (Code Splitting) giúp giảm dung lượng ban đầu
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const MedicineListPage = lazy(() => import('./pages/medicines/MedicineListPage'));
+const AddMedicinePage = lazy(() => import('./pages/medicines/AddMedicinePage'));
+const MedicineGroupsPage = lazy(() => import('./pages/medicine-groups/MedicineGroupsPage'));
+const InventoryPage = lazy(() => import('./pages/inventory/InventoryPage'));
+const ExpiryWarningPage = lazy(() => import('./pages/inventory/ExpiryWarningPage'));
+const PurchaseOrdersPage = lazy(() => import('./pages/purchase/PurchaseOrdersPage'));
+const PurchaseOrderPage = lazy(() => import('./pages/purchase/PurchaseOrderPage'));
+const PrescriptionScanPage = lazy(() => import('./pages/prescriptions/PrescriptionScanPage'));
+const POSPage = lazy(() => import('./pages/pos/POSPage'));
+const EInvoicePage = lazy(() => import('./pages/pos/EInvoicePage'));
+const SalesInvoicePage = lazy(() => import('./pages/invoices/SalesInvoicePage'));
+const CustomersPage = lazy(() => import('./pages/customers/CustomersPage'));
+const SuppliersPage = lazy(() => import('./pages/suppliers/SuppliersPage'));
+const SupplierDetailPage = lazy(() => import('./pages/suppliers/SupplierDetailPage'));
+const StaffPage = lazy(() => import('./pages/staff/StaffPage'));
+const ActivityPage = lazy(() => import('./pages/activity/ActivityPage'));
+const SchedulePage = lazy(() => import('./pages/schedule/SchedulePage'));
+const TimesheetPage = lazy(() => import('./pages/timesheet/TimesheetPage'));
+const PayrollPage = lazy(() => import('./pages/payroll/PayrollPage'));
+const CashbookPage = lazy(() => import('./pages/cashbook/CashbookPage'));
+const ReturnsPage = lazy(() => import('./pages/returns/ReturnsPage'));
+const RevenueReportPage = lazy(() => import('./pages/reports/revenue/RevenueReportPage'));
+const InventoryFlowReportPage = lazy(() => import('./pages/reports/inventory-flow/InventoryFlowReportPage'));
+const DebtReportPage = lazy(() => import('./pages/reports/debt/DebtReportPage'));
 
 // Placeholder components
 const Sales = () => <div className="p-6"><PageHeader title="Quản lý bán hàng" subtitle="Tạo hóa đơn và quản lý giao dịch bán hàng" /></div>;
+
+// Màn hình tải (Loading) chung
+const PageLoader = () => (
+  <div className="flex justify-center items-center h-full w-full bg-slate-50 min-h-[400px]">
+    <Spin size="large" tip="Đang tải trang..." />
+  </div>
+);
 
 function ProtectedRoute({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -59,32 +69,34 @@ function AppLayout() {
         <Header />
 
         <main className="flex-1 overflow-auto">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/medicines" element={<MedicineListPage />} />
-            <Route path="/medicines/add" element={<AddMedicinePage />} />
-            <Route path="/medicine-groups" element={<MedicineGroupsPage />} />
-            <Route path="/inventory/expiry" element={<ExpiryWarningPage />} />
-            <Route path="/inventory" element={<InventoryPage />} />
-            <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
-            <Route path="/purchase-orders/create" element={<PurchaseOrderPage />} />
-            <Route path="/invoices" element={<SalesInvoicePage />} />
-            <Route path="/customers" element={<CustomersPage />} />
-            <Route path="/suppliers" element={<SuppliersPage />} />
-            <Route path="/suppliers/:supplierId" element={<SupplierDetailPage />} />
-            <Route path="/staff" element={<StaffPage />} />
-            <Route path="/activity" element={<ActivityPage />} />
-            <Route path="/schedule" element={<SchedulePage />} />
-            <Route path="/timesheet" element={<TimesheetPage />} />
-            <Route path="/payroll" element={<PayrollPage />} />
-            <Route path="/cash-book" element={<CashbookPage />} />
-            <Route path="/report-revenue" element={<RevenueReportPage />} />
-            <Route path="/report-io" element={<InventoryFlowReportPage />} />
-            <Route path="/report-debt" element={<DebtReportPage />} />
-            <Route path="/returns" element={<ReturnsPage />} />
-            <Route path="/prescriptions/new" element={<div className="p-6"><PrescriptionScanPage /></div>} />
-            <Route path="/settings" element={<div className="p-6"><PageHeader title="Cài đặt hệ thống" subtitle="Tùy chỉnh cấu hình hệ thống" /></div>} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/medicines" element={<MedicineListPage />} />
+              <Route path="/medicines/add" element={<AddMedicinePage />} />
+              <Route path="/medicine-groups" element={<MedicineGroupsPage />} />
+              <Route path="/inventory/expiry" element={<ExpiryWarningPage />} />
+              <Route path="/inventory" element={<InventoryPage />} />
+              <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
+              <Route path="/purchase-orders/create" element={<PurchaseOrderPage />} />
+              <Route path="/invoices" element={<SalesInvoicePage />} />
+              <Route path="/customers" element={<CustomersPage />} />
+              <Route path="/suppliers" element={<SuppliersPage />} />
+              <Route path="/suppliers/:supplierId" element={<SupplierDetailPage />} />
+              <Route path="/staff" element={<StaffPage />} />
+              <Route path="/activity" element={<ActivityPage />} />
+              <Route path="/schedule" element={<SchedulePage />} />
+              <Route path="/timesheet" element={<TimesheetPage />} />
+              <Route path="/payroll" element={<PayrollPage />} />
+              <Route path="/cash-book" element={<CashbookPage />} />
+              <Route path="/report-revenue" element={<RevenueReportPage />} />
+              <Route path="/report-io" element={<InventoryFlowReportPage />} />
+              <Route path="/report-debt" element={<DebtReportPage />} />
+              <Route path="/returns" element={<ReturnsPage />} />
+              <Route path="/prescriptions/new" element={<div className="p-6"><PrescriptionScanPage /></div>} />
+              <Route path="/settings" element={<div className="p-6"><PageHeader title="Cài đặt hệ thống" subtitle="Tùy chỉnh cấu hình hệ thống" /></div>} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </div>
@@ -95,8 +107,17 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/pos" element={<ProtectedRoute><POSPage /></ProtectedRoute>} />
+        <Route path="/login" element={
+          <Suspense fallback={<PageLoader />}><LoginPage /></Suspense>
+        } />
+        <Route path="/e-invoice/:id" element={
+          <Suspense fallback={<PageLoader />}><EInvoicePage /></Suspense>
+        } />
+        <Route path="/pos" element={
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}><POSPage /></Suspense>
+          </ProtectedRoute>
+        } />
         <Route
           path="/*"
           element={

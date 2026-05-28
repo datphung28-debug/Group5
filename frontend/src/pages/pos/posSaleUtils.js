@@ -14,6 +14,7 @@ export const buildSalePayload = ({
     medicine: item.medicine._id,
     quantity: Number(item.quantity || 1),
     discount: Number(item.discount || 0),
+    dosage: item.dosage || "",
   })),
   customer: customer || undefined,
   prescription: prescription || undefined,

@@ -28,5 +28,9 @@ const importSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+importSchema.index({ importDate: -1 });
+importSchema.index({ supplier: 1 });
+importSchema.index({ paymentStatus: 1 });
+
 const Import = mongoose.model("Import", importSchema);
 export default Import;

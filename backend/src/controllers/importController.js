@@ -2,6 +2,7 @@ import Import from "../models/Import.js";
 import { sendErrorResponse } from "../utils/errorResponse.js";
 import Medicine from "../models/Medicine.js";
 import Supplier from "../models/Supplier.js";
+import mongoose from "mongoose";
 
 // Tạo mã phiếu nhập
 const generateImportCode = async () => {
@@ -94,10 +95,14 @@ export const createImport = async (req, res) => {
     const { supplier, items, paymentStatus, importDate, notes } = req.body;
 
     const validationError = validateCreateImportPayload({ supplier, items });
-    if (validationError) return res.status(400).json(validationError);
+    if (validationError) {
+      return res.status(400).json(validationError);
+    }
 
     const supplierExists = await Supplier.findOne({ _id: supplier, isActive: { $ne: false } });
-    if (!supplierExists) return res.status(400).json({ message: "Nhà cung cấp không tồn tại" });
+    if (!supplierExists) {
+      return res.status(400).json({ message: "Nhà cung cấp không tồn tại" });
+    }
 
     let totalAmount = 0;
     const processedItems = [];
@@ -138,7 +143,7 @@ export const createImport = async (req, res) => {
     // Cộng tồn kho và cập nhật hạn dùng
     for (const item of processedItems) {
       await Medicine.findByIdAndUpdate(item.medicine, buildMedicineImportUpdate(item), {
-        runValidators: true,
+        runValidators: true
       });
     }
 

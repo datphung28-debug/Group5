@@ -2,6 +2,7 @@ import Sale from "../models/Sale.js";
 import { sendErrorResponse } from "../utils/errorResponse.js";
 import Medicine from "../models/Medicine.js";
 import Customer from "../models/Customer.js";
+import mongoose from "mongoose";
 
 // Hàm tạo mã hóa đơn tự động
 const generateSaleCode = async () => {
@@ -45,6 +46,7 @@ export const buildProcessedSaleItem = (item, medicine) => {
     unitPrice,
     discount,
     total: unitPrice * quantity * (1 - discount / 100),
+    dosage: item.dosage,
   };
 };
 
@@ -123,7 +125,9 @@ export const createSale = async (req, res) => {
     const { customer, prescription, items, discount = 0, paymentMethod, amountPaid, notes } = req.body;
 
     const validationError = validateCreateSalePayload({ items, discount });
-    if (validationError) return res.status(400).json(validationError);
+    if (validationError) {
+      return res.status(400).json(validationError);
+    }
 
     // Kiểm tra tồn kho và tính tổng tiền
     let subTotal = 0;
@@ -146,7 +150,9 @@ export const createSale = async (req, res) => {
     }
 
     const payment = calculateSalePayment({ subTotal, discount, amountPaid });
-    if (payment.message) return res.status(400).json(payment);
+    if (payment.message) {
+      return res.status(400).json(payment);
+    }
 
     const code = await generateSaleCode();
     const sale = await Sale.create({
@@ -167,7 +173,7 @@ export const createSale = async (req, res) => {
     // Trừ tồn kho
     for (const item of processedItems) {
       await Medicine.findByIdAndUpdate(item.medicine, buildMedicineStockDecreaseUpdate(item), {
-        runValidators: true,
+        runValidators: true
       });
     }
 
@@ -188,7 +194,9 @@ export const createSale = async (req, res) => {
 export const cancelSale = async (req, res) => {
   try {
     const sale = await Sale.findById(req.params.id);
-    if (!sale) return res.status(404).json({ message: "Không tìm thấy hóa đơn" });
+    if (!sale) {
+      return res.status(404).json({ message: "Không tìm thấy hóa đơn" });
+    }
     if (sale.status !== "completed") {
       return res.status(400).json({ message: "Chỉ có thể hủy hóa đơn đã hoàn thành" });
     }
@@ -200,6 +208,13 @@ export const cancelSale = async (req, res) => {
     for (const item of sale.items) {
       await Medicine.findByIdAndUpdate(item.medicine, {
         $inc: { stock: item.quantity },
+      });
+    }
+
+    // Trừ tổng chi tiêu khách hàng
+    if (sale.customer) {
+      await Customer.findByIdAndUpdate(sale.customer, {
+        $inc: { totalSpent: -sale.totalAmount },
       });
     }
 

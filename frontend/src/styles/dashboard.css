@@ -67,11 +67,13 @@
 }
 
 .kpi-card {
-  background: var(--color-bg-surface);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 16px;
   padding: 24px;
-  border: 1px solid var(--color-border-light);
-  box-shadow: 0 1px 3px rgba(15, 30, 61, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 24px rgba(15, 30, 61, 0.04);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: default;
   position: relative;
@@ -178,10 +180,12 @@
 }
 
 .chart-card {
-  background: var(--color-bg-surface);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 16px;
-  border: 1px solid var(--color-border-light);
-  box-shadow: 0 1px 3px rgba(15, 30, 61, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 24px rgba(15, 30, 61, 0.04);
   overflow: hidden;
 }
 

@@ -19,5 +19,9 @@ const cashbookTransactionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+cashbookTransactionSchema.index({ transactionDate: -1 });
+cashbookTransactionSchema.index({ type: 1 });
+cashbookTransactionSchema.index({ category: 1 });
+
 const CashbookTransaction = mongoose.model("CashbookTransaction", cashbookTransactionSchema);
 export default CashbookTransaction;

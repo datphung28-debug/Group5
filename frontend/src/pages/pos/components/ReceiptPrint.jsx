@@ -54,7 +54,8 @@ const ReceiptPrint = forwardRef(({ invoice, pharmacyInfo }, ref) => {
             <tr key={index} className="border-b border-dashed border-gray-300 last:border-black">
               <td className="py-1.5 pr-1">
                 <div className="font-semibold truncate w-full">{item.medicine?.name || item.name}</div>
-                <div className="text-[10px] text-gray-500">{(item.unitPrice || item.medicine?.sellPrice || 0).toLocaleString()}đ</div>
+                {item.dosage && <div className="text-[10px] italic text-gray-700 mt-0.5 leading-tight">{item.dosage}</div>}
+                <div className="text-[10px] text-gray-500 mt-0.5">{(item.unitPrice || item.medicine?.sellPrice || 0).toLocaleString()}đ</div>
               </td>
               <td className="py-1.5 text-center font-medium">{item.quantity}</td>
               <td className="py-1.5 text-right font-bold">

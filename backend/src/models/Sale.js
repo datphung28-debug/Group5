@@ -6,6 +6,7 @@ const saleItemSchema = new mongoose.Schema({
   unitPrice: { type: Number, required: true, min: 0 }, // giá bán tại thời điểm bán
   discount: { type: Number, default: 0, min: 0, max: 100 }, // % giảm giá
   total: { type: Number, required: true, min: 0 },
+  dosage: { type: String }, // Hướng dẫn sử dụng
 });
 
 const saleSchema = new mongoose.Schema(
@@ -34,6 +35,10 @@ const saleSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+saleSchema.index({ createdAt: -1 });
+saleSchema.index({ customer: 1 });
+saleSchema.index({ status: 1 });
 
 const Sale = mongoose.model("Sale", saleSchema);
 export default Sale;

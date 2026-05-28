@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Input, Button, Table, InputNumber, Modal, Drawer, message, Tooltip, Tag, Checkbox, Form, Select, Alert } from 'antd';
+import { Input, Button, Table, InputNumber, Modal, Drawer, message, Tooltip, Tag, Checkbox, Form, Select, Alert, Tabs, QRCode } from 'antd';
 import { 
   SearchOutlined, ScanOutlined, UserAddOutlined, 
   DeleteOutlined, ShoppingCartOutlined, LogoutOutlined, 
@@ -15,6 +15,8 @@ import useAuthStore from '../../stores/useAuthStore';
 import OCRScanner from '../prescriptions/components/OCRScanner';
 import PharmacyMap from '../prescriptions/components/PharmacyMap';
 import ReceiptPrint from './components/ReceiptPrint';
+import AddCustomerModal from './components/AddCustomerModal';
+import CustomerHistoryModal from './components/CustomerHistoryModal';
 import { medicineAPI, saleAPI, customerAPI, prescriptionAPI } from '../../api/api';
 import { checkPrescriptionSafety } from '../../utils/drugSafety';
 import { buildSalePayload, getCartStockIssue, getCashPaymentIssue } from './posSaleUtils';
@@ -292,6 +294,22 @@ const POSPage = () => {
       const res = await saleAPI.create(payload);
       message.success(`✅ Thanh toán thành công! Mã HĐ: ${res.data?.code || 'OK'}`);
 
+      // Enrich dữ liệu hóa đơn (do API create không populate)
+      const invoiceData = { ...res.data };
+      if (invoiceData.customer && typeof invoiceData.customer === 'string') {
+        const c = customers.find(x => x._id === invoiceData.customer);
+        if (c) invoiceData.customer = c;
+      }
+      if (invoiceData.items && Array.isArray(invoiceData.items)) {
+        invoiceData.items = invoiceData.items.map(item => {
+           const cartItem = cart.find(ci => ci.medicine._id === item.medicine || ci.medicine._id === item.medicine?._id);
+           if (cartItem) {
+             return { ...item, medicine: cartItem.medicine };
+           }
+           return item;
+        });
+      }
+
       // Reset đơn hiện tại
       updateActiveOrder({ cart: [], discount: 0, customerGiven: null, prescription: null, customer: null });
 
@@ -301,7 +319,7 @@ const POSPage = () => {
       
       // Auto print preview
       if (autoPrint) {
-        setSelectedInvoiceToPrint(res.data);
+        setSelectedInvoiceToPrint(invoiceData);
         setIsReceiptModalOpen(true);
       }
     } catch (error) {
@@ -382,7 +400,7 @@ const POSPage = () => {
     {
       title: 'Sản phẩm',
       dataIndex: 'medicine',
-      render: (med) => {
+      render: (med, record) => {
         // Phase 3: Cảnh báo cận date (< 90 ngày)
         const daysLeft = med.expiryDate ? dayjs(med.expiryDate).diff(dayjs(), 'day') : 999;
         const isExpiringSoon = daysLeft <= 90 && daysLeft > 0;
@@ -408,6 +426,14 @@ const POSPage = () => {
                 </span>
               </div>
             )}
+            <Input
+              size="small"
+              placeholder="HDSD (VD: Sáng 1 viên, tối 1 viên)"
+              value={record.dosage || ''}
+              onChange={(e) => updateActiveOrder({ cart: cart.map(i => i.medicine._id === record.medicine._id ? { ...i, dosage: e.target.value } : i) })}
+              className="mt-1 text-[11px]"
+              style={{ width: '100%', maxWidth: '250px' }}
+            />
           </div>
         );
       },
@@ -888,105 +914,85 @@ const POSPage = () => {
         <PharmacyMap allMedicines={medicines} highlightMedicines={cart} onCellClick={() => {}} />
       </Drawer>
 
-      {/* ═══ MODAL XEM TRƯỚC HÓA ĐƠN IN ═══ */}
       <Modal 
-        title={<div className="flex items-center gap-2"><PrinterOutlined /><span>Bản xem trước Hóa đơn In nhiệt (80mm)</span></div>}
+        title={null}
         open={isReceiptModalOpen} 
         onCancel={() => setIsReceiptModalOpen(false)} 
-        footer={[
-          <Button key="close" onClick={() => setIsReceiptModalOpen(false)}>Đóng</Button>,
-          <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={() => {
-             message.success('Đã gửi lệnh in đến máy in nhiệt!');
-             setIsReceiptModalOpen(false);
-          }}>In ngay</Button>
-        ]}
-        width={360}
-        styles={{ body: { background: '#f1f5f9', padding: '20px 0', display: 'flex', justifyContent: 'center' } }}
-      >
-        <div className="shadow-lg drop-shadow-xl print-container" style={{ transform: 'scale(1.05)' }}>
-           <ReceiptPrint invoice={selectedInvoiceToPrint} />
-        </div>
-      </Modal>
-
-      {/* ═══ MODAL THÊM KHÁCH HÀNG ═══ */}
-      <Modal
-        title="Thêm Khách Hàng Mới"
-        open={isAddCustomerOpen}
-        onCancel={() => {
-          setIsAddCustomerOpen(false);
-          customerForm.resetFields();
-        }}
-        onOk={handleCreateCustomer}
-        okText="Lưu Khách Hàng"
-        cancelText="Hủy"
-      >
-        <Form form={customerForm} layout="vertical" className="mt-4">
-          <Form.Item name="name" label="Tên khách hàng" rules={[{ required: true, message: 'Vui lòng nhập tên' }]}>
-            <Input placeholder="Nhập tên khách hàng" />
-          </Form.Item>
-          <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: 'Vui lòng nhập SĐT' }]}>
-            <Input placeholder="Nhập số điện thoại" />
-          </Form.Item>
-          <Form.Item name="gender" label="Giới tính">
-            <Select placeholder="Chọn giới tính">
-              <Select.Option value="male">Nam</Select.Option>
-              <Select.Option value="female">Nữ</Select.Option>
-              <Select.Option value="other">Khác</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="address" label="Địa chỉ">
-            <Input.TextArea placeholder="Nhập địa chỉ" rows={2} />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* ═══ MODAL LỊCH SỬ MUA HÀNG KHÁCH HÀNG ═══ */}
-      <Modal
-        title={
-          <div className="flex items-center gap-2 text-slate-800">
-            <HistoryOutlined className="text-blue-600 text-xl" />
-            <span>Lịch sử mua hàng của khách</span>
-          </div>
-        }
-        open={isCustomerHistoryOpen}
-        onCancel={() => setIsCustomerHistoryOpen(false)}
         footer={null}
-        width={800}
-        destroyOnClose
+        width={400}
+        styles={{ body: { padding: '0px', overflow: 'hidden', borderRadius: '8px' } }}
       >
-        <Table 
-          dataSource={customerHistory} 
-          rowKey="_id"
-          loading={isHistoryLoading}
-          pagination={{ pageSize: 5 }}
-          className="mt-4"
-          columns={[
-            { title: 'Mã HĐ', dataIndex: 'code', key: 'code', render: (text) => <span className="font-mono text-blue-600 font-bold">{text}</span> },
-            { title: 'Ngày mua', dataIndex: 'createdAt', key: 'createdAt', render: (date) => dayjs(date).format('DD/MM/YYYY HH:mm') },
-            { title: 'Tổng tiền', dataIndex: 'totalAmount', key: 'totalAmount', render: (amt) => <span className="font-bold text-emerald-600">{(amt || 0).toLocaleString('vi-VN')}đ</span> },
-            { title: 'Trạng thái', dataIndex: 'status', key: 'status', render: (status) => <Tag color={status === 'cancelled' ? 'error' : 'success'}>{status === 'cancelled' ? 'HỦY' : 'HOÀN THÀNH'}</Tag> },
-            { 
-              title: 'Thao tác', 
-              key: 'action', 
-              align: 'center',
-              render: (_, record) => (
-                <Button 
-                  size="small" 
-                  type="primary"
-                  ghost
-                  icon={<PrinterOutlined />} 
-                  onClick={() => { 
-                    setSelectedInvoiceToPrint(record); 
-                    setIsReceiptModalOpen(true); 
-                  }}
-                >
-                  Xem / In
-                </Button>
-              ) 
+        <Tabs
+          defaultActiveKey="qr"
+          centered
+          className="pos-receipt-tabs"
+          items={[
+            {
+              key: 'qr',
+              label: <span className="font-bold px-2">Hóa Đơn Điện Tử (QR)</span>,
+              children: (
+                <div className="flex flex-col items-center justify-center p-6 bg-slate-50 min-h-[450px]">
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Hóa Đơn Điện Tử</h3>
+                  <p className="text-slate-500 text-sm mb-6 text-center">Khách hàng có thể quét mã QR này bằng Zalo/Camera để xem và lưu hóa đơn.</p>
+                  
+                  <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6">
+                    {selectedInvoiceToPrint?._id && (
+                      <QRCode 
+                        value={`${window.location.origin}/e-invoice/${selectedInvoiceToPrint._id}`}
+                        size={200}
+                        color="#0f172a"
+                        bordered={false}
+                      />
+                    )}
+                  </div>
+                  
+                  <Button type="primary" block size="large" onClick={() => setIsReceiptModalOpen(false)} className="bg-blue-600 font-semibold shadow-md">
+                    Hoàn tất giao dịch
+                  </Button>
+                  
+                  <Button type="link" block className="mt-2 text-slate-500" onClick={() => window.open(`/e-invoice/${selectedInvoiceToPrint?._id}`, '_blank')}>
+                    Xem thử biên lai
+                  </Button>
+                </div>
+              )
+            },
+            {
+              key: 'print',
+              label: <span className="font-bold px-2">In Biên Lai Giấy</span>,
+              children: (
+                <div className="bg-[#f1f5f9] p-5 flex flex-col items-center">
+                  <div className="shadow-lg drop-shadow-xl print-container mb-6" style={{ transform: 'scale(1.05)' }}>
+                     <ReceiptPrint invoice={selectedInvoiceToPrint} />
+                  </div>
+                  <div className="flex gap-3 w-full">
+                    <Button block size="large" onClick={() => setIsReceiptModalOpen(false)}>Đóng</Button>
+                    <Button type="primary" block size="large" icon={<PrinterOutlined />} className="bg-slate-800" onClick={() => {
+                       message.success('Đã gửi lệnh in đến máy in nhiệt!');
+                       setIsReceiptModalOpen(false);
+                    }}>In ngay</Button>
+                  </div>
+                </div>
+              )
             }
           ]}
         />
       </Modal>
+
+      {/* ═══ MODAL THÊM KHÁCH HÀNG ═══ */}
+      <AddCustomerModal 
+        open={isAddCustomerOpen}
+        onCancel={() => setIsAddCustomerOpen(false)}
+        onOk={handleCreateCustomer}
+        form={customerForm}
+      />
+
+      {/* ═══ MODAL LỊCH SỬ MUA HÀNG KHÁCH HÀNG ═══ */}
+      <CustomerHistoryModal 
+        open={isCustomerHistoryOpen}
+        onCancel={() => setIsCustomerHistoryOpen(false)}
+        customerHistory={customerHistory}
+        isHistoryLoading={isHistoryLoading}
+      />
 
       {/* ═══ CSS NỘI TUYẾN ═══ */}
       <style>{`
