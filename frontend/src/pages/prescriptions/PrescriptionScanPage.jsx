@@ -4,7 +4,7 @@ import { PlusOutlined, DeleteOutlined, PrinterOutlined, ScanOutlined, WarningOut
 import { Map, Pill } from 'lucide-react';
 import PharmacyMap from './components/PharmacyMap';
 import OCRScanner from './components/OCRScanner';
-import { medicineAPI } from '../../api/api';
+import { medicineAPI, prescriptionAPI } from '../../api/api';
 import { generatePrescriptionPDF } from '../../utils/generatePrescriptionPDF';
 import { checkPrescriptionSafety } from '../../utils/drugSafety';
 
@@ -40,9 +40,30 @@ const PrescriptionScanPage = () => {
         return message.warning("Vui lòng thêm ít nhất 1 loại thuốc vào đơn!");
       }
 
-      // Xây dựng object prescription từ form
+      // Xây dựng payload để lưu vào database qua prescriptionAPI
+      const payload = {
+        patientName: values.patientName,
+        patientAge: values.patientAge ? Number(values.patientAge) : undefined,
+        patientGender: values.patientGender,
+        doctorName: values.doctorName,
+        hospitalName: values.hospitalName,
+        diagnosis: values.diagnosis,
+        status: "pending",
+        items: values.items.map(item => ({
+          medicine: item.medicineId,
+          dosage: item.dosage || 'Theo chỉ dẫn',
+          frequency: item.frequency ? `${item.frequency} lần/ngày` : '1 lần/ngày',
+          duration: item.days ? `${item.days} ngày` : '',
+          quantity: Number(item.quantity || 1),
+        }))
+      };
+
+      const res = await prescriptionAPI.create(payload);
+      const savedPrescription = res.data || res;
+
+      // Xây dựng object prescription từ form có kèm mã thật từ DB
       const prescriptionData = {
-        code: `RX${Date.now()}`,
+        code: savedPrescription.code || `RX${Date.now()}`,
         patientName: values.patientName,
         patientPhone: values.patientPhone,
         patientAge: values.patientAge,
@@ -69,11 +90,15 @@ const PrescriptionScanPage = () => {
 
       // Tạo PDF
       generatePrescriptionPDF(prescriptionData);
-      message.success("Đã xuất phiếu cấp phát thuốc thành công!");
+      message.success("Đã lưu đơn thuốc và xuất phiếu cấp phát thành công!");
+      form.resetFields();
+      form.setFieldsValue({ items: [{}] });
+      setSelectedItems([]);
       
     } catch (error) {
       console.error(error);
-      message.error("Vui lòng điền đầy đủ thông tin bắt buộc.");
+      const errMsg = error.response?.data?.message || "Vui lòng điền đầy đủ thông tin bắt buộc.";
+      message.error(errMsg);
     }
   };
 
