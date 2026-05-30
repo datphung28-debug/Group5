@@ -292,43 +292,46 @@ const SchedulePage = () => {
         <ShiftTable data={mappedShifts} onSelect={setSelectedShift} weekDays={weekDays} />
       )}
 
-      {/* Drawer Chi tiết & Cập nhật ca làm */}
-      <Drawer
+      {/* Modal Chi tiết & Cập nhật ca làm */}
+      <Modal
         title={isAdmin ? "Cập nhật ca làm" : "Chi tiết ca làm"}
-        placement="right"
+        centered
         width={520}
         open={Boolean(selectedShift)}
-        onClose={() => setSelectedShift(null)}
-        extra={
-          isAdmin && (
-            <Space size={8}>
-              <Popconfirm
-                title="Xóa ca làm việc này?"
-                description="Hành động này không thể hoàn tác."
-                onConfirm={handleDelete}
-                okText="Xóa"
-                cancelText="Hủy"
-                okButtonProps={{ danger: true }}
-              >
-                <Button danger icon={<Trash2 size={16} />} className="rounded-[var(--radius-md)]">
-                  Xóa ca
-                </Button>
-              </Popconfirm>
-              <Button
-                type="primary"
-                icon={<Save size={16} />}
-                loading={submitting}
-                className="rounded-[var(--radius-md)] border-none bg-[var(--color-primary)]"
-                onClick={() => editForm.submit()}
-              >
-                Lưu
+        onCancel={() => setSelectedShift(null)}
+        footer={
+          isAdmin ? [
+            <Popconfirm
+              key="delete"
+              title="Xóa ca làm việc này?"
+              description="Hành động này không thể hoàn tác."
+              onConfirm={handleDelete}
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+            >
+              <Button danger icon={<Trash2 size={16} />} className="float-left rounded-[var(--radius-md)]">
+                Xóa ca
               </Button>
-            </Space>
-          )
+            </Popconfirm>,
+            <Button key="cancel" onClick={() => setSelectedShift(null)} className="rounded-[var(--radius-md)]">Hủy</Button>,
+            <Button
+              key="submit"
+              type="primary"
+              icon={<Save size={16} />}
+              loading={submitting}
+              className="rounded-[var(--radius-md)] border-none bg-[var(--color-primary)]"
+              onClick={() => editForm.submit()}
+            >
+              Lưu
+            </Button>
+          ] : [
+            <Button key="close" onClick={() => setSelectedShift(null)} className="rounded-[var(--radius-md)]">Đóng</Button>
+          ]
         }
       >
         {selectedShift && (
-          <div className="space-y-6">
+          <div className="space-y-6 pt-4">
             <div className="rounded-[var(--radius-lg)] border border-[var(--color-border-light)] bg-[var(--color-bg-subtle)] p-4">
               <div className="font-semibold text-[var(--color-text-primary)]">{selectedShift.staffName}</div>
               <div className="mt-1 text-[13px] text-[var(--color-text-secondary)]">{selectedShift.role} · {selectedShift.area}</div>
@@ -382,7 +385,7 @@ const SchedulePage = () => {
             )}
           </div>
         )}
-      </Drawer>
+      </Modal>
 
       {/* Modal Tạo ca làm mới (Admin Only) */}
       <Modal

@@ -23,16 +23,15 @@ const KPICard = ({ label, value, subtitle, icon, color, bgColor }) => {
 
 const ScheduleKPIs = ({ summary }) => {
   const cards = [
-    { label: 'Tổng ca tuần', value: summary.total.toLocaleString('vi-VN'), subtitle: 'Ca làm đang hiển thị', icon: CalendarCheck2, color: 'var(--color-primary)', bgColor: 'var(--color-primary-light)' },
-    { label: 'Đã xác nhận', value: summary.confirmed.toLocaleString('vi-VN'), subtitle: 'Nhân sự đã nhận ca', icon: UserCheck, color: 'var(--color-profit)', bgColor: 'var(--color-profit-bg)' },
-    { label: 'Chờ xác nhận', value: summary.pending.toLocaleString('vi-VN'), subtitle: 'Ca cần nhắc xác nhận', icon: Clock3, color: 'var(--color-warning)', bgColor: 'var(--color-warning-bg)' },
-    { label: 'Vắng mặt', value: summary.absent.toLocaleString('vi-VN'), subtitle: 'Ca cần bố trí thay thế', icon: UserX, color: 'var(--color-debt)', bgColor: 'var(--color-debt-bg)' },
+    { label: 'Tổng ca tuần', value: summary.total.toLocaleString('vi-VN'), subtitle: 'Ca làm đang hiển thị', icon: CalendarCheck2, color: '#0D9488', bgColor: '#F0FDFA' },
+    { label: 'Có mặt', value: summary.confirmed.toLocaleString('vi-VN'), subtitle: 'Nhân sự đi làm đầy đủ', icon: UserCheck, color: '#16A34A', bgColor: '#F0FDF4' },
+    { label: 'Vắng mặt', value: summary.absent.toLocaleString('vi-VN'), subtitle: 'Ca cần bố trí thay thế', icon: UserX, color: '#DC2626', bgColor: '#FEF2F2' },
   ];
 
   return (
     <Row gutter={[16, 16]} className="mb-6">
       {cards.map((card) => (
-        <Col xs={24} sm={12} lg={6} key={card.label}>
+        <Col xs={24} sm={8} key={card.label}>
           <KPICard {...card} />
         </Col>
       ))}

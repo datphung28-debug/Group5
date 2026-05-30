@@ -5,8 +5,7 @@ export const SHIFT_META = {
 };
 
 export const STATUS_META = {
-  confirmed: { label: 'Đã xác nhận', color: '#16A34A', bg: '#F0FDF4', border: '#DCFCE7' },
-  pending: { label: 'Chờ xác nhận', color: '#EA580C', bg: '#FFF5F1', border: '#FFE4D6' },
+  confirmed: { label: 'Có mặt', color: '#16A34A', bg: '#F0FDF4', border: '#DCFCE7' },
   absent: { label: 'Vắng mặt', color: '#DC2626', bg: '#FEF2F2', border: '#FEE2E2' },
 };
 
