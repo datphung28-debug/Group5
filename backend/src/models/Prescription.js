@@ -20,6 +20,7 @@ const prescriptionSchema = new mongoose.Schema(
     hospitalName: { type: String, trim: true },
     diagnosis: { type: String, trim: true },  // chẩn đoán
     items: [prescriptionItemSchema],
+    imageUrl: { type: String }, // Link hoặc Base64 ảnh đơn thuốc scan
     issuedDate: { type: Date, default: Date.now },
     status: {
       type: String,

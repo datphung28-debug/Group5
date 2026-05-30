@@ -9,5 +9,5 @@ export const sendErrorResponse = (res, error) => {
     return res.status(400).json({ message: "Dữ liệu đã tồn tại" });
   }
 
-  return res.status(500).json({ message: "Lỗi server" });
+  return res.status(500).json({ message: "Lỗi hệ thống: " + (error?.message || "Không xác định"), stack: error?.stack });
 };

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Toa Thuốc Mẫu</title>
+    <style>
+        body {
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+            font-family: 'Times New Roman', serif;
+        }
+        .prescription-paper {
+            background-color: white;
+            width: 600px;
+            min-height: 800px;
+            padding: 40px 50px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            position: relative;
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #1e3a8a;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .hospital-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1e3a8a;
+            text-transform: uppercase;
+        }
+        .title {
+            font-size: 26px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            letter-spacing: 2px;
+        }
+        .info-row {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .info-row strong {
+            display: inline-block;
+            width: 120px;
+        }
+        .dotted-line {
+            border-bottom: 1px dotted #ccc;
+            flex-grow: 1;
+            display: inline-block;
+        }
+        .rx {
+            font-size: 40px;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+        .drug-list {
+            list-style-type: decimal;
+            padding-left: 25px;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+        .drug-item {
+            margin-bottom: 20px;
+        }
+        .drug-name {
+            font-weight: bold;
+            font-size: 19px;
+            text-transform: uppercase;
+        }
+        .qty {
+            float: right;
+            font-weight: bold;
+        }
+        .dosage {
+            font-style: italic;
+            color: #4b5563;
+            margin-top: 5px;
+            font-size: 16px;
+            padding-left: 10px;
+        }
+        .footer {
+            margin-top: 80px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .signature {
+            text-align: center;
+        }
+        .sign-area {
+            height: 80px;
+            margin-top: 10px;
+        }
+        .doctor-name {
+            font-weight: bold;
+            font-size: 18px;
+        }
+    <style>
+        .control-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        .control-panel h3 { margin-top: 0; font-family: Arial, sans-serif; }
+        .control-panel button {
+            display: block;
+            width: 100%;
+            margin-bottom: 5px;
+            padding: 8px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .control-panel button:hover { background: #1d4ed8; }
+    </style>
+</head>
+<body>
+
+    <div class="control-panel" data-html2canvas-ignore>
+        <h3>Đổi Toa Thuốc Mẫu</h3>
+        <button onclick="loadPrescription(0)">Mẫu 1: Cảm cúm & Dạ dày</button>
+        <button onclick="loadPrescription(1)">Mẫu 2: Huyết áp & Tim mạch</button>
+        <button onclick="loadPrescription(2)">Mẫu 3: Da liễu & Nhiễm trùng</button>
+        <button onclick="loadPrescription(3)">Mẫu 4: Xương khớp & Giảm đau</button>
+        <button onclick="loadPrescription(4)">Mẫu 5: Tai mũi họng cấp</button>
+        <button onclick="loadPrescription(5)">Mẫu 6: Tiêu hóa & Gan mật</button>
+        <button onclick="loadPrescription(6)">Mẫu 7: Thần kinh & Bổ não</button>
+        <button onclick="loadPrescription(7)">Mẫu 8: Kháng sinh phổ rộng</button>
+        <button onclick="loadPrescription(8)">Mẫu 9: Viêm phổi & Dị ứng</button>
+        <button onclick="loadPrescription(9)">Mẫu 10: Rối loạn mỡ máu</button>
+    </div>
+
+    <div class="prescription-paper" id="paper">
+        <div class="header">
+            <div class="hospital-name">BỆNH VIỆN ĐA KHOA QUỐC TẾ</div>
+            <div>Số 123 Đường Y Tế, Phường Khỏe Mạnh, TP. Sức Khỏe</div>
+            <div>Điện thoại: 1900 1234 56</div>
+        </div>
+
+        <div class="title">ĐƠN THUỐC</div>
+
+        <div class="info-row">
+            <strong>Họ tên bệnh nhân:</strong> <span id="p-name" style="text-transform: uppercase; font-weight: bold; font-size: 18px;">Nguyễn Hoàng Kiên</span>
+        </div>
+        <div class="info-row" style="display: flex;">
+            <div style="width: 50%;"><strong>Tuổi:</strong> <span id="p-age">32</span></div>
+            <div style="width: 50%;"><strong>Giới tính:</strong> <span id="p-gender">Nam</span></div>
+        </div>
+        <div class="info-row">
+            <strong>Địa chỉ:</strong> <span id="p-address">456 Lê Lợi, Phường 1, Quận 1</span>
+        </div>
+        <div class="info-row">
+            <strong>Chẩn đoán:</strong> <span id="p-diagnosis" style="font-weight: bold; color: #dc2626;">Viêm phế quản cấp, trào ngược dạ dày thực quản</span>
+        </div>
+
+        <div class="rx">Rx.</div>
+
+        <ol class="drug-list" id="p-drugs">
+            <!-- Thuốc sẽ được render qua JS -->
+        </ol>
+
+        <div class="footer">
+            <div>
+                <div><strong>Lời dặn:</strong></div>
+                <div id="p-notes" style="font-style: italic; font-size: 15px; margin-top: 5px;">
+                    - Uống nhiều nước ấm<br>
+                    - Kiêng đồ ăn cay nóng, dầu mỡ<br>
+                    - Tái khám sau 5 ngày nếu không đỡ
+                </div>
+            </div>
+            <div class="signature">
+                <div id="p-date">Ngày 30 tháng 05 năm 2026</div>
+                <div><strong>Bác sĩ điều trị</strong></div>
+                <div class="sign-area">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/2/23/Signature_of_John_Hancock.svg" height="60" style="opacity: 0.6">
+                </div>
+                <div class="doctor-name" id="p-doctor">BS. Trần Quốc Tuấn</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const prescriptions = [
+            {
+                name: "Nguyễn Hoàng Kiên", age: 32, gender: "Nam", address: "456 Lê Lợi, Phường 1, Quận 1",
+                diagnosis: "Viêm phế quản cấp, trào ngược dạ dày thực quản",
+                doctor: "BS. Trần Quốc Tuấn",
+                drugs: [
+                    { name: "Cefalexin", qty: "20 Viên", dosage: "Uống 2 lần/ngày, mỗi lần 1 viên. Uống sau khi ăn no." },
+                    { name: "Omeprazole 20mg", qty: "14 Viên", dosage: "Sáng 1 viên. Uống trước bữa ăn sáng 30 phút." },
+                    { name: "Paracetamol 500mg", qty: "10 Viên", dosage: "Uống 1 viên khi sốt > 38.5 độ C. Cách nhau 6 tiếng." },
+                    { name: "Vitamin C 500mg", qty: "10 Viên", dosage: "Sáng 1 viên. Uống sau ăn." }
+                ],
+                notes: "- Uống nhiều nước ấm<br>- Kiêng đồ ăn cay nóng, dầu mỡ<br>- Tái khám sau 5 ngày nếu không đỡ"
+            },
+            {
+                name: "Trần Thị Bé", age: 55, gender: "Nữ", address: "12 Võ Văn Tần, Quận 3",
+                diagnosis: "Tăng huyết áp vô căn, thiếu máu cơ tim",
+                doctor: "BS. Lê Tâm",
+                drugs: [
+                    { name: "Cardiosartan 1g", qty: "30 Viên", dosage: "Sáng 1 viên. Uống cố định giờ." },
+                    { name: "Cardiobion Retard", qty: "30 Viên", dosage: "Sáng 1 viên sau ăn." },
+                    { name: "Lipozol 500", qty: "30 Viên", dosage: "Tối 1 viên sau ăn." }
+                ],
+                notes: "- Ăn nhạt, giảm mỡ động vật<br>- Tập thể dục nhẹ nhàng 30p mỗi ngày<br>- Đo huyết áp hàng ngày"
+            },
+            {
+                name: "Phạm Văn Minh", age: 24, gender: "Nam", address: "89 Nguyễn Đình Chiểu, Quận 3",
+                diagnosis: "Viêm da cơ địa, nhiễm trùng da",
+                doctor: "BS. Vũ Da Liễu",
+                drugs: [
+                    { name: "Dermacillin 1g", qty: "14 Viên", dosage: "Uống 2 lần/ngày, mỗi lần 1 viên." },
+                    { name: "Dermamin", qty: "1 Tuýp", dosage: "Thoa lớp mỏng lên vùng da bệnh 2 lần/ngày." },
+                    { name: "Vitammol Max", qty: "20 Viên", dosage: "Sáng 1 viên, tối 1 viên." }
+                ],
+                notes: "- Vệ sinh da sạch sẽ<br>- Không gãi mạnh gây xước da<br>- Kiêng hải sản"
+            },
+            {
+                name: "Lý Quý Mùi", age: 62, gender: "Nam", address: "102 Lê Trọng Tấn, Tân Phú",
+                diagnosis: "Thoái hóa khớp gối, viêm đau nhức xương khớp",
+                doctor: "BS. Đặng Cơ Xương",
+                drugs: [
+                    { name: "Neurofen", qty: "20 Viên", dosage: "Uống 2 lần/ngày, sáng 1 tối 1 sau ăn no." },
+                    { name: "Paramol Retard", qty: "10 Viên", dosage: "Uống 1 viên khi đau nhức nhiều." },
+                    { name: "Gastromol", qty: "14 Viên", dosage: "Uống bảo vệ dạ dày, trước ăn 30p." }
+                ],
+                notes: "- Hạn chế leo cầu thang<br>- Ngâm chân nước ấm buổi tối"
+            },
+            {
+                name: "Lê Nguyễn Hà", age: 18, gender: "Nữ", address: "24 Phạm Ngọc Thạch, Quận 3",
+                diagnosis: "Viêm tai giữa cấp tính",
+                doctor: "BS. Hoàng Mũi Họng",
+                drugs: [
+                    { name: "Otolexin 10mg", qty: "20 Viên", dosage: "Sáng 1 viên, tối 1 viên." },
+                    { name: "Otocort Retard", qty: "10 Viên", dosage: "Sáng 1 viên." },
+                    { name: "Otomol", qty: "1 Chai", dosage: "Nhỏ tai 2 giọt/lần, 2 lần/ngày." }
+                ],
+                notes: "- Giữ tai khô ráo<br>- Không dùng tăm bông ngoáy sâu"
+            },
+            {
+                name: "Hồ Minh Đạt", age: 40, gender: "Nam", address: "55 Cách Mạng Tháng 8, Quận 10",
+                diagnosis: "Rối loạn chức năng gan, viêm loét dạ dày",
+                doctor: "BS. Phạm Tiêu Hóa",
+                drugs: [
+                    { name: "Hepatopril 10mg", qty: "30 Viên", dosage: "Sáng 1 viên." },
+                    { name: "Hepatostat", qty: "30 Viên", dosage: "Tối 1 viên." },
+                    { name: "Gastrolexin 10mg", qty: "20 Viên", dosage: "Sáng 1 tối 1 trước ăn." },
+                    { name: "Gastrocillin", qty: "1 Hộp", dosage: "Uống 1 gói khi đau rát dạ dày." }
+                ],
+                notes: "- Tuyệt đối kiêng rượu bia<br>- Không thức khuya"
+            },
+            {
+                name: "Đỗ Mai Anh", age: 29, gender: "Nữ", address: "78 Nguyễn Trãi, Quận 5",
+                diagnosis: "Rối loạn tiền đình, đau đầu căng thẳng",
+                doctor: "BS. Ngô Thần Kinh",
+                drugs: [
+                    { name: "Neurosartan", qty: "20 Viên", dosage: "Sáng 1 viên, chiều 1 viên." },
+                    { name: "Cardiofen Retard", qty: "10 Viên", dosage: "Tối 1 viên trước khi ngủ." },
+                    { name: "Vitammin", qty: "30 Viên", dosage: "Ngày 1 viên bồi bổ." }
+                ],
+                notes: "- Tránh căng thẳng<br>- Ngủ đủ 8 tiếng/ngày"
+            },
+            {
+                name: "Trịnh Đức Thiện", age: 35, gender: "Nam", address: "190 Điện Biên Phủ, Bình Thạnh",
+                diagnosis: "Viêm họng mủ cấp",
+                doctor: "BS. Nguyễn Kháng Sinh",
+                drugs: [
+                    { name: "Cefasartan Max", qty: "14 Viên", dosage: "Sáng 1 tối 1." },
+                    { name: "Amoxsartan", qty: "14 Viên", dosage: "Sáng 1 tối 1." },
+                    { name: "Parabion", qty: "10 Viên", dosage: "Uống khi sốt." }
+                ],
+                notes: "- Súc miệng nước muối<br>- Không uống nước đá lạnh"
+            },
+            {
+                name: "Bùi Thị Tuyết", age: 48, gender: "Nữ", address: "15 Kha Vạn Cân, Thủ Đức",
+                diagnosis: "Viêm phế quản phổi, dị ứng thời tiết",
+                doctor: "BS. Mai Dị Ứng",
+                drugs: [
+                    { name: "Cefasartan 500", qty: "20 Viên", dosage: "Sáng 1 tối 1." },
+                    { name: "Dermapril", qty: "10 Viên", dosage: "Tối 1 viên để giảm dị ứng." },
+                    { name: "Otozol", qty: "1 Chai", dosage: "Xịt mũi 2 lần/ngày." }
+                ],
+                notes: "- Đeo khẩu trang khi ra ngoài<br>- Tránh gió lùa"
+            },
+            {
+                name: "Vũ Công Lý", age: 50, gender: "Nam", address: "40 Quốc Lộ 13, Bình Thạnh",
+                diagnosis: "Rối loạn mỡ máu hỗn hợp",
+                doctor: "BS. Trần Mạch",
+                drugs: [
+                    { name: "Lipozol Extra", qty: "30 Viên", dosage: "Tối 1 viên sau ăn." },
+                    { name: "Lipomol", qty: "30 Viên", dosage: "Sáng 1 viên." },
+                    { name: "Cardiostat", qty: "30 Viên", dosage: "Ngày 1 viên." }
+                ],
+                notes: "- Hạn chế nội tạng động vật<br>- Tập thể dục đều đặn"
+            }
+        ];
+
+        function loadPrescription(index) {
+            const data = prescriptions[index];
+            document.getElementById('p-name').innerText = data.name;
+            document.getElementById('p-age').innerText = data.age;
+            document.getElementById('p-gender').innerText = data.gender;
+            document.getElementById('p-address').innerText = data.address;
+            document.getElementById('p-diagnosis').innerText = data.diagnosis;
+            document.getElementById('p-doctor').innerText = data.doctor;
+            document.getElementById('p-notes').innerHTML = data.notes;
+
+            const drugsList = document.getElementById('p-drugs');
+            drugsList.innerHTML = '';
+            data.drugs.forEach(d => {
+                const li = document.createElement('li');
+                li.className = 'drug-item';
+                li.innerHTML = `
+                    <span class="drug-name">${d.name}</span>
+                    <span class="qty">${d.qty}</span>
+                    <div class="dosage">${d.dosage}</div>
+                `;
+                drugsList.appendChild(li);
+            });
+
+            // Tự động set ngày hiện tại
+            const today = new Date();
+            document.getElementById('p-date').innerText = `Ngày ${String(today.getDate()).padStart(2, '0')} tháng ${String(today.getMonth() + 1).padStart(2, '0')} năm ${today.getFullYear()}`;
+        }
+
+        // Tải toa đầu tiên mặc định
+        loadPrescription(0);
+    </script>
+</body>
+</html>
