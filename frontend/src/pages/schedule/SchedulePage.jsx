@@ -243,7 +243,7 @@ const SchedulePage = () => {
       {contextHolder}
       <PageHeader
         title="Lịch phân ca"
-        subtitle="Sắp xếp, theo dõi và xác nhận ca làm thực tế từ database"
+        subtitle="Sắp xếp, theo dõi ca làm việc"
         actions={
           isAdmin && (
             <Space size={12} wrap>
