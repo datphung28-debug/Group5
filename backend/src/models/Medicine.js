@@ -1,5 +1,12 @@
 import mongoose from "mongoose";
 
+const medicineBatchSchema = new mongoose.Schema({
+  batchNumber: { type: String, required: true, trim: true },
+  expiryDate: { type: Date, required: true },
+  quantity: { type: Number, required: true, min: 0 },
+  importPrice: { type: Number, required: true, min: 0 },
+});
+
 const medicineSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -34,6 +41,8 @@ const medicineSchema = new mongoose.Schema(
       label: { type: String },                  // Mã nhãn: "A-02-3-1"
       notes: { type: String },                  // Ghi chú bổ sung
     },
+    // Danh sách các lô hàng của thuốc
+    batches: { type: [medicineBatchSchema], default: [] },
   },
   { timestamps: true }
 );

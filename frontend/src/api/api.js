@@ -129,6 +129,7 @@ export const prescriptionAPI = {
   getById: (id) => api.get(`/prescriptions/${id}`),
   create: (data) => api.post('/prescriptions', data),
   update: (id, data) => api.put(`/prescriptions/${id}`, data),
+  getNational: (code) => api.get(`/prescriptions/national/${code}`),
 };
 
 // ─── Reports ───────────────────────────────────────────────────────────────

@@ -622,6 +622,84 @@ const POSPage = () => {
     }
   };
 
+  const handleSearchNationalPrescription = async (code) => {
+    if (!code || code.trim() === '') {
+      message.warning('Vui lòng nhập mã đơn thuốc quốc gia');
+      return;
+    }
+    
+    message.loading({ content: 'Đang kết nối Cổng đơn thuốc Quốc gia...', key: 'national_rx' });
+    try {
+      const res = await prescriptionAPI.getNational(code);
+      const nationalRx = res.data;
+      if (!nationalRx) {
+        throw new Error('Không tìm thấy đơn thuốc trên hệ thống Quốc gia');
+      }
+
+      // Tạo đơn thuốc cục bộ từ đơn quốc gia giả định
+      const payload = {
+        patientName: nationalRx.patientName,
+        age: nationalRx.age,
+        gender: nationalRx.gender,
+        weight: nationalRx.weight,
+        diagnosis: nationalRx.diagnosis,
+        doctorName: nationalRx.doctorName,
+        hospitalName: nationalRx.hospitalName,
+        items: nationalRx.items.map(item => ({
+          medicine: item.medicine._id,
+          quantity: item.quantity,
+          dosage: item.dosage,
+        })),
+        status: 'pending',
+      };
+
+      const createRes = await prescriptionAPI.create(payload);
+      const newLocalRx = createRes.data;
+
+      // Cập nhật state local
+      setPrescriptions(prev => {
+        const updated = [newLocalRx, ...prev];
+        prescriptionsCache = updated;
+        return updated;
+      });
+
+      // Tự động gán vào đơn hàng đang active
+      updateActiveOrder({ prescription: newLocalRx._id });
+
+      // Hỏi dược sĩ xem có muốn tự động điền các thuốc từ đơn này vào giỏ hàng không!
+      Modal.confirm({
+        title: 'Tải đơn thuốc thành công!',
+        content: `Đã kết nối Cổng quốc gia. Bạn có muốn tự động thêm ${nationalRx.items.length} mặt hàng từ đơn thuốc của bệnh nhân "${nationalRx.patientName}" vào giỏ hàng không?`,
+        okText: 'Thêm vào giỏ',
+        cancelText: 'Chỉ liên kết đơn',
+        onOk: () => {
+          // Thêm các sản phẩm vào giỏ hàng
+          const newCart = [...cart];
+          nationalRx.items.forEach(item => {
+            const existingIdx = newCart.findIndex(ci => ci.medicine._id === item.medicine._id);
+            if (existingIdx > -1) {
+              newCart[existingIdx].quantity += item.quantity;
+            } else {
+              newCart.push({
+                medicine: item.medicine,
+                quantity: item.quantity,
+                discount: 0,
+                dosage: item.dosage,
+              });
+            }
+          });
+          updateActiveOrder({ cart: newCart });
+          message.success('Đã thêm các thuốc từ đơn vào giỏ hàng!');
+        }
+      });
+
+      message.success({ content: '✅ Tải đơn thuốc Quốc gia thành công!', key: 'national_rx', duration: 3 });
+    } catch (error) {
+      const errMsg = error.response?.data?.message || error.message || 'Không thể kết nối Cổng Đơn thuốc Quốc gia';
+      message.error({ content: errMsg, key: 'national_rx', duration: 3 });
+    }
+  };
+
   // ═══════════════════════════════════════════════════════════════════
   // PHASE 1: CỘT BẢNG GIỎ HÀNG (Nâng cấp: Batch/Exp, Rx, Discount)
   // ═══════════════════════════════════════════════════════════════════
@@ -999,6 +1077,18 @@ const POSPage = () => {
                     <Tag color="red" className="m-0 font-bold uppercase text-[9px] animate-pulse">Cần đơn thuốc (Rx)</Tag>
                   )}
                 </div>
+
+                {/* Tra cứu đơn thuốc quốc gia */}
+                <div className="flex gap-2 mb-2">
+                  <Input.Search
+                    placeholder="Mã đơn thuốc Quốc gia..."
+                    size="middle"
+                    enterButton="Tra cứu đơn"
+                    className="w-full"
+                    onSearch={handleSearchNationalPrescription}
+                  />
+                </div>
+
                 <Select
                   showSearch
                   allowClear

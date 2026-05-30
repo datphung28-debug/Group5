@@ -78,6 +78,73 @@ export const buildMedicineStockDecreaseUpdate = (item) => ({
   $inc: { stock: -Number(item.quantity) },
 });
 
+const deductMedicineStockFEFO = async (medicineId, quantity, session = null) => {
+  const med = await Medicine.findById(medicineId);
+  if (!med) return;
+
+  med.stock = Math.max(0, med.stock - Number(quantity));
+
+  if (med.batches && med.batches.length > 0) {
+    // Sắp xếp các lô có hạn sử dụng gần nhất lên trước (FEFO)
+    med.batches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+
+    let remainingToDeduct = Number(quantity);
+    for (let b of med.batches) {
+      if (remainingToDeduct <= 0) break;
+      if (b.quantity >= remainingToDeduct) {
+        b.quantity -= remainingToDeduct;
+        remainingToDeduct = 0;
+      } else {
+        remainingToDeduct -= b.quantity;
+        b.quantity = 0;
+      }
+    }
+
+    // Loại bỏ các lô đã hết hàng
+    med.batches = med.batches.filter(b => b.quantity > 0);
+
+    // Cập nhật lại hạn dùng của thuốc từ lô tiếp theo sắp hết hạn
+    if (med.batches.length > 0) {
+      med.batches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+      med.expiryDate = med.batches[0].expiryDate;
+    }
+  }
+
+  if (session) {
+    await med.save({ session });
+  } else {
+    await med.save();
+  }
+};
+
+const returnMedicineStock = async (medicineId, quantity, session = null) => {
+  const med = await Medicine.findById(medicineId);
+  if (!med) return;
+
+  med.stock += Number(quantity);
+
+  if (med.batches && med.batches.length > 0) {
+    // Thêm số lượng trả lại vào lô có hạn sử dụng dài nhất
+    med.batches.sort((a, b) => new Date(b.expiryDate) - new Date(a.expiryDate));
+    med.batches[0].quantity += Number(quantity);
+  } else {
+    // Nếu chưa có lô nào, tạo một lô mặc định là "Hoàn trả"
+    if (!med.batches) med.batches = [];
+    med.batches.push({
+      batchNumber: "TRA-HANG",
+      expiryDate: med.expiryDate || new Date(Date.now() + 365*24*60*60*1000),
+      quantity: Number(quantity),
+      importPrice: Number(med.importPrice || 0),
+    });
+  }
+
+  if (session) {
+    await med.save({ session });
+  } else {
+    await med.save();
+  }
+};
+
 // @GET /api/sales
 export const getSales = async (req, res) => {
   try {
@@ -176,13 +243,9 @@ export const createSale = async (req, res) => {
         createdBy: req.user._id,
       }], { session });
 
-      // Trừ tồn kho
+      // Trừ tồn kho theo FEFO
       for (const item of processedItems) {
-        await Medicine.findByIdAndUpdate(
-          item.medicine, 
-          buildMedicineStockDecreaseUpdate(item), 
-          { session, runValidators: true }
-        );
+        await deductMedicineStockFEFO(item.medicine, item.quantity, session);
       }
 
       // Cộng tổng chi tiêu khách hàng
@@ -223,11 +286,9 @@ export const createSale = async (req, res) => {
             createdBy: req.user._id,
           });
 
-          // Trừ tồn kho
+          // Trừ tồn kho theo FEFO
           for (const item of processedItems) {
-            await Medicine.findByIdAndUpdate(item.medicine, buildMedicineStockDecreaseUpdate(item), {
-              runValidators: true
-            });
+            await deductMedicineStockFEFO(item.medicine, item.quantity);
           }
 
           // Cộng tổng chi tiêu khách hàng
@@ -270,11 +331,7 @@ export const cancelSale = async (req, res) => {
 
       // Hoàn kho
       for (const item of sale.items) {
-        await Medicine.findByIdAndUpdate(
-          item.medicine, 
-          { $inc: { stock: item.quantity } },
-          { session }
-        );
+        await returnMedicineStock(item.medicine, item.quantity, session);
       }
 
       // Trừ tổng chi tiêu khách hàng
@@ -301,9 +358,7 @@ export const cancelSale = async (req, res) => {
 
         // Hoàn kho
         for (const item of sale.items) {
-          await Medicine.findByIdAndUpdate(item.medicine, {
-            $inc: { stock: item.quantity },
-          });
+          await returnMedicineStock(item.medicine, item.quantity);
         }
 
         // Trừ tổng chi tiêu khách hàng

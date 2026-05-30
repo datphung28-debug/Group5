@@ -140,11 +140,46 @@ export const createImport = async (req, res) => {
       createdBy: req.user._id,
     });
 
-    // Increment stock and update expiry/manufacturing dates
+    // Increment stock, add to batch, and update expiry/manufacturing dates
     for (const item of processedItems) {
-      await Medicine.findByIdAndUpdate(item.medicine, buildMedicineImportUpdate(item), {
-        runValidators: true
-      });
+      const med = await Medicine.findById(item.medicine);
+      if (med) {
+        med.stock += Number(item.quantity);
+        if (item.importPrice !== undefined && item.importPrice !== null) {
+          med.importPrice = Number(item.importPrice);
+        }
+        if (item.expiryDate) med.expiryDate = item.expiryDate;
+        if (item.manufacturingDate) med.manufacturingDate = item.manufacturingDate;
+
+        // Xử lý số lô (batch)
+        if (item.batchNumber) {
+          if (!med.batches) med.batches = [];
+          const existingBatchIdx = med.batches.findIndex(b => b.batchNumber === item.batchNumber);
+          if (existingBatchIdx > -1) {
+            med.batches[existingBatchIdx].quantity += Number(item.quantity);
+            if (item.importPrice !== undefined) {
+              med.batches[existingBatchIdx].importPrice = Number(item.importPrice);
+            }
+            if (item.expiryDate) {
+              med.batches[existingBatchIdx].expiryDate = item.expiryDate;
+            }
+          } else {
+            med.batches.push({
+              batchNumber: item.batchNumber,
+              expiryDate: item.expiryDate || new Date(Date.now() + 365*24*60*60*1000), // Mặc định 1 năm nếu không có hạn dùng
+              quantity: Number(item.quantity),
+              importPrice: Number(item.importPrice || med.importPrice || 0),
+            });
+          }
+
+          // Cập nhật lại hạn sử dụng của thuốc theo lô sắp hết hạn nhất
+          if (med.batches.length > 0) {
+            med.batches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+            med.expiryDate = med.batches[0].expiryDate;
+          }
+        }
+        await med.save();
+      }
     }
 
     // Increase supplier debt and append to history if unpaid or partial

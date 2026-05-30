@@ -92,3 +92,56 @@ export const updatePrescription = async (req, res) => {
     return sendErrorResponse(res, error);
   }
 };
+
+// @GET /api/prescriptions/national/:code - Tra cứu Đơn thuốc Quốc gia
+export const getNationalPrescriptionByCode = async (req, res) => {
+  try {
+    const { code } = req.params;
+    if (!code) {
+      return res.status(400).json({ message: "Vui lòng nhập mã đơn thuốc quốc gia" });
+    }
+
+    // Lấy 2 thuốc cần kê đơn đang kích hoạt để demo
+    const activeMeds = await Medicine.find({ isActive: true, requiresPrescription: true }).limit(2);
+    
+    // Nếu không tìm thấy thuốc kê đơn, lấy 2 thuốc bất kỳ
+    const medsToUse = activeMeds.length > 0 
+      ? activeMeds 
+      : await Medicine.find({ isActive: true }).limit(2);
+
+    if (medsToUse.length === 0) {
+      return res.status(404).json({ message: "Không tìm thấy thuốc tương thích trong hệ thống" });
+    }
+
+    const mockNationalPrescription = {
+      code: code.toUpperCase(),
+      patientName: "Nguyễn Văn Bệnh Nhân",
+      age: 35,
+      gender: "Nam",
+      weight: 65,
+      diagnosis: "Viêm phọng cấp tính / Cảm cúm chuẩn GPP",
+      doctorName: "Bác sĩ Nguyễn Văn Y",
+      doctorLicense: "CCHN-001234",
+      hospitalName: "Bệnh viện Đa khoa Quốc tế GPP",
+      items: medsToUse.map((m, index) => ({
+        medicine: {
+          _id: m._id,
+          name: m.name,
+          code: m.code,
+          requiresPrescription: m.requiresPrescription,
+          sellPrice: m.sellPrice,
+          unit: m.unit,
+        },
+        quantity: index === 0 ? 10 : 5,
+        dosage: index === 0 
+          ? "Uống 1 viên sau ăn sáng, 1 viên sau ăn tối" 
+          : "Uống 1 viên trước khi đi ngủ",
+      })),
+      status: "pending",
+    };
+
+    res.json(mockNationalPrescription);
+  } catch (error) {
+    return sendErrorResponse(res, error);
+  }
+};
