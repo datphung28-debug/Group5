@@ -61,6 +61,31 @@ const SchedulePage = () => {
     return { start, end };
   }, [weekDays]);
 
+  const defaultWeek = useMemo(() => {
+    const today = dayjs();
+    let startOfThisWeek = today.startOf('week');
+    if (today.day() === 0) {
+      startOfThisWeek = today.subtract(6, 'day');
+    } else {
+      startOfThisWeek = startOfThisWeek.add(1, 'day');
+    }
+    
+    // Nếu tuần đang lọc là tuần trong quá khứ, dùng tuần hiện tại
+    if (activeFilters.week.isBefore(startOfThisWeek, 'day')) {
+      return today;
+    }
+    return activeFilters.week;
+  }, [activeFilters.week]);
+
+  useEffect(() => {
+    if (autoModalOpen) {
+      autoForm.setFieldsValue({
+        strategy: 'rotate',
+        week: defaultWeek,
+      });
+    }
+  }, [autoModalOpen, defaultWeek, autoForm]);
+
   // 1. Tải danh sách nhân sự từ Database
   useEffect(() => {
     const fetchStaff = async () => {
@@ -253,8 +278,17 @@ const SchedulePage = () => {
   const handleAutoAssign = async (values) => {
     setSubmitting(true);
     try {
+      const selectedWeek = values.week;
+      let startOfWeek = selectedWeek.startOf('week');
+      if (selectedWeek.day() === 0) {
+        startOfWeek = selectedWeek.subtract(6, 'day');
+      } else {
+        startOfWeek = startOfWeek.add(1, 'day');
+      }
+      const startDateStr = startOfWeek.format('YYYY-MM-DD');
+
       const res = await scheduleAPI.autoAssign({
-        startDate: activeDateRange.start,
+        startDate: startDateStr,
         strategy: values.strategy,
       });
       messageApi.success(res.data?.message || "Tự động xếp ca tuần thành công!");
@@ -562,19 +596,41 @@ const SchedulePage = () => {
         width={480}
       >
         <div className="my-4 text-[13px] text-[var(--color-text-secondary)]">
-          Hệ thống sẽ tự động phân bổ ca làm việc (Sáng, Chiều, Tối) và luân chuyển khu vực làm việc cho tất cả dược sĩ đang hoạt động trong tuần đang hiển thị (<span className="font-semibold">{activeDateRange.start} đến {activeDateRange.end}</span>).
+          Hệ thống sẽ tự động phân bổ ca làm việc (Sáng, Chiều, Tối) và luân chuyển khu vực làm việc cho tất cả dược sĩ đang hoạt động trong tuần được chọn.
         </div>
         
         <div className="mb-4 rounded-[var(--radius-md)] border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-700 font-medium">
-          ⚠️ Chú ý: Hành động này sẽ xóa toàn bộ ca làm hiện tại trong tuần này trước khi tạo lịch tự động mới.
+          ⚠️ Chú ý: Hành động này sẽ xóa toàn bộ ca làm hiện tại trong tuần được chọn trước khi tạo lịch tự động mới.
         </div>
 
         <Form
           form={autoForm}
           layout="vertical"
           onFinish={handleAutoAssign}
-          initialValues={{ strategy: 'rotate' }}
         >
+          <Form.Item
+            label="Chọn tuần xếp ca"
+            name="week"
+            rules={[{ required: true, message: 'Vui lòng chọn tuần xếp ca' }]}
+          >
+            <DatePicker
+              picker="week"
+              format="YYYY-WW"
+              className="w-full"
+              disabledDate={(current) => {
+                const today = dayjs();
+                let startOfThisWeek = today.startOf('week');
+                if (today.day() === 0) {
+                  startOfThisWeek = today.subtract(6, 'day');
+                } else {
+                  startOfThisWeek = startOfThisWeek.add(1, 'day');
+                }
+                return current && current.isBefore(startOfThisWeek, 'day');
+              }}
+              placeholder="Chọn tuần phân ca làm việc"
+            />
+          </Form.Item>
+
           <Form.Item
             label="Chọn chiến lược xếp ca"
             name="strategy"
