@@ -21,6 +21,15 @@ import { medicineAPI, saleAPI, customerAPI, prescriptionAPI } from '../../api/ap
 import { checkPrescriptionSafety } from '../../utils/drugSafety';
 import { buildSalePayload, getCartStockIssue, getCashPaymentIssue } from './posSaleUtils';
 
+// ═══════════════════════════════════════════════════════════════════
+// BỘ ĐỆM CACHE NGOẠI TUYẾN & TỐI ƯU HÓA TẢI DỮ LIỆU
+// ═══════════════════════════════════════════════════════════════════
+let medicinesCache = null;
+let customersCache = null;
+let prescriptionsCache = null;
+let cacheTimestamp = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 phút
+
 const POSPage = () => {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
@@ -48,8 +57,17 @@ const POSPage = () => {
   const [isOCRModalOpen, setIsOCRModalOpen] = useState(false);
   const [isMapDrawerOpen, setIsMapDrawerOpen] = useState(false);
 
-  // Search state
+  // Search state & Debounce
   const [searchText, setSearchText] = useState('');
+  const [debouncedSearchText, setDebouncedSearchText] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchText(searchText);
+    }, 200);
+
+    return () => clearTimeout(handler);
+  }, [searchText]);
 
   // Phase 2: Hóa đơn trong ca (live data)
   const [todayInvoices, setTodayInvoices] = useState([]);
@@ -81,11 +99,19 @@ const POSPage = () => {
     }
   }, []);
 
-  const fetchCustomers = useCallback(async () => {
+  const fetchCustomers = useCallback(async (forceRefresh = false) => {
+    const now = Date.now();
+    if (!forceRefresh && customersCache && (now - cacheTimestamp < CACHE_DURATION)) {
+      setCustomers(customersCache);
+      return;
+    }
     try {
       const res = await customerAPI.getAll({ limit: 500 });
       const data = res.data?.customers || res.data || [];
-      setCustomers(Array.isArray(data) ? data : []);
+      const customersArray = Array.isArray(data) ? data : [];
+      setCustomers(customersArray);
+      customersCache = customersArray;
+      cacheTimestamp = now;
     } catch (error) {
       console.error('Không thể tải khách hàng:', error);
     }
@@ -93,22 +119,38 @@ const POSPage = () => {
 
   const [prescriptions, setPrescriptions] = useState([]);
 
-  const fetchPrescriptions = useCallback(async () => {
+  const fetchPrescriptions = useCallback(async (forceRefresh = false) => {
+    const now = Date.now();
+    if (!forceRefresh && prescriptionsCache && (now - cacheTimestamp < CACHE_DURATION)) {
+      setPrescriptions(prescriptionsCache);
+      return;
+    }
     try {
       const res = await prescriptionAPI.getAll({ limit: 500, status: 'pending' });
       const data = res.data?.prescriptions || res.data || [];
-      setPrescriptions(Array.isArray(data) ? data : []);
+      const prescriptionsArray = Array.isArray(data) ? data : [];
+      setPrescriptions(prescriptionsArray);
+      prescriptionsCache = prescriptionsArray;
+      cacheTimestamp = now;
     } catch (error) {
       console.error('Không thể tải đơn thuốc:', error);
     }
   }, []);
 
-  const fetchMedicines = useCallback(async () => {
+  const fetchMedicines = useCallback(async (forceRefresh = false) => {
     setMedicineError('');
+    const now = Date.now();
+    if (!forceRefresh && medicinesCache && (now - cacheTimestamp < CACHE_DURATION)) {
+      setMedicines(medicinesCache);
+      return;
+    }
     try {
       const res = await medicineAPI.getAll({ limit: 5000 });
       const meds = res.data?.medicines || res.data?.data || res.data || [];
-      setMedicines(Array.isArray(meds) ? meds : []);
+      const medsArray = Array.isArray(meds) ? meds : [];
+      setMedicines(medsArray);
+      medicinesCache = medsArray;
+      cacheTimestamp = now;
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Không thể tải danh sách thuốc';
       setMedicineError(errorMessage);
@@ -260,12 +302,12 @@ const POSPage = () => {
 
   // Lọc tìm kiếm
   const filteredMedicines = useMemo(() => {
-    if (!searchText) return [];
+    if (!debouncedSearchText) return [];
     return medicines.filter(m =>
-      m.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      (m.code && m.code.toLowerCase().includes(searchText.toLowerCase()))
+      m.name.toLowerCase().includes(debouncedSearchText.toLowerCase()) ||
+      (m.code && m.code.toLowerCase().includes(debouncedSearchText.toLowerCase()))
     ).slice(0, 8);
-  }, [searchText, medicines]);
+  }, [debouncedSearchText, medicines]);
 
   // Kiểm tra an toàn dược
   const safetyCheck = useMemo(() => checkPrescriptionSafety(cart), [cart]);
@@ -295,15 +337,78 @@ const POSPage = () => {
 
     const proceedCheckout = async () => {
       setCheckoutSubmitting(true);
-      try {
-        const payload = buildSalePayload({
-          cart,
+      const payload = buildSalePayload({
+        cart,
+        customer: activeOrder.customer,
+        prescription: activeOrder.prescription,
+        discount: orderDiscount,
+        paymentMethod,
+        amountPaid: paymentMethod === 'cash' ? customerGiven : total,
+      });
+
+      const isOffline = !navigator.onLine;
+
+      if (isOffline) {
+        // Lưu tạm offline
+        const offlineCode = `HD-OFF-${Date.now()}`;
+        const offlineInvoice = {
+          _id: offlineCode,
+          code: offlineCode,
           customer: activeOrder.customer,
           prescription: activeOrder.prescription,
+          items: cart.map(item => ({
+            medicine: item.medicine,
+            quantity: item.quantity,
+            unitPrice: item.medicine.sellPrice,
+            discount: item.discount,
+            total: item.medicine.sellPrice * item.quantity * (1 - (item.discount || 0) / 100),
+            dosage: item.dosage,
+          })),
+          subTotal,
           discount: orderDiscount,
+          totalAmount: total,
           paymentMethod,
           amountPaid: paymentMethod === 'cash' ? customerGiven : total,
-        });
+          changeAmount: paymentMethod === 'cash' ? Math.max(0, customerGiven - total) : 0,
+          createdAt: new Date().toISOString(),
+          isOffline: true,
+        };
+
+        const offlineQueue = JSON.parse(localStorage.getItem('offline_sales') || '[]');
+        offlineQueue.push(payload);
+        localStorage.setItem('offline_sales', JSON.stringify(offlineQueue));
+
+        message.warning(`⚠️ Ngoại tuyến: Đã lưu tạm hóa đơn ${offlineCode}! Sẽ đồng bộ tự động khi có mạng.`);
+
+        // Enrich dữ liệu local
+        const invoiceData = { ...offlineInvoice };
+        if (invoiceData.customer && typeof invoiceData.customer === 'string') {
+          const c = customers.find(x => x._id === invoiceData.customer);
+          if (c) invoiceData.customer = c;
+        }
+
+        // Cập nhật tồn kho local tạm thời
+        setMedicines(prev => prev.map(m => {
+          const item = cart.find(ci => ci.medicine._id === m._id);
+          if (item) {
+            return { ...m, stock: Math.max(0, m.stock - item.quantity) };
+          }
+          return m;
+        }));
+
+        // Reset đơn hàng hiện tại
+        updateActiveOrder({ cart: [], discount: 0, customerGiven: null, prescription: null, customer: null });
+
+        if (autoPrint) {
+          setSelectedInvoiceToPrint(invoiceData);
+          setIsReceiptModalOpen(true);
+        }
+        setCheckoutSubmitting(false);
+        return;
+      }
+
+      // Xử lý online
+      try {
         const res = await saleAPI.create(payload);
         message.success(`✅ Thanh toán thành công! Mã HĐ: ${res.data?.code || 'OK'}`);
 
@@ -328,8 +433,8 @@ const POSPage = () => {
 
         // Refresh data
         fetchTodayInvoices();
-        fetchMedicines();
-        fetchPrescriptions();
+        fetchMedicines(true); // Force refresh medicines stock from backend
+        fetchPrescriptions(true);
         
         // Auto print preview
         if (autoPrint) {
@@ -337,8 +442,62 @@ const POSPage = () => {
           setIsReceiptModalOpen(true);
         }
       } catch (error) {
-        const errMsg = error.response?.data?.message || 'Lỗi khi thanh toán!';
-        message.error(errMsg);
+        if (!error.response) {
+          // Lỗi mạng đột ngột
+          const offlineCode = `HD-OFF-${Date.now()}`;
+          const offlineInvoice = {
+            _id: offlineCode,
+            code: offlineCode,
+            customer: activeOrder.customer,
+            prescription: activeOrder.prescription,
+            items: cart.map(item => ({
+              medicine: item.medicine,
+              quantity: item.quantity,
+              unitPrice: item.medicine.sellPrice,
+              discount: item.discount,
+              total: item.medicine.sellPrice * item.quantity * (1 - (item.discount || 0) / 100),
+              dosage: item.dosage,
+            })),
+            subTotal,
+            discount: orderDiscount,
+            totalAmount: total,
+            paymentMethod,
+            amountPaid: paymentMethod === 'cash' ? customerGiven : total,
+            changeAmount: paymentMethod === 'cash' ? Math.max(0, customerGiven - total) : 0,
+            createdAt: new Date().toISOString(),
+            isOffline: true,
+          };
+
+          const offlineQueue = JSON.parse(localStorage.getItem('offline_sales') || '[]');
+          offlineQueue.push(payload);
+          localStorage.setItem('offline_sales', JSON.stringify(offlineQueue));
+
+          message.warning(`⚠️ Mất kết nối: Đã lưu tạm hóa đơn ngoại tuyến ${offlineCode}!`);
+
+          const invoiceData = { ...offlineInvoice };
+          if (invoiceData.customer && typeof invoiceData.customer === 'string') {
+            const c = customers.find(x => x._id === invoiceData.customer);
+            if (c) invoiceData.customer = c;
+          }
+
+          setMedicines(prev => prev.map(m => {
+            const item = cart.find(ci => ci.medicine._id === m._id);
+            if (item) {
+              return { ...m, stock: Math.max(0, m.stock - item.quantity) };
+            }
+            return m;
+          }));
+
+          updateActiveOrder({ cart: [], discount: 0, customerGiven: null, prescription: null, customer: null });
+
+          if (autoPrint) {
+            setSelectedInvoiceToPrint(invoiceData);
+            setIsReceiptModalOpen(true);
+          }
+        } else {
+          const errMsg = error.response?.data?.message || 'Lỗi khi thanh toán!';
+          message.error(errMsg);
+        }
       } finally {
         setCheckoutSubmitting(false);
       }
@@ -399,6 +558,46 @@ const POSPage = () => {
     return () => clearInterval(timer);
   }, [fetchCustomers, fetchMedicines, fetchTodayInvoices, fetchPrescriptions]);
 
+  // Tự động đồng bộ hóa đơn offline khi có mạng trở lại
+  useEffect(() => {
+    const syncOfflineSales = async () => {
+      if (!navigator.onLine) return;
+      const offlineQueue = JSON.parse(localStorage.getItem('offline_sales') || '[]');
+      if (offlineQueue.length === 0) return;
+
+      message.loading({ content: 'Đang đồng bộ hóa đơn ngoại tuyến...', key: 'sync_sales' });
+      const remainingQueue = [];
+      let successCount = 0;
+
+      for (const payload of offlineQueue) {
+        try {
+          await saleAPI.create(payload);
+          successCount++;
+        } catch (err) {
+          console.error('Lỗi đồng bộ hóa đơn offline:', err);
+          remainingQueue.push(payload);
+        }
+      }
+
+      localStorage.setItem('offline_sales', JSON.stringify(remainingQueue));
+      
+      if (successCount > 0) {
+        message.success({ content: `✅ Đã đồng bộ thành công ${successCount} hóa đơn ngoại tuyến!`, key: 'sync_sales', duration: 4 });
+        fetchTodayInvoices();
+        fetchMedicines(true); // Force refresh medicines stock from backend
+      } else {
+        message.destroy('sync_sales');
+      }
+    };
+
+    window.addEventListener('online', syncOfflineSales);
+    syncOfflineSales();
+
+    return () => {
+      window.removeEventListener('online', syncOfflineSales);
+    };
+  }, [fetchTodayInvoices, fetchMedicines]);
+
   const handleCreateCustomer = async () => {
     try {
       const values = await customerForm.validateFields();
@@ -408,7 +607,11 @@ const POSPage = () => {
       customerForm.resetFields();
       
       const newCustomer = res.data;
-      setCustomers(prev => [...prev, newCustomer]);
+      setCustomers(prev => {
+        const updated = [...prev, newCustomer];
+        customersCache = updated;
+        return updated;
+      });
       updateActiveOrder({ customer: newCustomer._id });
     } catch (error) {
       if (error.response?.data?.message) {
@@ -1019,13 +1222,13 @@ const POSPage = () => {
               label: <span className="font-bold px-2">In Biên Lai Giấy</span>,
               children: (
                 <div className="bg-[#f1f5f9] p-5 flex flex-col items-center">
-                  <div className="shadow-lg drop-shadow-xl print-container mb-6" style={{ transform: 'scale(1.05)' }}>
+                  <div className="shadow-lg drop-shadow-xl print-container print-receipt-area mb-6" style={{ transform: 'scale(1.05)' }}>
                      <ReceiptPrint invoice={selectedInvoiceToPrint} />
                   </div>
                   <div className="flex gap-3 w-full">
                     <Button block size="large" onClick={() => setIsReceiptModalOpen(false)}>Đóng</Button>
                     <Button type="primary" block size="large" icon={<PrinterOutlined />} className="bg-slate-800" onClick={() => {
-                       message.success('Đã gửi lệnh in đến máy in nhiệt!');
+                       window.print();
                        setIsReceiptModalOpen(false);
                     }}>In ngay</Button>
                   </div>

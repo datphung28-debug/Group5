@@ -96,3 +96,27 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
+
+/* ═══ PRINT STYLES FOR THERMAL K80 PRINTER ═══ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-receipt-area, .print-receipt-area * {
+    visibility: visible;
+  }
+  .print-receipt-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 0;
+    box-shadow: none !important;
+    background: white;
+  }
+  @page {
+    size: auto;
+    margin: 0mm;
+  }
+}
