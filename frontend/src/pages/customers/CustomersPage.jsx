@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Descriptions, Drawer, Dropdown, Empty, Form, Input, Modal, Pagination, Select, Space, Table, Tag, message } from 'antd';
-import { Activity, CalendarClock, Edit3, Eye, Filter, HeartPulse, MoreVertical, Plus, ReceiptText, RotateCcw, Sparkles, Star, UserRound, Users } from 'lucide-react';
+import { Button, Card, DatePicker, Descriptions, Drawer, Dropdown, Empty, Form, Input, Modal, Pagination, Select, Space, Table, Tag, message } from 'antd';
+import { Activity, CalendarClock, Edit3, Eye, Filter, HeartPulse, MoreVertical, Plus, ReceiptText, RotateCcw, Sparkles, Star, Trash2, UserRound, Users } from 'lucide-react';
+import dayjs from 'dayjs';
 import PageHeader from '../../components/PageHeader';
 import { customerAPI, saleAPI } from '../../api/api';
 
@@ -39,9 +40,9 @@ const normalizeCustomer = (customer = {}) => {
     segment: totalSpending >= 5000000 ? 'loyal' : joinedThisMonth ? 'new' : 'regular',
     gender: GENDER_OPTIONS.find((option) => option.value === customer.gender)?.label || 'Khác',
     dateOfBirth: customer.dateOfBirth ? new Date(customer.dateOfBirth).toLocaleDateString('vi-VN') : '—',
-    allergies: '',
-    chronicDiseases: '',
-    medicationWarnings: '',
+    allergies: customer.allergies || '',
+    chronicDiseases: customer.chronicDiseases || '',
+    medicationWarnings: customer.medicationWarnings || '',
     medicalNotes: customer.notes || '',
     loyaltyPoints: 0,
     totalSpending,
@@ -164,17 +165,30 @@ export default function CustomersPage() {
 
   const handleOpenEdit = (customer) => {
     setEditingCustomer(customer);
+    let dobVal = null;
+    if (customer.dateOfBirth && customer.dateOfBirth !== '—') {
+      const parts = customer.dateOfBirth.split('/');
+      if (parts.length === 3) {
+        dobVal = dayjs(`${parts[2]}-${parts[1]}-${parts[0]}`);
+      } else {
+        dobVal = dayjs(customer.dateOfBirth);
+      }
+    }
     customerForm.setFieldsValue({
       name: customer.name,
       phone: customer.phone,
-      gender: customer.gender === 'Nam' ? 'male' : customer.gender === 'Nữ' ? 'female' : 'other',
+      email: customer.email || '',
+      gender: ['male', 'female', 'other'].includes(customer.gender)
+        ? customer.gender
+        : customer.gender === 'Nam' ? 'male' : customer.gender === 'Nữ' ? 'female' : 'other',
       segment: customer.segment,
-      address: customer.address,
-      allergies: customer.allergies,
-      chronicDiseases: customer.chronicDiseases,
-      medicationWarnings: customer.medicationWarnings,
-      notes: customer.medicalNotes,
-      insight: customer.insight,
+      address: customer.address || '',
+      dateOfBirth: dobVal,
+      allergies: customer.allergies || '',
+      chronicDiseases: customer.chronicDiseases || '',
+      medicationWarnings: customer.medicationWarnings || '',
+      notes: customer.notes || customer.medicalNotes || '',
+      insight: customer.insight || '',
     });
     setCustomerModalOpen(true);
   };
@@ -184,9 +198,14 @@ export default function CustomersPage() {
     const payload = {
       name: values.name,
       phone: values.phone,
+      email: values.email || '',
       gender: values.gender,
       address: values.address || '',
-      notes: values.notes || values.insight || '',
+      dateOfBirth: values.dateOfBirth ? values.dateOfBirth.toISOString() : null,
+      allergies: values.allergies || '',
+      chronicDiseases: values.chronicDiseases || '',
+      medicationWarnings: values.medicationWarnings || '',
+      notes: values.notes || '',
     };
 
     try {
@@ -205,6 +224,29 @@ export default function CustomersPage() {
     } catch (error) {
       message.error(error.response?.data?.message || 'Không thể lưu khách hàng');
     }
+  };
+
+  const handleDeleteCustomer = (customer) => {
+    Modal.confirm({
+      title: 'Xóa khách hàng',
+      content: `Bạn có chắc chắn muốn xóa khách hàng ${customer.name}? Hành động này sẽ được thực hiện dưới dạng xóa mềm.`,
+      okText: 'Xóa',
+      okType: 'danger',
+      cancelText: 'Hủy',
+      okButtonProps: { className: 'bg-red-600 border-none' },
+      onOk: async () => {
+        try {
+          await customerAPI.delete(customer._id || customer.id);
+          setCustomers((current) => current.filter((c) => c.id !== (customer._id || customer.id)));
+          message.success('Đã xóa khách hàng thành công');
+          if (selectedCustomer && (selectedCustomer._id === customer._id || selectedCustomer.id === customer.id)) {
+            setSelectedCustomer(null);
+          }
+        } catch (error) {
+          message.error(error.response?.data?.message || 'Không thể xóa khách hàng');
+        }
+      },
+    });
   };
 
   const handleViewCustomer = async (customer) => {
@@ -265,18 +307,20 @@ export default function CustomersPage() {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 120,
+      width: 150,
       fixed: 'right',
       render: (_, customer) => {
         const items = [
           { key: 'view', label: 'Xem chi tiết', icon: <Eye size={16} />, onClick: () => handleViewCustomer(customer) },
           { key: 'edit', label: 'Chỉnh sửa', icon: <Edit3 size={16} />, onClick: () => handleOpenEdit(customer) },
+          { key: 'delete', label: 'Xóa', danger: true, icon: <Trash2 size={16} />, onClick: () => handleDeleteCustomer(customer) },
         ];
 
         return (
           <div className="flex min-h-12 items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
             <Button type="text" aria-label="Xem khách hàng" icon={<Eye size={17} className="text-[var(--color-primary)]" />} className="rounded-full hover:bg-[var(--color-primary-light)]" onClick={() => handleViewCustomer(customer)} />
             <Button type="text" aria-label="Sửa khách hàng" icon={<Edit3 size={17} className="text-[var(--color-text-secondary)]" />} className="rounded-full hover:bg-[var(--color-bg-subtle)]" onClick={() => handleOpenEdit(customer)} />
+            <Button type="text" aria-label="Xóa khách hàng" icon={<Trash2 size={17} className="text-red-500" />} className="rounded-full hover:bg-red-50" onClick={() => handleDeleteCustomer(customer)} />
             <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
               <Button type="text" aria-label="Thêm thao tác" icon={<MoreVertical size={17} className="text-[var(--color-text-secondary)]" />} className="rounded-full hover:bg-[var(--color-bg-subtle)] sm:hidden" />
             </Dropdown>
@@ -367,7 +411,11 @@ export default function CustomersPage() {
                 <p className="font-semibold text-[var(--color-text-primary)]">{customer.name}</p>
                 <p className="text-[var(--font-size-xs)] text-[var(--color-text-muted)]">{customer.code} · {customer.phone}</p>
               </div>
-              <Dropdown menu={{ items: [{ key: 'view', label: 'Xem chi tiết', icon: <Eye size={16} />, onClick: () => handleViewCustomer(customer) }, { key: 'edit', label: 'Chỉnh sửa', icon: <Edit3 size={16} />, onClick: () => handleOpenEdit(customer) }] }} trigger={['click']}>
+              <Dropdown menu={{ items: [
+                { key: 'view', label: 'Xem chi tiết', icon: <Eye size={16} />, onClick: () => handleViewCustomer(customer) },
+                { key: 'edit', label: 'Chỉnh sửa', icon: <Edit3 size={16} />, onClick: () => handleOpenEdit(customer) },
+                { key: 'delete', label: 'Xóa', danger: true, icon: <Trash2 size={16} />, onClick: () => handleDeleteCustomer(customer) }
+              ] }} trigger={['click']}>
                 <Button type="text" icon={<MoreVertical size={18} className="text-[var(--color-text-secondary)]" />} />
               </Dropdown>
             </div>
@@ -455,6 +503,7 @@ export default function CustomersPage() {
                 <Descriptions.Item label="Giới tính">{selectedCustomer.gender}</Descriptions.Item>
                 <Descriptions.Item label="Ngày sinh">{selectedCustomer.dateOfBirth}</Descriptions.Item>
                 <Descriptions.Item label="SĐT">{selectedCustomer.phone}</Descriptions.Item>
+                <Descriptions.Item label="Email">{selectedCustomer.email || '—'}</Descriptions.Item>
                 <Descriptions.Item label="Địa chỉ">{selectedCustomer.address}</Descriptions.Item>
               </Descriptions>
             </Card>
@@ -487,14 +536,16 @@ export default function CustomersPage() {
       >
         <Form form={customerForm} layout="vertical">
           <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
-            <Form.Item name="name" label="Tên khách hàng" rules={[{ required: true, message: 'Vui lòng nhập tên khách hàng' }]}><Input /></Form.Item>
-            <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: 'Vui lòng nhập SĐT' }]}><Input /></Form.Item>
-            <Form.Item name="gender" label="Giới tính"><Select options={GENDER_OPTIONS} /></Form.Item>
-            <Form.Item name="segment" label="Nhóm khách"><Select options={SEGMENT_FILTER_OPTIONS.filter((option) => option.value !== 'all')} /></Form.Item>
-            <Form.Item name="address" label="Địa chỉ" className="md:col-span-2"><Input /></Form.Item>
-            <Form.Item name="allergies" label="Dị ứng"><Input placeholder="VD: Penicillin" /></Form.Item>
-            <Form.Item name="chronicDiseases" label="Bệnh mãn tính"><Input placeholder="VD: Tăng huyết áp" /></Form.Item>
-            <Form.Item name="medicationWarnings" label="Cảnh báo thuốc" className="md:col-span-2"><Input /></Form.Item>
+            <Form.Item name="name" label="Tên khách hàng" rules={[{ required: true, message: 'Vui lòng nhập tên khách hàng' }]}><Input className="h-10 rounded-[var(--radius-md)]" /></Form.Item>
+            <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: 'Vui lòng nhập SĐT' }]}><Input className="h-10 rounded-[var(--radius-md)]" /></Form.Item>
+            <Form.Item name="email" label="Email" rules={[{ type: 'email', message: 'Email không hợp lệ' }]}><Input className="h-10 rounded-[var(--radius-md)]" placeholder="VD: email@example.com" /></Form.Item>
+            <Form.Item name="gender" label="Giới tính"><Select className="h-10" options={GENDER_OPTIONS} /></Form.Item>
+            <Form.Item name="dateOfBirth" label="Ngày sinh"><DatePicker format="DD/MM/YYYY" className="h-10 w-full rounded-[var(--radius-md)]" placeholder="Chọn ngày sinh" /></Form.Item>
+            <Form.Item name="segment" label="Nhóm khách"><Select className="h-10" options={SEGMENT_FILTER_OPTIONS.filter((option) => option.value !== 'all')} /></Form.Item>
+            <Form.Item name="address" label="Địa chỉ" className="md:col-span-2"><Input className="h-10 rounded-[var(--radius-md)]" /></Form.Item>
+            <Form.Item name="allergies" label="Dị ứng"><Input className="h-10 rounded-[var(--radius-md)]" placeholder="VD: Penicillin" /></Form.Item>
+            <Form.Item name="chronicDiseases" label="Bệnh mãn tính"><Input className="h-10 rounded-[var(--radius-md)]" placeholder="VD: Tăng huyết áp" /></Form.Item>
+            <Form.Item name="medicationWarnings" label="Cảnh báo thuốc" className="md:col-span-2"><Input className="h-10 rounded-[var(--radius-md)]" /></Form.Item>
             <Form.Item name="notes" label="Ghi chú sức khỏe / hồ sơ" className="md:col-span-2"><Input.TextArea rows={3} /></Form.Item>
             <Form.Item name="insight" label="Insight chăm sóc khách hàng" className="md:col-span-2"><Input.TextArea rows={2} /></Form.Item>
           </div>
