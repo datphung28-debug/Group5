@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Button } from 'antd';
 import { Plus } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -6,14 +6,21 @@ import PageHeader from '../../components/PageHeader';
 import FilterBar from './components/FilterBar';
 import MedicineTable from './components/MedicineTable';
 import useMedicineStore from '../../stores/useMedicineStore';
+import useCategoryStore from '../../stores/useCategoryStore';
 
 const MedicineListPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { fetchMedicines, setParams, total, loading } = useMedicineStore();
+  const { fetchMedicines, setParams, params, total, loading } = useMedicineStore();
+  const { categories, fetchCategories } = useCategoryStore();
 
   const searchParams = new URLSearchParams(location.search);
   const initialCategory = searchParams.get('group') || '';
+
+  // Fetch categories list on mount to resolve ID to name
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   // Fetch when component mounts or when URL query parameter changes
   useEffect(() => {
@@ -40,10 +47,18 @@ const MedicineListPage = () => {
     navigate('/medicines', { replace: true });
   };
 
+  // Find the selected category name to show in the page header title
+  const selectedCategoryName = useMemo(() => {
+    const currentCategory = params.category || initialCategory;
+    if (!currentCategory || categories.length === 0) return '';
+    const cat = categories.find(c => (c._id || c.id) === currentCategory);
+    return cat ? cat.name : '';
+  }, [params.category, initialCategory, categories]);
+
   return (
     <div className="p-6 min-h-screen bg-[var(--color-bg-app)]">
       <PageHeader
-        title="Danh mục thuốc"
+        title={selectedCategoryName ? `Danh mục thuốc — Nhóm ${selectedCategoryName}` : 'Danh mục thuốc'}
         subtitle="Quản lý danh sách thuốc trong hệ thống"
         actions={
           <Button
