@@ -1,41 +1,85 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Empty, Popover, Tag } from 'antd';
-import { Search, Bell, Plus, ChevronDown, User, X } from 'lucide-react';
+import { Badge, Button, Empty, Popover, Tag, Spin } from 'antd';
+import { Search, Bell, Plus, ChevronDown, User, X, LogOut } from 'lucide-react';
 import useAuthStore from '../stores/useAuthStore';
+import { medicineAPI, importAPI } from '../api/api';
 
-const initialNotifications = [
-  {
-    id: 1,
-    title: '12 thuốc sắp hết tồn',
-    description: 'Kiểm tra tồn kho và tạo đơn nhập bổ sung.',
-    time: '5 phút trước',
-    type: 'Tồn kho',
-    unread: true,
-  },
-  {
-    id: 2,
-    title: '3 lô thuốc sắp hết hạn',
-    description: 'Cần rà soát hạn dùng trong 30 ngày tới.',
-    time: '18 phút trước',
-    type: 'Cảnh báo',
-    unread: true,
-  },
-  {
-    id: 3,
-    title: 'Đơn nhập PN-2409 đã hoàn tất',
-    description: 'Nhà cung cấp An Khang đã giao đủ hàng.',
-    time: '1 giờ trước',
-    type: 'Nhập hàng',
-    unread: false,
-  },
-];
+
 
 export default function Header() {
   const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  // Fetch real alerts and updates from database
+  useEffect(() => {
+    const fetchRealNotifications = async () => {
+      setLoadingNotifications(true);
+      try {
+        const [lowStockRes, expiringRes, importsRes] = await Promise.all([
+          medicineAPI.getAll({ lowStock: 'true', limit: 10 }),
+          medicineAPI.getExpiring(30),
+          importAPI.getAll({ limit: 5 })
+        ]);
+
+        const lowStock = lowStockRes.data?.medicines || lowStockRes.data?.data || lowStockRes.data || [];
+        const expiring = expiringRes.data?.medicines || expiringRes.data?.data || expiringRes.data || [];
+        const imports = importsRes.data?.imports || importsRes.data?.data || importsRes.data || [];
+
+        const list = [];
+        
+        // Map medicines with low stock
+        if (lowStock.length > 0) {
+          list.push({
+            id: 'low-stock',
+            title: `${lowStock.length} thuốc sắp hết tồn`,
+            description: `Bao gồm: ${lowStock.slice(0, 3).map((m) => m.name).join(', ')}${lowStock.length > 3 ? '...' : ''}.`,
+            time: 'Hiện tại',
+            type: 'Tồn kho',
+            unread: true,
+          });
+        }
+
+        // Map medicines expiring in 30 days
+        if (expiring.length > 0) {
+          list.push({
+            id: 'expiring-soon',
+            title: `${expiring.length} lô thuốc sắp hết hạn`,
+            description: `Bao gồm: ${expiring.slice(0, 3).map((m) => m.name).join(', ')}${expiring.length > 3 ? '...' : ''}.`,
+            time: 'Hiện tại',
+            type: 'Cảnh báo',
+            unread: true,
+          });
+        }
+
+        // Map recent completed import transactions
+        if (imports.length > 0) {
+          const latestImport = imports[0];
+          list.push({
+            id: `import-${latestImport._id}`,
+            title: `Phiếu nhập ${latestImport.code} hoàn tất`,
+            description: `Nhập hàng từ nhà cung cấp ${latestImport.supplier?.name || 'NCC'} thành công.`,
+            time: 'Gần đây',
+            type: 'Nhập hàng',
+            unread: false,
+          });
+        }
+
+        setNotifications(list);
+      } catch (err) {
+        console.error('Failed to fetch real notifications:', err);
+      } finally {
+        setLoadingNotifications(false);
+      }
+    };
+
+    fetchRealNotifications();
+  }, []);
 
   const unreadCount = notifications.filter((notification) => notification.unread).length;
 
@@ -44,17 +88,37 @@ export default function Header() {
   };
 
   const markAllAsRead = () => {
-    setNotifications((currentNotifications) => currentNotifications.map((notification) => ({
-      ...notification,
-      unread: false,
-    })));
+    setNotifications((current) => current.map((item) => ({ ...item, unread: false })));
   };
 
   const markAsRead = (notificationId) => {
-    setNotifications((currentNotifications) => currentNotifications.map((notification) => (
-      notification.id === notificationId ? { ...notification, unread: false } : notification
+    setNotifications((current) => current.map((item) => (
+      item.id === notificationId ? { ...item, unread: false } : item
     )));
   };
+
+  // Content for the user avatar dropdown popover
+  const userContent = (
+    <div className="w-[200px] py-1">
+      <div className="px-4 py-2 border-b border-[var(--color-border-light)]">
+        <p className="m-0 text-[13px] font-semibold text-[var(--color-text-primary)] truncate">{user?.name || 'Dược sĩ'}</p>
+        <p className="m-0 mt-0.5 text-[11px] text-[var(--color-text-secondary)] uppercase tracking-wider font-medium">
+          {user?.role === 'admin' ? 'Quản trị viên' : 'Dược sĩ'}
+        </p>
+        <p className="m-0 mt-0.5 text-[11px] text-[var(--color-text-muted)] truncate">{user?.email}</p>
+      </div>
+      <div className="py-1">
+        <button
+          onClick={logout}
+          type="button"
+          className="flex w-full items-center gap-2 px-4 py-2 text-left text-[13px] font-medium text-[var(--color-debt)] hover:bg-[var(--color-debt-bg)] transition-colors cursor-pointer"
+        >
+          <LogOut size={14} />
+          Đăng xuất
+        </button>
+      </div>
+    </div>
+  );
 
   const notificationContent = (
     <div className="w-[calc(100vw-32px)] max-w-[360px]">
@@ -72,7 +136,11 @@ export default function Header() {
         )}
       </div>
 
-      {notifications.length === 0 ? (
+      {loadingNotifications ? (
+        <div className="flex justify-center items-center py-8">
+          <Spin size="small" />
+        </div>
+      ) : notifications.length === 0 ? (
         <div className="px-4 py-8">
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có thông báo" />
         </div>
@@ -170,20 +238,30 @@ export default function Header() {
           <div className="hidden sm:block h-6 w-px bg-[var(--color-border-light)] mx-1"></div>
 
           {/* User avatar + info */}
-          <button className="flex items-center gap-2 md:gap-3 hover:bg-[var(--color-bg-subtle)] p-1.5 -m-1.5 rounded-[var(--radius-md)] transition-colors cursor-pointer text-left flex-shrink-0 group">
-            <div className="w-8 h-8 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center overflow-hidden flex-shrink-0 border border-transparent group-hover:border-[var(--color-primary-border)] transition-all">
-              <User size={18} />
-            </div>
-            <div className="hidden lg:flex flex-col">
-              <span className="text-[13px] font-semibold text-[var(--color-text-primary)] leading-tight whitespace-nowrap">
-                {user?.name || 'Dược sĩ'}
-              </span>
-              <span className="text-[11px] text-[var(--color-text-secondary)] leading-tight uppercase tracking-wider font-medium">
-                Quản trị viên
-              </span>
-            </div>
-            <ChevronDown size={14} className="text-[var(--color-text-muted)] hidden lg:block group-hover:text-[var(--color-primary)] transition-colors" />
-          </button>
+          <Popover
+            trigger="click"
+            placement="bottomRight"
+            open={userDropdownOpen}
+            onOpenChange={setUserDropdownOpen}
+            content={userContent}
+            arrow={false}
+            overlayInnerStyle={{ padding: 0, borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-dropdown)' }}
+          >
+            <button className={`flex items-center gap-2 md:gap-3 p-1.5 -m-1.5 rounded-[var(--radius-md)] transition-colors cursor-pointer text-left flex-shrink-0 group ${userDropdownOpen ? 'bg-[var(--color-bg-subtle)]' : 'hover:bg-[var(--color-bg-subtle)]'}`}>
+              <div className={`w-8 h-8 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center overflow-hidden flex-shrink-0 border transition-all ${userDropdownOpen ? 'border-[var(--color-primary-border)]' : 'border-transparent group-hover:border-[var(--color-primary-border)]'}`}>
+                <User size={18} />
+              </div>
+              <div className="hidden lg:flex flex-col">
+                <span className="text-[13px] font-semibold text-[var(--color-text-primary)] leading-tight whitespace-nowrap">
+                  {user?.name || 'Dược sĩ'}
+                </span>
+                <span className="text-[11px] text-[var(--color-text-secondary)] leading-tight uppercase tracking-wider font-medium">
+                  {user?.role === 'admin' ? 'Quản trị viên' : 'Dược sĩ'}
+                </span>
+              </div>
+              <ChevronDown size={14} className={`text-[var(--color-text-muted)] hidden lg:block transition-colors ${userDropdownOpen ? 'text-[var(--color-primary)]' : 'group-hover:text-[var(--color-primary)]'}`} />
+            </button>
+          </Popover>
         </div>
       </div>
 

@@ -30,7 +30,7 @@ import {
 import useAuthStore from '../stores/useAuthStore';
 
 
-export default function Sidebar({ collapsed, onCollapse, badges = {} }) {
+export default function Sidebar({ collapsed, onCollapse }) {
   const location = useLocation();
   const logout = useAuthStore((state) => state.logout);
 

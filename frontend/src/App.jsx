@@ -82,7 +82,6 @@ function AppLayout() {
       <Sidebar
         collapsed={collapsed}
         onCollapse={setCollapsed}
-        badges={{ inventory: 12 }}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
