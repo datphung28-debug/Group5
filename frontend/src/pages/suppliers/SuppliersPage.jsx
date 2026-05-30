@@ -14,7 +14,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
-import SupplierEditDrawer from './SupplierEditDrawer';
+import SupplierEditModal from './SupplierEditModal';
 import useSupplierStore from '../../stores/useSupplierStore';
 import { formatCurrency, statusStyles } from './supplierData';
 import '../../styles/dashboard.css';
@@ -298,7 +298,7 @@ export default function SuppliersPage() {
         ))}
       </div>
 
-      <SupplierEditDrawer
+      <SupplierEditModal
         open={drawerOpen}
         supplier={editingSupplier}
         confirmLoading={loading}

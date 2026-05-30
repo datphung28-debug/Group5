@@ -4,7 +4,7 @@ import { Alert, Button, Card, DatePicker, Descriptions, Empty, Form, Input, Inpu
 import dayjs from 'dayjs';
 import { ArrowLeft, CircleDollarSign, Mail, MapPin, Pencil, Phone, ReceiptText, ShieldCheck, UserRound, WalletCards } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
-import SupplierEditDrawer from './SupplierEditDrawer';
+import SupplierEditModal from './SupplierEditModal';
 import useSupplierStore from '../../stores/useSupplierStore';
 import { formatCurrency, statusStyles } from './supplierData';
 import '../../styles/dashboard.css';
@@ -300,7 +300,7 @@ export default function SupplierDetailPage() {
         </Card>
       )}
 
-      <SupplierEditDrawer open={editOpen} supplier={supplier} confirmLoading={loading} onClose={() => setEditOpen(false)} onSave={handleSave} />
+      <SupplierEditModal open={editOpen} supplier={supplier} confirmLoading={loading} onClose={() => setEditOpen(false)} onSave={handleSave} />
     </div>
   );
 }

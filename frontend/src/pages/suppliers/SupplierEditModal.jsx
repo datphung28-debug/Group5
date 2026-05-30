@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import { Button, Drawer, Form, Input, InputNumber, Select } from 'antd';
+import { Button, Modal, Form, Input, InputNumber, Select } from 'antd';
 import { supplierStatusOptions } from './supplierData';
 
-export default function SupplierEditDrawer({ open, supplier, confirmLoading = false, onClose, onSave }) {
+export default function SupplierEditModal({ open, supplier, confirmLoading = false, onClose, onSave }) {
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -27,15 +27,16 @@ export default function SupplierEditDrawer({ open, supplier, confirmLoading = fa
   };
 
   return (
-    <Drawer
+    <Modal
       title={supplier ? 'Chỉnh sửa thông tin nhà cung cấp' : 'Thêm nhà cung cấp'}
       open={open}
-      onClose={onClose}
-      width={560}
+      onCancel={onClose}
+      width={720}
       destroyOnClose
-      styles={{ body: { background: 'var(--color-bg-app)', padding: 0 } }}
+      centered
+      styles={{ body: { background: 'var(--color-bg-app)', padding: '20px', maxHeight: '70vh', overflowY: 'auto' } }}
       footer={
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-3 pt-3">
           <Button onClick={onClose} className="h-10 rounded-[var(--radius-md)] px-5 font-medium">
             Hủy
           </Button>
@@ -45,7 +46,7 @@ export default function SupplierEditDrawer({ open, supplier, confirmLoading = fa
         </div>
       }
     >
-      <Form form={form} layout="vertical" onFinish={handleFinish} className="p-5">
+      <Form form={form} layout="vertical" onFinish={handleFinish} className="p-0">
         <div className="rounded-[var(--radius-lg)] border border-[var(--color-border-light)] bg-white p-5 shadow-[var(--shadow-card)]">
           <h3 className="mb-4 font-semibold text-[var(--color-text-primary)]">Thông tin cơ bản</h3>
           <Form.Item label="Tên nhà cung cấp" name="name" rules={[{ required: true, message: 'Vui lòng nhập tên nhà cung cấp' }]}>
@@ -103,6 +104,6 @@ export default function SupplierEditDrawer({ open, supplier, confirmLoading = fa
           </Form.Item>
         </div>
       </Form>
-    </Drawer>
+    </Modal>
   );
 }
