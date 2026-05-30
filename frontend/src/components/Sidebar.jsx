@@ -103,6 +103,25 @@ export default function Sidebar({ collapsed, onCollapse, badges = {} }) {
       ],
     },
   ];
+  
+  // Filter out backlog items to keep sidebar clean for MVP
+  const BACKLOG_PATHS = new Set([
+    '/returns',
+    '/activity',
+    '/schedule',
+    '/timesheet',
+    '/payroll',
+    '/settings',
+    '/my-schedule',
+    '/my-timesheet'
+  ]);
+
+  const filteredMenuGroups = menuGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !BACKLOG_PATHS.has(item.path)),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <aside
@@ -152,7 +171,7 @@ export default function Sidebar({ collapsed, onCollapse, badges = {} }) {
           .scrollbar-thin:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
         `}</style>
 
-        {menuGroups.map((group, groupIdx) => (
+        {filteredMenuGroups.map((group, groupIdx) => (
           <div key={groupIdx} className="mb-6">
             {/* Group Label */}
             {!collapsed ? (
