@@ -99,19 +99,24 @@ const StaffPage = () => {
     if (!editingUser) return;
 
     const userId = editingUser._id || editingUser.id;
-    const nextUser = { ...editingUser, ...values };
 
     try {
-      if (editingUser._id) {
-        const res = await userAPI.update(userId, values);
-        updateLocalUser(res.data);
+      if (editingUser.isNew) {
+        // Create new internal user
+        const res = await userAPI.create(values);
+        const newUser = res.data?.user || res.data;
+        setUsers((current) => [newUser, ...current]);
+        messageApi.success('Đã tạo người dùng mới thành công');
       } else {
-        updateLocalUser(nextUser);
+        // Update existing user
+        const res = await userAPI.update(userId, values);
+        const updatedUser = res.data?.user || res.data;
+        updateLocalUser(updatedUser);
+        messageApi.success('Đã cập nhật người dùng');
       }
       setEditingUser(null);
-      messageApi.success('Đã cập nhật người dùng');
     } catch (err) {
-      messageApi.error(err.response?.data?.message || 'Không thể cập nhật người dùng');
+      messageApi.error(err.response?.data?.message || 'Không thể lưu thông tin người dùng');
     }
   };
 
@@ -148,7 +153,7 @@ const StaffPage = () => {
             type="primary"
             icon={<Plus size={18} className="mr-2 inline" />}
             className="h-10 rounded-[var(--radius-md)] border-none bg-[var(--color-primary)] px-6 font-medium shadow-[var(--shadow-card)] hover:bg-[var(--color-primary-hover)]"
-            onClick={() => messageApi.info('Tạo người dùng mới sẽ được nối với API đăng ký khi cần.')}
+            onClick={() => setEditingUser({ isNew: true, isActive: true, role: 'pharmacist' })}
           >
             Thêm người dùng
           </Button>
@@ -178,7 +183,7 @@ const StaffPage = () => {
         title={
           <div className="flex items-center gap-2">
             <UserCog size={19} className="text-[var(--color-primary)]" />
-            <span>Chỉnh sửa người dùng</span>
+            <span>{editingUser?.isNew ? 'Thêm người dùng mới' : 'Chỉnh sửa người dùng'}</span>
           </div>
         }
         placement="right"
@@ -206,6 +211,18 @@ const StaffPage = () => {
           <Form.Item label="Email" name="email" rules={[{ required: true, message: 'Vui lòng nhập email' }, { type: 'email', message: 'Email không hợp lệ' }]}>
             <Input className="h-10 rounded-[var(--radius-md)]" placeholder="name@example.com" />
           </Form.Item>
+          {editingUser?.isNew && (
+            <Form.Item
+              label="Mật khẩu"
+              name="password"
+              rules={[
+                { required: true, message: 'Vui lòng nhập mật khẩu' },
+                { min: 6, message: 'Mật khẩu phải từ 6 ký tự trở lên' },
+              ]}
+            >
+              <Input.Password className="h-10 rounded-[var(--radius-md)]" placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)" />
+            </Form.Item>
+          )}
           <Form.Item label="Số điện thoại" name="phone">
             <Input className="h-10 rounded-[var(--radius-md)]" placeholder="Nhập số điện thoại" />
           </Form.Item>

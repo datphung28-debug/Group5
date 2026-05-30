@@ -66,3 +66,45 @@ export const deleteUser = async (req, res) => {
     return sendErrorResponse(res, error);
   }
 };
+
+// @POST /api/users - Create new internal user (admin only)
+export const createUser = async (req, res) => {
+  try {
+    const { name, email, password, phone, address, role } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Vui lòng nhập đầy đủ Tên, Email và Mật khẩu" });
+    }
+
+    // Check if user already exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: "Email này đã được sử dụng" });
+    }
+
+    const user = new User({
+      name,
+      email,
+      password,
+      phone,
+      address,
+      role: role || "pharmacist",
+      isActive: true,
+    });
+
+    const savedUser = await user.save();
+    res.status(201).json({
+      _id: savedUser._id,
+      name: savedUser.name,
+      email: savedUser.email,
+      phone: savedUser.phone,
+      address: savedUser.address,
+      role: savedUser.role,
+      isActive: savedUser.isActive,
+      message: "Tạo người dùng mới thành công"
+    });
+  } catch (error) {
+    return sendErrorResponse(res, error);
+  }
+};
+
