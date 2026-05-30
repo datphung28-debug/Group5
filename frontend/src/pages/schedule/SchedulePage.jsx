@@ -135,6 +135,9 @@ const SchedulePage = () => {
 
   const handleChange = (nextFilters) => {
     setFilters((current) => ({ ...current, ...nextFilters }));
+    if ('view' in nextFilters || 'week' in nextFilters) {
+      setActiveFilters((current) => ({ ...current, ...nextFilters }));
+    }
   };
 
   // 3. Xử lý tạo ca làm mới
