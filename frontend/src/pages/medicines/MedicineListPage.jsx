@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Button } from 'antd';
 import { Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import FilterBar from './components/FilterBar';
 import MedicineTable from './components/MedicineTable';
@@ -9,12 +9,23 @@ import useMedicineStore from '../../stores/useMedicineStore';
 
 const MedicineListPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { fetchMedicines, setParams, total, loading } = useMedicineStore();
 
-  // Fetch khi component mount
+  const searchParams = new URLSearchParams(location.search);
+  const initialCategory = searchParams.get('group') || '';
+
+  // Fetch when component mounts or when URL query parameter changes
   useEffect(() => {
-    fetchMedicines();
-  }, [fetchMedicines]);
+    const paramsPayload = { page: 1 };
+    if (initialCategory) {
+      paramsPayload.category = initialCategory;
+    } else {
+      paramsPayload.category = '';
+    }
+    setParams(paramsPayload);
+    fetchMedicines(paramsPayload);
+  }, [initialCategory, fetchMedicines, setParams]);
 
   const handleFilter = (values) => {
     setParams({ ...values, page: 1 });
@@ -25,6 +36,8 @@ const MedicineListPage = () => {
     const reset = { search: '', category: '', requiresPrescription: '', lowStock: '' };
     setParams({ ...reset, page: 1 });
     fetchMedicines({ ...reset, page: 1 });
+    // Clear URL query parameters
+    navigate('/medicines', { replace: true });
   };
 
   return (
@@ -45,7 +58,7 @@ const MedicineListPage = () => {
       />
 
       {/* Filter Bar */}
-      <FilterBar onFilter={handleFilter} onReset={handleReset} />
+      <FilterBar onFilter={handleFilter} onReset={handleReset} initialCategory={initialCategory} />
 
       {/* Summary info */}
       <div className="flex justify-between items-center mb-3 px-1">

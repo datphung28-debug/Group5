@@ -5,13 +5,19 @@ import { categoryAPI } from '../../../api/api';
 
 const { Option } = Select;
 
-const FilterBar = ({ onFilter, onReset }) => {
+const FilterBar = ({ onFilter, onReset, initialCategory }) => {
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState(initialCategory || '');
+  const [prevInitialCategory, setPrevInitialCategory] = useState(initialCategory);
   const [requiresPrescription, setRequiresPrescription] = useState('');
   const [lowStock, setLowStock] = useState('');
   const [categories, setCategories] = useState([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
+
+  if (initialCategory !== prevInitialCategory) {
+    setPrevInitialCategory(initialCategory);
+    setCategory(initialCategory || '');
+  }
 
   useEffect(() => {
     const loadCategories = async () => {
