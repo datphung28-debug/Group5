@@ -10,21 +10,21 @@ const ShiftCard = ({ shift, onSelect }) => {
     <button
       type="button"
       onClick={() => onSelect(shift)}
-      className="w-full rounded-[var(--radius-md)] border p-3 text-left transition-colors hover:bg-[var(--color-bg-subtle)]"
-      style={{ borderColor: shiftMeta.border, backgroundColor: shiftMeta.bg }}
+      className="w-full rounded-[var(--radius-md)] border border-[var(--color-border-light)] bg-white p-3 text-left transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:border-[var(--color-primary-hover)] relative overflow-hidden"
+      style={{ borderLeft: `4px solid ${shiftMeta.color}` }}
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="font-semibold text-[var(--color-text-primary)]">{shift.staffName}</div>
-          <div className="mt-1 text-[12px] text-[var(--color-text-secondary)]">{shift.role} · {shift.area}</div>
+          <div className="font-semibold text-[var(--color-text-primary)] text-[13px]">{shift.staffName}</div>
+          <div className="mt-0.5 text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wider">{shift.role} · {shift.area}</div>
         </div>
-        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: statusMeta.color }} />
+        <span className="h-2 w-2 shrink-0 rounded-full mt-1" style={{ backgroundColor: statusMeta.color }} />
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Tag className="m-0 rounded-full border px-2 py-0.5 text-[11px] font-medium" style={{ color: shiftMeta.color, borderColor: shiftMeta.border, backgroundColor: 'white' }}>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <Tag className="m-0 rounded-full border px-2 py-0.5 text-[11px] font-medium" style={{ color: shiftMeta.color, borderColor: shiftMeta.border, backgroundColor: shiftMeta.bg }}>
           {shiftMeta.label}
         </Tag>
-        <span className="text-[12px] font-medium text-[var(--color-text-muted)]">{shiftMeta.time}</span>
+        <span className="text-[11px] font-semibold text-[var(--color-text-secondary)]">{shiftMeta.time}</span>
       </div>
     </button>
   );
