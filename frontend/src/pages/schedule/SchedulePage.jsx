@@ -475,8 +475,8 @@ const SchedulePage = () => {
                     if (type === 'morning') range = [dayjs('07:00', 'HH:mm'), dayjs('12:00', 'HH:mm')];
                     else if (type === 'afternoon') range = [dayjs('12:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
                     else if (type === 'evening') range = [dayjs('17:00', 'HH:mm'), dayjs('21:00', 'HH:mm')];
-                    else if (type === 'fulltime') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
-                    else if (type === 'custom') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
+                    else if (type === 'fulltime') range = [dayjs('07:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
+                    else if (type === 'custom') range = [dayjs('07:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
                     
                     if (range) {
                       editForm.setFieldsValue({ timeRange: range });
@@ -553,8 +553,8 @@ const SchedulePage = () => {
               if (type === 'morning') range = [dayjs('07:00', 'HH:mm'), dayjs('12:00', 'HH:mm')];
               else if (type === 'afternoon') range = [dayjs('12:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
               else if (type === 'evening') range = [dayjs('17:00', 'HH:mm'), dayjs('21:00', 'HH:mm')];
-              else if (type === 'fulltime') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
-              else if (type === 'custom') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
+              else if (type === 'fulltime') range = [dayjs('07:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
+              else if (type === 'custom') range = [dayjs('07:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
               
               if (range) {
                 createForm.setFieldsValue({ timeRange: range });
