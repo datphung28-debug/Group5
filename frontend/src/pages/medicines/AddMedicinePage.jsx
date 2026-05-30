@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { Card, Input, Select, InputNumber, Switch, Button, Space, Typography, Row, Col, Alert, message, Spin } from 'antd';
+import { Card, Input, Select, InputNumber, Switch, Button, Space, Typography, Row, Col, Alert, message, Spin, Divider } from 'antd';
 import { Save, X, Pill, DollarSign, FileText, Settings, ArrowLeft, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
@@ -23,7 +23,7 @@ const SectionHeader = ({ icon, title }) => (
 
 const AddMedicinePage = () => {
   const navigate = useNavigate();
-  const { createMedicine } = useMedicineStore();
+  const { medicines, fetchMedicines, createMedicine } = useMedicineStore();
   const { categories, fetchCategories, loading: catLoading } = useCategoryStore();
 
   const [units, setUnits] = useState([]);
@@ -32,6 +32,66 @@ const AddMedicinePage = () => {
   const [supplierLoading, setSupplierLoading] = useState(false);
   const [unitError, setUnitError] = useState('');
   const [supplierError, setSupplierError] = useState('');
+
+  const defaultZones = useMemo(() => [
+    { value: 'A', label: 'Khu A (Kháng sinh)' },
+    { value: 'B', label: 'Khu B (Giảm đau/Hô hấp)' },
+    { value: 'C', label: 'Khu C (Tiêu hóa/Da liễu)' },
+    { value: 'D', label: 'Khu D (Vitamin)' },
+    { value: 'E', label: 'Khu E (Tim mạch/Thần kinh)' },
+  ], []);
+
+  const [addedZones, setAddedZones] = useState([]);
+  const [newZoneCode, setNewZoneCode] = useState('');
+  const [newZoneName, setNewZoneName] = useState('');
+
+  // Tính toán động danh sách Khu vực (Zone) tránh cascading setState trong useEffect
+  const zones = useMemo(() => {
+    const list = [...defaultZones];
+    const existingValues = new Set(list.map(z => z.value));
+
+    // 1. Trích xuất các Khu vực từ thuốc thực tế đã lưu trong store
+    if (medicines && medicines.length > 0) {
+      medicines.forEach(m => {
+        const zCode = m.location?.zone;
+        if (zCode && !existingValues.has(zCode)) {
+          existingValues.add(zCode);
+          list.push({
+            value: zCode,
+            label: `Khu ${zCode} (${m.location.notes || 'Khu vực lưu trữ'})`
+          });
+        }
+      });
+    }
+
+    // 2. Thêm các Khu vực do người dùng vừa thêm trực tiếp trên giao diện
+    addedZones.forEach(z => {
+      if (!existingValues.has(z.value)) {
+        existingValues.add(z.value);
+        list.push(z);
+      }
+    });
+
+    return list;
+  }, [defaultZones, medicines, addedZones]);
+
+  const handleAddZone = (e) => {
+    e.preventDefault();
+    if (!newZoneCode.trim() || !newZoneName.trim()) {
+      message.warning('Vui lòng điền đầy đủ Mã khu và Tên khu vực!');
+      return;
+    }
+    const code = newZoneCode.trim().toUpperCase();
+    if (zones.some(z => z.value === code)) {
+      message.warning('Mã khu vực này đã tồn tại!');
+      return;
+    }
+    const newZone = { value: code, label: `Khu ${code} (${newZoneName.trim()})` };
+    setAddedZones(prev => [...prev, newZone]);
+    setNewZoneCode('');
+    setNewZoneName('');
+    message.success(`Đã thêm khu vực ${code} thành công!`);
+  };
 
   const { control, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
@@ -67,6 +127,7 @@ const AddMedicinePage = () => {
   // Load data khi mount
   useEffect(() => {
     fetchCategories();
+    fetchMedicines({ limit: 1000 }); // Load medicines to extract unique zones
 
     const loadUnits = async () => {
       setUnitLoading(true);
@@ -102,7 +163,7 @@ const AddMedicinePage = () => {
 
     loadUnits();
     loadSuppliers();
-  }, [fetchCategories]);
+  }, [fetchCategories, fetchMedicines]);
 
   const onSubmit = async (formData) => {
     // Map tên field frontend → backend model
@@ -400,13 +461,42 @@ const AddMedicinePage = () => {
                         name="location.zone"
                         control={control}
                         render={({ field }) => (
-                          <Select {...field} className="w-full rounded-[var(--radius-md)] h-10">
-                            <Option value="A">Khu A (Kháng sinh)</Option>
-                            <Option value="B">Khu B (Giảm đau/Hô hấp)</Option>
-                            <Option value="C">Khu C (Tiêu hóa/Da liễu)</Option>
-                            <Option value="D">Khu D (Vitamin)</Option>
-                            <Option value="E">Khu E (Tim mạch/Thần kinh)</Option>
-                          </Select>
+                          <Select
+                            {...field}
+                            className="w-full rounded-[var(--radius-md)] h-10"
+                            options={zones}
+                            dropdownRender={(menu) => (
+                              <>
+                                {menu}
+                                <Divider className="my-1.5" />
+                                <div className="p-2 pt-0" onMouseDown={e => e.preventDefault()}>
+                                  <div className="flex gap-2 mb-2">
+                                    <Input
+                                      placeholder="Mã khu (VD: F)"
+                                      value={newZoneCode}
+                                      onChange={(e) => setNewZoneCode(e.target.value)}
+                                      className="w-1/3 rounded-[var(--radius-sm)]"
+                                      maxLength={3}
+                                    />
+                                    <Input
+                                      placeholder="Tên khu (VD: Đông Y)"
+                                      value={newZoneName}
+                                      onChange={(e) => setNewZoneName(e.target.value)}
+                                      className="w-2/3 rounded-[var(--radius-sm)]"
+                                    />
+                                  </div>
+                                  <Button
+                                    type="text"
+                                    icon={<Plus size={14} className="inline mr-1" />}
+                                    onClick={handleAddZone}
+                                    className="text-[var(--color-primary)] font-medium hover:text-[var(--color-primary-hover)] flex items-center justify-center bg-[var(--color-primary-light)] rounded-[var(--radius-sm)] w-full py-1 h-8"
+                                  >
+                                    Thêm khu vực mới
+                                  </Button>
+                                </div>
+                              </>
+                            )}
+                          />
                         )}
                       />
                     </div>

@@ -1,15 +1,15 @@
 import React from 'react';
-import { Table, Tag, Badge, Button, Dropdown, Popconfirm, message, Spin, Empty, Alert } from 'antd';
+import { Table, Tag, Badge, Button, Dropdown, Popconfirm, message, Spin, Empty, Alert, Form, Input, Select, InputNumber, Modal as AntModal, Divider } from 'antd';
 import {
   MoreVertical,
   Eye,
   Pencil,
   Warehouse,
   Trash2,
-  MapPin
+  MapPin,
+  Plus
 } from 'lucide-react';
 import useMedicineStore from '../../../stores/useMedicineStore';
-import { Form, Input, Select, InputNumber, Modal as AntModal } from 'antd';
 
 const MedicineTable = () => {
   const { medicines, loading, error, total, params, setParams, fetchMedicines, deleteMedicine, updateMedicine } = useMedicineStore();
@@ -20,6 +20,66 @@ const MedicineTable = () => {
   const [editingMedicine, setEditingMedicine] = React.useState(null);
   const [locForm] = Form.useForm();
   const [priceForm] = Form.useForm();
+
+  const defaultZones = React.useMemo(() => [
+    { value: 'A', label: 'Khu A (Kháng sinh)' },
+    { value: 'B', label: 'Khu B (Giảm đau/Hô hấp)' },
+    { value: 'C', label: 'Khu C (Tiêu hóa/Da liễu)' },
+    { value: 'D', label: 'Khu D (Vitamin)' },
+    { value: 'E', label: 'Khu E (Tim mạch/Thần kinh)' },
+  ], []);
+
+  const [addedZones, setAddedZones] = React.useState([]);
+  const [newZoneCode, setNewZoneCode] = React.useState('');
+  const [newZoneName, setNewZoneName] = React.useState('');
+
+  // Tính toán động danh sách Khu vực (Zone) tránh cascading setState trong useEffect
+  const zones = React.useMemo(() => {
+    const list = [...defaultZones];
+    const existingValues = new Set(list.map(z => z.value));
+
+    // 1. Trích xuất các Khu vực từ thuốc thực tế đã lưu trong store
+    if (medicines && medicines.length > 0) {
+      medicines.forEach(m => {
+        const zCode = m.location?.zone;
+        if (zCode && !existingValues.has(zCode)) {
+          existingValues.add(zCode);
+          list.push({
+            value: zCode,
+            label: `Khu ${zCode} (${m.location.notes || 'Khu vực lưu trữ'})`
+          });
+        }
+      });
+    }
+
+    // 2. Thêm các Khu vực do người dùng vừa thêm trực tiếp trên giao diện
+    addedZones.forEach(z => {
+      if (!existingValues.has(z.value)) {
+        existingValues.add(z.value);
+        list.push(z);
+      }
+    });
+
+    return list;
+  }, [defaultZones, medicines, addedZones]);
+
+  const handleAddZone = (e) => {
+    e.preventDefault();
+    if (!newZoneCode.trim() || !newZoneName.trim()) {
+      message.warning('Vui lòng điền đầy đủ Mã khu và Tên khu vực!');
+      return;
+    }
+    const code = newZoneCode.trim().toUpperCase();
+    if (zones.some(z => z.value === code)) {
+      message.warning('Mã khu vực này đã tồn tại!');
+      return;
+    }
+    const newZone = { value: code, label: `Khu ${code} (${newZoneName.trim()})` };
+    setAddedZones(prev => [...prev, newZone]);
+    setNewZoneCode('');
+    setNewZoneName('');
+    message.success(`Đã thêm khu vực ${code} thành công!`);
+  };
 
   const handleDelete = async (record) => {
     const res = await deleteMedicine(record._id || record.id);
@@ -354,13 +414,40 @@ const MedicineTable = () => {
             </Select>
           </Form.Item>
           <Form.Item name="zone" label="Khu vực (Zone)">
-            <Select>
-              <Select.Option value="A">Khu A (Kháng sinh)</Select.Option>
-              <Select.Option value="B">Khu B (Giảm đau/Hô hấp)</Select.Option>
-              <Select.Option value="C">Khu C (Tiêu hóa/Da liễu)</Select.Option>
-              <Select.Option value="D">Khu D (Vitamin)</Select.Option>
-              <Select.Option value="E">Khu E (Tim mạch/Thần kinh)</Select.Option>
-            </Select>
+            <Select
+              options={zones}
+              dropdownRender={(menu) => (
+                <>
+                  {menu}
+                  <Divider className="my-1.5" />
+                  <div className="p-2 pt-0" onMouseDown={e => e.preventDefault()}>
+                    <div className="flex gap-2 mb-2">
+                      <Input
+                        placeholder="Mã khu (VD: F)"
+                        value={newZoneCode}
+                        onChange={(e) => setNewZoneCode(e.target.value)}
+                        className="w-1/3 rounded-[var(--radius-sm)]"
+                        maxLength={3}
+                      />
+                      <Input
+                        placeholder="Tên khu (VD: Đông Y)"
+                        value={newZoneName}
+                        onChange={(e) => setNewZoneName(e.target.value)}
+                        className="w-2/3 rounded-[var(--radius-sm)]"
+                      />
+                    </div>
+                    <Button
+                      type="text"
+                      icon={<Plus size={14} className="inline mr-1" />}
+                      onClick={handleAddZone}
+                      className="text-[var(--color-primary)] font-medium hover:text-[var(--color-primary-hover)] flex items-center justify-center bg-[var(--color-primary-light)] rounded-[var(--radius-sm)] w-full py-1 h-8"
+                    >
+                      Thêm khu vực mới
+                    </Button>
+                  </div>
+                </>
+              )}
+            />
           </Form.Item>
           <Form.Item name="shelf" label="Kệ số">
             <InputNumber min={1} max={10} className="w-full" />
