@@ -129,10 +129,12 @@ const generateYearlyData = () => {
 export const useDashboard = () => {
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
       try {
         // Gọi song song dashboard + top medicines
         const [dashRes, topRes] = await Promise.allSettled([
@@ -147,40 +149,12 @@ export const useDashboard = () => {
           // Adapter backend format → frontend format
           setData(adaptDashboardData(dashData, topData));
         } else {
-          throw new Error('Không lấy được dữ liệu dashboard');
+          throw new Error(dashRes.reason?.response?.data?.message || 'Không lấy được dữ liệu dashboard từ server.');
         }
       } catch (err) {
-        console.warn('Dashboard API lỗi, dùng dữ liệu mẫu:', err.message);
-        // Fallback mock data với dữ liệu thuyết phục
-        const { yearlyRevenue, yearlySummary } = generateYearlyData();
-        setData({
-          kpi: {
-            revenueToday:      15600000,
-            profitToday:       4200000,
-            profitMarginToday: 26.9,
-            invoicesToday:     124,
-            avgInvoiceValue:   125806,
-            revenueMonth:      425000000,
-            customerDebt:      18500000,
-            supplierDebt:      32400000,
-            inventoryValue:    1280000000,
-            profitMarginMonth: 27.4,
-          },
-          topProducts: [
-            { id: '1', name: 'Paracetamol 500mg', quantity: 342, revenue: 17100000, profit: 5130000, profitMargin: 0.30 },
-            { id: '2', name: 'Amoxicillin 500mg', quantity: 285, revenue: 14250000, profit: 3562500, profitMargin: 0.25 },
-            { id: '3', name: 'Vitamin C 1000mg Effervescent', quantity: 268, revenue: 10720000, profit: 3752000, profitMargin: 0.35 },
-            { id: '4', name: 'Omeprazole 20mg', quantity: 195, revenue: 9750000, profit: 2925000, profitMargin: 0.30 },
-            { id: '5', name: 'Cetirizine 10mg', quantity: 178, revenue: 7120000, profit: 2136000, profitMargin: 0.30 },
-            { id: '6', name: 'Metformin 500mg', quantity: 165, revenue: 6600000, profit: 1650000, profitMargin: 0.25 },
-            { id: '7', name: 'Ibuprofen 400mg', quantity: 152, revenue: 6080000, profit: 1824000, profitMargin: 0.30 },
-            { id: '8', name: 'Azithromycin 250mg', quantity: 140, revenue: 8400000, profit: 2520000, profitMargin: 0.30 },
-          ],
-          revenueProfit30Days: generateRevenueChart(),
-          hourlyRevenueToday:  generateHourlyChart(),
-          yearlyRevenue,
-          yearlySummary,
-        });
+        console.error('Dashboard API error:', err);
+        setError(err.message || 'Không thể tải dữ liệu báo cáo từ hệ thống.');
+        setData(null);
       } finally {
         setLoading(false);
       }
@@ -200,5 +174,5 @@ export const useDashboard = () => {
     []
   );
 
-  return { data, loading, formatCurrency, formatNumber };
+  return { data, loading, error, formatCurrency, formatNumber };
 };

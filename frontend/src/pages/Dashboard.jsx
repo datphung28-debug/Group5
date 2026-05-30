@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Skeleton } from 'antd';
+import { Skeleton, Alert } from 'antd';
 import { motion } from 'framer-motion';
 import {
   TrendingUp,
@@ -418,7 +418,7 @@ function TopProductsCard({ products, formatCurrency }) {
 // MAIN DASHBOARD
 // ═══════════════════════════════════════════════════════════════════
 const Dashboard = () => {
-  const { data, loading, formatCurrency, formatNumber } = useDashboard();
+  const { data, loading, error, formatCurrency, formatNumber } = useDashboard();
 
   // Today's date formatted
   const today = new Date();
@@ -428,6 +428,20 @@ const Dashboard = () => {
     month: '2-digit',
     year: 'numeric',
   });
+
+  if (error) {
+    return (
+      <div className="dashboard-page" style={{ padding: '24px' }}>
+        <Alert
+          message="Lỗi tải dữ liệu báo cáo"
+          description={error}
+          type="error"
+          showIcon
+          style={{ borderRadius: '12px', boxShadow: 'var(--shadow-card)' }}
+        />
+      </div>
+    );
+  }
 
   // ── Loading Skeleton ────────────────────────────────────────────
   if (loading || !data || !data.kpi) {
