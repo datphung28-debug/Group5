@@ -3,14 +3,14 @@ import { Button, Empty, Space, Table, Tag, Tooltip } from 'antd';
 import { Eye } from 'lucide-react';
 import { SHIFT_META, STATUS_META, WEEK_DAYS } from '../scheduleData';
 
-const ShiftTable = ({ data, onSelect }) => {
+const ShiftTable = ({ data, onSelect, weekDays = WEEK_DAYS }) => {
   const columns = [
     {
       title: 'Ngày',
       dataIndex: 'day',
       width: 110,
       render: (dayKey) => {
-        const day = WEEK_DAYS.find((item) => item.key === dayKey);
+        const day = weekDays.find((item) => item.key === dayKey);
         return (
           <div>
             <div className="font-semibold text-[var(--color-text-primary)]">{day?.label}</div>

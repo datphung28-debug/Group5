@@ -15,6 +15,7 @@ import prescriptionRoutes from "./routes/prescriptionRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import configRoutes from "./routes/configRoutes.js";
 import cashbookRoutes from "./routes/cashbookRoutes.js";
+import scheduleRoutes from "./routes/scheduleRoutes.js";
 
 dotenv.config();
 
@@ -43,6 +44,7 @@ app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/config", configRoutes);
 app.use("/api/cashbook", cashbookRoutes);
+app.use("/api/schedule", scheduleRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

@@ -3,7 +3,7 @@ import { Button, DatePicker, Select, Space, Segmented } from 'antd';
 import { Filter, RotateCcw } from 'lucide-react';
 import { STAFF_OPTIONS } from '../scheduleData';
 
-const ScheduleFilter = ({ filters, onChange, onApply, onReset }) => {
+const ScheduleFilter = ({ filters, onChange, onApply, onReset, staffOptions = STAFF_OPTIONS }) => {
   return (
     <div className="mb-6 rounded-[var(--radius-lg)] border border-[var(--color-border-light)] bg-white p-4 shadow-[var(--shadow-card)]">
       <div className="flex flex-col gap-4">
@@ -43,7 +43,7 @@ const ScheduleFilter = ({ filters, onChange, onApply, onReset }) => {
             value={filters.staffId}
             onChange={(staffId) => onChange({ staffId })}
             className="h-10 w-[220px]"
-            options={STAFF_OPTIONS}
+            options={staffOptions}
           />
           <Select
             value={filters.shiftType}

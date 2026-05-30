@@ -139,3 +139,12 @@ export const reportAPI = {
   getTopMedicines: (params) => api.get('/reports/top-medicines', { params }),
   getInventory: (params) => api.get('/reports/inventory', { params }),
 };
+
+// ─── Schedules ─────────────────────────────────────────────────────────────
+export const scheduleAPI = {
+  getAll: (params) => api.get('/schedule', { params }),
+  create: (data) => api.post('/schedule', data),
+  update: (id, data) => api.put(`/schedule/${id}`, data),
+  delete: (id) => api.delete(`/schedule/${id}`),
+  copyWeek: (data) => api.post('/schedule/copy-week', data),
+};

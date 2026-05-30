@@ -14,6 +14,7 @@ import Medicine from "./models/Medicine.js";
 import Customer from "./models/Customer.js";
 import Sale from "./models/Sale.js";
 import Import from "./models/Import.js";
+import Schedule from "./models/Schedule.js";
 
 const seed = async () => {
   try {
@@ -23,7 +24,7 @@ const seed = async () => {
     await Promise.all([
       User.deleteMany({}), Category.deleteMany({}), Unit.deleteMany({}),
       Supplier.deleteMany({}), Medicine.deleteMany({}), Customer.deleteMany({}),
-      Sale.deleteMany({}), Import.deleteMany({}),
+      Sale.deleteMany({}), Import.deleteMany({}), Schedule.deleteMany({}),
     ]);
     console.log("🗑️  Đã xóa dữ liệu cũ");
 
@@ -192,6 +193,20 @@ const seed = async () => {
     salesData.forEach(s => { if (s.customer) { const id = s.customer.toString(); customerSpend[id] = (customerSpend[id] || 0) + s.totalAmount; } });
     for (const [id, total] of Object.entries(customerSpend)) { await Customer.findByIdAndUpdate(id, { totalSpent: total }); }
     console.log(`🧾 Đã tạo ${salesData.length} hóa đơn bán hàng`);
+
+    // Seed Lịch phân ca
+    const scheduleData = [
+      { date: "2026-05-25", day: "mon", staff: users[1]._id, shiftType: "morning", area: "Quầy tư vấn", status: "confirmed", note: "Phụ trách tư vấn thuốc kê đơn" },
+      { date: "2026-05-25", day: "mon", staff: users[0]._id, shiftType: "afternoon", area: "POS", status: "confirmed", note: "Đối soát và bàn giao" },
+      { date: "2026-05-26", day: "tue", staff: users[0]._id, shiftType: "morning", area: "Kho", status: "confirmed", note: "Kiểm kê tồn kho nhanh" },
+      { date: "2026-05-26", day: "tue", staff: users[1]._id, shiftType: "evening", area: "Quầy thuốc", status: "pending", note: "Chờ xác nhận đổi ca" },
+      { date: "2026-05-27", day: "wed", staff: users[1]._id, shiftType: "afternoon", area: "Quầy tư vấn", status: "confirmed", note: "Phụ trách nhập đơn thuốc" },
+      { date: "2026-05-28", day: "thu", staff: users[0]._id, shiftType: "morning", area: "POS", status: "absent", note: "Xin nghỉ có phép" },
+      { date: "2026-05-29", day: "fri", staff: users[1]._id, shiftType: "afternoon", area: "Quầy thuốc", status: "confirmed", note: "Ca tăng cường cuối tuần" },
+      { date: "2026-05-30", day: "sat", staff: users[1]._id, shiftType: "evening", area: "Quầy thuốc", status: "confirmed", note: "Theo dõi thuốc cận hạn" },
+    ];
+    await Schedule.insertMany(scheduleData);
+    console.log(`📅 Đã tạo ${scheduleData.length} lịch phân ca mẫu`);
 
     console.log("\n🎉 Seed dữ liệu hoàn tất!");
     console.log("📧 Admin:    admin@pharmacy.com / 123456");

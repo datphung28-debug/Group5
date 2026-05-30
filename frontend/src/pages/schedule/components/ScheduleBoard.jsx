@@ -30,8 +30,8 @@ const ShiftCard = ({ shift, onSelect }) => {
   );
 };
 
-const ScheduleBoard = ({ shifts, onSelect }) => {
-  const grouped = WEEK_DAYS.map((day) => ({
+const ScheduleBoard = ({ shifts, onSelect, weekDays = WEEK_DAYS }) => {
+  const grouped = weekDays.map((day) => ({
     ...day,
     shifts: shifts.filter((shift) => shift.day === day.key),
   }));
