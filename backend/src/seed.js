@@ -196,14 +196,14 @@ const seed = async () => {
 
     // Seed Lịch phân ca
     const scheduleData = [
-      { date: "2026-05-25", day: "mon", staff: users[1]._id, shiftType: "morning", area: "Quầy tư vấn", status: "confirmed", note: "Phụ trách tư vấn thuốc kê đơn" },
-      { date: "2026-05-25", day: "mon", staff: users[0]._id, shiftType: "afternoon", area: "POS", status: "confirmed", note: "Đối soát và bàn giao" },
-      { date: "2026-05-26", day: "tue", staff: users[0]._id, shiftType: "morning", area: "Kho", status: "confirmed", note: "Kiểm kê tồn kho nhanh" },
-      { date: "2026-05-26", day: "tue", staff: users[1]._id, shiftType: "evening", area: "Quầy thuốc", status: "confirmed", note: "Ca làm buổi tối" },
-      { date: "2026-05-27", day: "wed", staff: users[1]._id, shiftType: "afternoon", area: "Quầy tư vấn", status: "confirmed", note: "Phụ trách nhập đơn thuốc" },
-      { date: "2026-05-28", day: "thu", staff: users[0]._id, shiftType: "morning", area: "POS", status: "absent", note: "Xin nghỉ có phép" },
-      { date: "2026-05-29", day: "fri", staff: users[1]._id, shiftType: "afternoon", area: "Quầy thuốc", status: "confirmed", note: "Ca tăng cường cuối tuần" },
-      { date: "2026-05-30", day: "sat", staff: users[1]._id, shiftType: "evening", area: "Quầy thuốc", status: "confirmed", note: "Theo dõi thuốc cận hạn" },
+      { date: "2026-05-25", day: "mon", staff: users[1]._id, shiftType: "morning", startTime: "07:00", endTime: "12:00", area: "Quầy tư vấn", status: "confirmed", note: "Phụ trách tư vấn thuốc kê đơn" },
+      { date: "2026-05-25", day: "mon", staff: users[0]._id, shiftType: "afternoon", startTime: "12:00", endTime: "17:00", area: "POS", status: "confirmed", note: "Đối soát và bàn giao" },
+      { date: "2026-05-26", day: "tue", staff: users[0]._id, shiftType: "morning", startTime: "07:00", endTime: "12:00", area: "Kho", status: "confirmed", note: "Kiểm kê tồn kho nhanh" },
+      { date: "2026-05-26", day: "tue", staff: users[1]._id, shiftType: "evening", startTime: "17:00", endTime: "22:00", area: "Quầy thuốc", status: "confirmed", note: "Ca làm buổi tối" },
+      { date: "2026-05-27", day: "wed", staff: users[1]._id, shiftType: "afternoon", startTime: "12:00", endTime: "17:00", area: "Quầy tư vấn", status: "confirmed", note: "Phụ trách nhập đơn thuốc" },
+      { date: "2026-05-28", day: "thu", staff: users[0]._id, shiftType: "morning", startTime: "07:00", endTime: "12:00", area: "POS", status: "absent", note: "Xin nghỉ có phép" },
+      { date: "2026-05-29", day: "fri", staff: users[1]._id, shiftType: "afternoon", startTime: "12:00", endTime: "17:00", area: "Quầy thuốc", status: "confirmed", note: "Ca tăng cường cuối tuần" },
+      { date: "2026-05-30", day: "sat", staff: users[1]._id, shiftType: "evening", startTime: "17:00", endTime: "22:00", area: "Quầy thuốc", status: "confirmed", note: "Theo dõi thuốc cận hạn" },
     ];
     await Schedule.insertMany(scheduleData);
     console.log(`📅 Đã tạo ${scheduleData.length} lịch phân ca mẫu`);

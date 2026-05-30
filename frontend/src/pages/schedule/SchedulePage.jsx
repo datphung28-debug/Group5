@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Button, Descriptions, Drawer, Space, Tag, message, Modal, Form, Select, Input, DatePicker, Popconfirm } from 'antd';
+import { Button, Descriptions, Space, Tag, message, Modal, Form, Select, Input, DatePicker, Popconfirm, TimePicker } from 'antd';
 import dayjs from 'dayjs';
 import { CalendarPlus, Copy, Save, Trash2 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
@@ -117,6 +117,8 @@ const SchedulePage = () => {
       area: s.area,
       status: s.status,
       note: s.note,
+      startTime: s.startTime,
+      endTime: s.endTime,
     }));
   }, [schedules]);
 
@@ -158,11 +160,21 @@ const SchedulePage = () => {
         dayKey = mapping[dayNum];
       }
 
+      // Lấy thời gian bắt đầu và kết thúc từ timeRange
+      let startTime = '07:00';
+      let endTime = '12:00';
+      if (values.timeRange && values.timeRange.length === 2) {
+        startTime = values.timeRange[0].format('HH:mm');
+        endTime = values.timeRange[1].format('HH:mm');
+      }
+
       await scheduleAPI.create({
         date: dateStr,
         day: dayKey,
         staffId: values.staffId,
         shiftType: values.shiftType,
+        startTime,
+        endTime,
         area: values.area,
         status: 'confirmed', // Mặc định đã xác nhận khi tạo mới
         note: values.note,
@@ -184,8 +196,18 @@ const SchedulePage = () => {
     if (!selectedShift) return;
     setSubmitting(true);
     try {
+      // Lấy thời gian bắt đầu và kết thúc từ timeRange
+      let startTime = '07:00';
+      let endTime = '12:00';
+      if (values.timeRange && values.timeRange.length === 2) {
+        startTime = values.timeRange[0].format('HH:mm');
+        endTime = values.timeRange[1].format('HH:mm');
+      }
+
       await scheduleAPI.update(selectedShift.id, {
         shiftType: values.shiftType,
+        startTime,
+        endTime,
         area: values.area,
         status: values.status,
         note: values.note,
@@ -227,8 +249,11 @@ const SchedulePage = () => {
   // Khi chọn xem chi tiết ca làm, thiết lập giá trị cho Form sửa đổi
   useEffect(() => {
     if (selectedShift) {
+      const startTime = selectedShift.startTime || '07:00';
+      const endTime = selectedShift.endTime || '12:00';
       editForm.setFieldsValue({
         shiftType: selectedShift.shiftType,
+        timeRange: [dayjs(startTime, 'HH:mm'), dayjs(endTime, 'HH:mm')],
         area: selectedShift.area,
         status: selectedShift.status,
         note: selectedShift.note,
@@ -354,9 +379,27 @@ const SchedulePage = () => {
                 layout="vertical"
                 onFinish={handleUpdate}
                 className="space-y-4"
+                onValuesChange={(changedValues) => {
+                  if (changedValues.shiftType) {
+                    const type = changedValues.shiftType;
+                    let range = null;
+                    if (type === 'morning') range = [dayjs('07:00', 'HH:mm'), dayjs('12:00', 'HH:mm')];
+                    else if (type === 'afternoon') range = [dayjs('12:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
+                    else if (type === 'evening') range = [dayjs('17:00', 'HH:mm'), dayjs('22:00', 'HH:mm')];
+                    else if (type === 'custom') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
+                    
+                    if (range) {
+                      editForm.setFieldsValue({ timeRange: range });
+                    }
+                  }
+                }}
               >
                 <Form.Item label="Ca làm việc" name="shiftType" rules={[{ required: true }]}>
                   <Select options={Object.entries(SHIFT_META).map(([value, meta]) => ({ value, label: `${meta.label} (${meta.time})` }))} />
+                </Form.Item>
+
+                <Form.Item label="Thời gian ca làm" name="timeRange" rules={[{ required: true, message: 'Vui lòng chọn thời gian' }]}>
+                  <TimePicker.RangePicker format="HH:mm" minuteStep={15} className="w-full" />
                 </Form.Item>
 
                 <Form.Item label="Khu vực phụ trách" name="area" rules={[{ required: true, message: 'Nhập khu vực làm việc' }]}>
@@ -381,7 +424,7 @@ const SchedulePage = () => {
             ) : (
               <Descriptions column={1} bordered size="middle">
                 <Descriptions.Item label="Ngày làm">{selectedDay ? `${selectedDay.label} - ${selectedDay.date}` : '--'}</Descriptions.Item>
-                <Descriptions.Item label="Giờ làm">{SHIFT_META[selectedShift.shiftType].time}</Descriptions.Item>
+                <Descriptions.Item label="Giờ làm">{selectedShift.startTime} - {selectedShift.endTime}</Descriptions.Item>
                 <Descriptions.Item label="Khu vực">{selectedShift.area}</Descriptions.Item>
                 <Descriptions.Item label="Ghi chú">{selectedShift.note || 'Không có ghi chú'}</Descriptions.Item>
               </Descriptions>
@@ -408,9 +451,24 @@ const SchedulePage = () => {
           className="mt-4"
           initialValues={{
             shiftType: 'morning',
+            timeRange: [dayjs('07:00', 'HH:mm'), dayjs('12:00', 'HH:mm')],
             area: 'Quầy thuốc',
             status: 'confirmed',
             date: activeFilters.week,
+          }}
+          onValuesChange={(changedValues) => {
+            if (changedValues.shiftType) {
+              const type = changedValues.shiftType;
+              let range = null;
+              if (type === 'morning') range = [dayjs('07:00', 'HH:mm'), dayjs('12:00', 'HH:mm')];
+              else if (type === 'afternoon') range = [dayjs('12:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
+              else if (type === 'evening') range = [dayjs('17:00', 'HH:mm'), dayjs('22:00', 'HH:mm')];
+              else if (type === 'custom') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
+              
+              if (range) {
+                createForm.setFieldsValue({ timeRange: range });
+              }
+            }
           }}
         >
           <Form.Item label="Chọn nhân viên" name="staffId" rules={[{ required: true, message: 'Vui lòng chọn nhân viên' }]}>
@@ -426,6 +484,10 @@ const SchedulePage = () => {
 
           <Form.Item label="Ca làm việc" name="shiftType" rules={[{ required: true }]}>
             <Select options={Object.entries(SHIFT_META).map(([value, meta]) => ({ value, label: `${meta.label} (${meta.time})` }))} />
+          </Form.Item>
+
+          <Form.Item label="Thời gian ca làm" name="timeRange" rules={[{ required: true, message: 'Vui lòng chọn thời gian' }]}>
+            <TimePicker.RangePicker format="HH:mm" minuteStep={15} className="w-full" />
           </Form.Item>
 
           <Form.Item label="Khu vực phụ trách" name="area" rules={[{ required: true }]}>

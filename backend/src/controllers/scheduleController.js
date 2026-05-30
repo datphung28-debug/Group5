@@ -40,7 +40,7 @@ export const getSchedules = async (req, res) => {
 // @POST /api/schedule - Tạo ca làm mới
 export const createSchedule = async (req, res) => {
   try {
-    const { date, day, staffId, shiftType, area, status, note } = req.body;
+    const { date, day, staffId, shiftType, area, status, note, startTime, endTime } = req.body;
 
     if (!date || !day || !staffId || !shiftType) {
       return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin bắt buộc" });
@@ -52,10 +52,20 @@ export const createSchedule = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy nhân viên" });
     }
 
-    // Kiểm tra trùng ca
-    const existing = await Schedule.findOne({ date, staff: staffId, shiftType });
+    // Xác định startTime và endTime dựa trên shiftType nếu chưa được truyền
+    let start = startTime;
+    let end = endTime;
+    if (!start || !end) {
+      if (shiftType === 'morning') { start = '07:00'; end = '12:00'; }
+      else if (shiftType === 'afternoon') { start = '12:00'; end = '17:00'; }
+      else if (shiftType === 'evening') { start = '17:00'; end = '22:00'; }
+      else { start = '08:00'; end = '17:00'; }
+    }
+
+    // Kiểm tra trùng ca bắt đầu cùng một giờ cho cùng 1 người
+    const existing = await Schedule.findOne({ date, staff: staffId, startTime: start });
     if (existing) {
-      return res.status(400).json({ message: "Nhân viên đã có lịch làm việc trong ca này" });
+      return res.status(400).json({ message: "Nhân viên đã có lịch làm việc bắt đầu vào khung giờ này" });
     }
 
     const newSchedule = await Schedule.create({
@@ -63,6 +73,8 @@ export const createSchedule = async (req, res) => {
       day,
       staff: staffId,
       shiftType,
+      startTime: start,
+      endTime: end,
       area: area || "Quầy thuốc",
       status: status || "confirmed",
       note: note || "",
@@ -78,31 +90,31 @@ export const createSchedule = async (req, res) => {
 // @PUT /api/schedule/:id - Cập nhật ca làm
 export const updateSchedule = async (req, res) => {
   try {
-    const { date, day, staffId, shiftType, area, status, note } = req.body;
+    const { date, day, staffId, shiftType, area, status, note, startTime, endTime } = req.body;
     const schedule = await Schedule.findById(req.params.id);
 
     if (!schedule) {
       return res.status(404).json({ message: "Không tìm thấy lịch làm việc" });
     }
 
-    // Nếu đổi ca/ngày/nhân sự, kiểm tra xem có bị trùng với ca khác không
+    // Xác định các trường kiểm tra trùng lặp
     const checkDate = date || schedule.date;
     const checkStaff = staffId || schedule.staff;
-    const checkShiftType = shiftType || schedule.shiftType;
+    const checkStartTime = startTime || schedule.startTime;
 
     if (
       (date && date !== schedule.date) ||
       (staffId && staffId.toString() !== schedule.staff.toString()) ||
-      (shiftType && shiftType !== schedule.shiftType)
+      (startTime && startTime !== schedule.startTime)
     ) {
       const existing = await Schedule.findOne({
         _id: { $ne: req.params.id },
         date: checkDate,
         staff: checkStaff,
-        shiftType: checkShiftType,
+        startTime: checkStartTime,
       });
       if (existing) {
-        return res.status(400).json({ message: "Nhân viên đã có lịch làm việc trong ca này" });
+        return res.status(400).json({ message: "Nhân viên đã có lịch làm việc bắt đầu vào khung giờ này" });
       }
     }
 
@@ -116,6 +128,8 @@ export const updateSchedule = async (req, res) => {
       schedule.staff = staffId;
     }
     if (shiftType) schedule.shiftType = shiftType;
+    if (startTime) schedule.startTime = startTime;
+    if (endTime) schedule.endTime = endTime;
     if (area) schedule.area = area;
     if (status) schedule.status = status;
     if (note !== undefined) schedule.note = note;
@@ -189,6 +203,8 @@ export const copyWeekSchedules = async (req, res) => {
           day: sched.day,
           staff: sched.staff,
           shiftType: sched.shiftType,
+          startTime: sched.startTime,
+          endTime: sched.endTime,
           area: sched.area,
           status: "confirmed", // Đặt về mặc định đã xác nhận khi sao chép
           note: sched.note,

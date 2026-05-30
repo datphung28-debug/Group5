@@ -24,7 +24,7 @@ const ShiftCard = ({ shift, onSelect }) => {
         <Tag className="m-0 rounded-full border px-2 py-0.5 text-[11px] font-medium" style={{ color: shiftMeta.color, borderColor: shiftMeta.border, backgroundColor: shiftMeta.bg }}>
           {shiftMeta.label}
         </Tag>
-        <span className="text-[11px] font-semibold text-[var(--color-text-secondary)]">{shiftMeta.time}</span>
+        <span className="text-[11px] font-semibold text-[var(--color-text-secondary)]">{shift.startTime} - {shift.endTime}</span>
       </div>
     </button>
   );

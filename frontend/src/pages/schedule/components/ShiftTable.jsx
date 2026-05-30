@@ -39,7 +39,7 @@ const ShiftTable = ({ data, onSelect, weekDays = WEEK_DAYS }) => {
         return <Tag className="m-0 rounded-full border px-3 py-1 font-medium" style={{ color: meta.color, backgroundColor: meta.bg, borderColor: meta.border }}>{meta.label}</Tag>;
       },
     },
-    { title: 'Giờ làm', dataIndex: 'shiftType', width: 140, render: (shiftType) => <span className="font-medium text-[var(--color-text-primary)]">{SHIFT_META[shiftType].time}</span> },
+    { title: 'Giờ làm', key: 'time', width: 140, render: (_, record) => <span className="font-medium text-[var(--color-text-primary)]">{record.startTime} - {record.endTime}</span> },
     { title: 'Khu vực', dataIndex: 'area', width: 140, render: (area) => <span className="text-[var(--color-text-secondary)]">{area}</span> },
     {
       title: 'Trạng thái',

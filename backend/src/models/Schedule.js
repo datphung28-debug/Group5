@@ -17,9 +17,19 @@ const scheduleSchema = new mongoose.Schema(
       required: true,
     },
     shiftType: {
-      type: String, // 'morning', 'afternoon', 'evening'
+      type: String, // 'morning', 'afternoon', 'evening', 'custom'
       required: true,
-      enum: ["morning", "afternoon", "evening"],
+      enum: ["morning", "afternoon", "evening", "custom"],
+    },
+    startTime: {
+      type: String, // Định dạng HH:mm
+      required: true,
+      default: "07:00",
+    },
+    endTime: {
+      type: String, // Định dạng HH:mm
+      required: true,
+      default: "12:00",
     },
     area: {
       type: String,
@@ -40,8 +50,8 @@ const scheduleSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Tránh trùng ca của cùng một nhân sự trong cùng một ngày và cùng một ca
-scheduleSchema.index({ date: 1, staff: 1, shiftType: 1 }, { unique: true });
+// Tránh trùng ca của cùng một nhân sự bắt đầu cùng giờ trong cùng một ngày
+scheduleSchema.index({ date: 1, staff: 1, startTime: 1 }, { unique: true });
 
 const Schedule = mongoose.model("Schedule", scheduleSchema);
 export default Schedule;
