@@ -30,7 +30,7 @@ const scheduleSchema = new mongoose.Schema(
       type: String, // 'confirmed', 'pending', 'absent'
       required: true,
       enum: ["confirmed", "pending", "absent"],
-      default: "pending",
+      default: "confirmed",
     },
     note: {
       type: String,

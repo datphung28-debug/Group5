@@ -161,7 +161,7 @@ const SchedulePage = () => {
         staffId: values.staffId,
         shiftType: values.shiftType,
         area: values.area,
-        status: 'pending', // Mặc định là chờ xác nhận khi tạo mới
+        status: 'confirmed', // Mặc định đã xác nhận khi tạo mới
         note: values.note,
       });
 
@@ -403,7 +403,7 @@ const SchedulePage = () => {
           initialValues={{
             shiftType: 'morning',
             area: 'Quầy thuốc',
-            status: 'pending',
+            status: 'confirmed',
             date: activeFilters.week,
           }}
         >

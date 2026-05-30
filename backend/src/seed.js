@@ -199,7 +199,7 @@ const seed = async () => {
       { date: "2026-05-25", day: "mon", staff: users[1]._id, shiftType: "morning", area: "Quầy tư vấn", status: "confirmed", note: "Phụ trách tư vấn thuốc kê đơn" },
       { date: "2026-05-25", day: "mon", staff: users[0]._id, shiftType: "afternoon", area: "POS", status: "confirmed", note: "Đối soát và bàn giao" },
       { date: "2026-05-26", day: "tue", staff: users[0]._id, shiftType: "morning", area: "Kho", status: "confirmed", note: "Kiểm kê tồn kho nhanh" },
-      { date: "2026-05-26", day: "tue", staff: users[1]._id, shiftType: "evening", area: "Quầy thuốc", status: "pending", note: "Chờ xác nhận đổi ca" },
+      { date: "2026-05-26", day: "tue", staff: users[1]._id, shiftType: "evening", area: "Quầy thuốc", status: "confirmed", note: "Ca làm buổi tối" },
       { date: "2026-05-27", day: "wed", staff: users[1]._id, shiftType: "afternoon", area: "Quầy tư vấn", status: "confirmed", note: "Phụ trách nhập đơn thuốc" },
       { date: "2026-05-28", day: "thu", staff: users[0]._id, shiftType: "morning", area: "POS", status: "absent", note: "Xin nghỉ có phép" },
       { date: "2026-05-29", day: "fri", staff: users[1]._id, shiftType: "afternoon", area: "Quầy thuốc", status: "confirmed", note: "Ca tăng cường cuối tuần" },

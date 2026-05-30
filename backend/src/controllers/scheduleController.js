@@ -64,7 +64,7 @@ export const createSchedule = async (req, res) => {
       staff: staffId,
       shiftType,
       area: area || "Quầy thuốc",
-      status: status || "pending",
+      status: status || "confirmed",
       note: note || "",
     });
 
@@ -190,7 +190,7 @@ export const copyWeekSchedules = async (req, res) => {
           staff: sched.staff,
           shiftType: sched.shiftType,
           area: sched.area,
-          status: "pending", // Đặt về mặc định chờ xác nhận khi sao chép
+          status: "confirmed", // Đặt về mặc định đã xác nhận khi sao chép
           note: sched.note,
         });
         copiedCount++;
