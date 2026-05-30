@@ -62,10 +62,21 @@ export const createSchedule = async (req, res) => {
       else { start = '08:00'; end = '17:00'; }
     }
 
-    // Kiểm tra trùng ca bắt đầu cùng một giờ cho cùng 1 người
-    const existing = await Schedule.findOne({ date, staff: staffId, startTime: start });
+    if (start >= end) {
+      return res.status(400).json({ message: "Giờ bắt đầu phải trước giờ kết thúc" });
+    }
+
+    // Kiểm tra trùng/gối thời gian làm việc với ca khác của cùng nhân viên
+    const existing = await Schedule.findOne({
+      date,
+      staff: staffId,
+      startTime: { $lt: end },
+      endTime: { $gt: start }
+    });
     if (existing) {
-      return res.status(400).json({ message: "Nhân viên đã có lịch làm việc bắt đầu vào khung giờ này" });
+      return res.status(400).json({
+        message: `Nhân viên đã có lịch làm việc trùng lặp thời gian trong khoảng ${existing.startTime} - ${existing.endTime}`
+      });
     }
 
     const newSchedule = await Schedule.create({
@@ -100,22 +111,32 @@ export const updateSchedule = async (req, res) => {
     // Xác định các trường kiểm tra trùng lặp
     const checkDate = date || schedule.date;
     const checkStaff = staffId || schedule.staff;
-    const checkStartTime = startTime || schedule.startTime;
+    let checkStartTime = startTime || schedule.startTime;
+    let checkEndTime = endTime || schedule.endTime;
 
-    if (
-      (date && date !== schedule.date) ||
-      (staffId && staffId.toString() !== schedule.staff.toString()) ||
-      (startTime && startTime !== schedule.startTime)
-    ) {
-      const existing = await Schedule.findOne({
-        _id: { $ne: req.params.id },
-        date: checkDate,
-        staff: checkStaff,
-        startTime: checkStartTime,
+    if (shiftType && shiftType !== schedule.shiftType && !startTime && !endTime) {
+      if (shiftType === 'morning') { checkStartTime = '07:00'; checkEndTime = '12:00'; }
+      else if (shiftType === 'afternoon') { checkStartTime = '12:00'; checkEndTime = '17:00'; }
+      else if (shiftType === 'evening') { checkStartTime = '17:00'; checkEndTime = '22:00'; }
+      else if (shiftType === 'custom') { checkStartTime = '08:00'; checkEndTime = '17:00'; }
+    }
+
+    if (checkStartTime >= checkEndTime) {
+      return res.status(400).json({ message: "Giờ bắt đầu phải trước giờ kết thúc" });
+    }
+
+    // Kiểm tra trùng/gối thời gian làm việc với ca khác của cùng nhân viên
+    const existing = await Schedule.findOne({
+      _id: { $ne: req.params.id },
+      date: checkDate,
+      staff: checkStaff,
+      startTime: { $lt: checkEndTime },
+      endTime: { $gt: checkStartTime },
+    });
+    if (existing) {
+      return res.status(400).json({
+        message: `Nhân viên đã có lịch làm việc trùng lặp thời gian trong khoảng ${existing.startTime} - ${existing.endTime}`
       });
-      if (existing) {
-        return res.status(400).json({ message: "Nhân viên đã có lịch làm việc bắt đầu vào khung giờ này" });
-      }
     }
 
     if (date) schedule.date = date;
@@ -128,8 +149,8 @@ export const updateSchedule = async (req, res) => {
       schedule.staff = staffId;
     }
     if (shiftType) schedule.shiftType = shiftType;
-    if (startTime) schedule.startTime = startTime;
-    if (endTime) schedule.endTime = endTime;
+    if (checkStartTime) schedule.startTime = checkStartTime;
+    if (checkEndTime) schedule.endTime = checkEndTime;
     if (area) schedule.area = area;
     if (status) schedule.status = status;
     if (note !== undefined) schedule.note = note;
@@ -190,11 +211,11 @@ export const copyWeekSchedules = async (req, res) => {
       schedDate.setDate(schedDate.getDate() + 7);
       const targetDateStr = schedDate.toISOString().split("T")[0];
 
-      // Kiểm tra trùng
+      // Kiểm tra trùng theo giờ bắt đầu của ca
       const existing = await Schedule.findOne({
         date: targetDateStr,
         staff: sched.staff,
-        shiftType: sched.shiftType,
+        startTime: sched.startTime,
       });
 
       if (!existing) {
