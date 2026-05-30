@@ -32,6 +32,7 @@ const MedicineTable = () => {
   const [addedZones, setAddedZones] = React.useState([]);
   const [newZoneCode, setNewZoneCode] = React.useState('');
   const [newZoneName, setNewZoneName] = React.useState('');
+  const [isAddingZone, setIsAddingZone] = React.useState(false);
 
   // Tính toán động danh sách Khu vực (Zone) tránh cascading setState trong useEffect
   const zones = React.useMemo(() => {
@@ -78,6 +79,7 @@ const MedicineTable = () => {
     setAddedZones(prev => [...prev, newZone]);
     setNewZoneCode('');
     setNewZoneName('');
+    setIsAddingZone(false);
     message.success(`Đã thêm khu vực ${code} thành công!`);
   };
 
@@ -420,30 +422,59 @@ const MedicineTable = () => {
                 <>
                   {menu}
                   <Divider className="my-1.5" />
-                  <div className="p-2 pt-0" onMouseDown={e => e.preventDefault()}>
-                    <div className="flex gap-2 mb-2">
-                      <Input
-                        placeholder="Mã khu (VD: F)"
-                        value={newZoneCode}
-                        onChange={(e) => setNewZoneCode(e.target.value)}
-                        className="w-1/3 rounded-[var(--radius-sm)]"
-                        maxLength={3}
-                      />
-                      <Input
-                        placeholder="Tên khu (VD: Đông Y)"
-                        value={newZoneName}
-                        onChange={(e) => setNewZoneName(e.target.value)}
-                        className="w-2/3 rounded-[var(--radius-sm)]"
-                      />
-                    </div>
-                    <Button
-                      type="text"
-                      icon={<Plus size={14} className="inline mr-1" />}
-                      onClick={handleAddZone}
-                      className="text-[var(--color-primary)] font-medium hover:text-[var(--color-primary-hover)] flex items-center justify-center bg-[var(--color-primary-light)] rounded-[var(--radius-sm)] w-full py-1 h-8"
-                    >
-                      Thêm khu vực mới
-                    </Button>
+                  <div className="p-2 pt-0" onMouseDown={e => e.stopPropagation()}>
+                    {!isAddingZone ? (
+                      <Button
+                        type="text"
+                        icon={<Plus size={14} className="inline mr-1" />}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setIsAddingZone(true);
+                        }}
+                        className="text-[var(--color-primary)] font-medium hover:text-[var(--color-primary-hover)] flex items-center justify-center bg-[var(--color-primary-light)] rounded-[var(--radius-sm)] w-full py-1 h-8"
+                      >
+                        Thêm khu vực mới
+                      </Button>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Mã khu (VD: F)"
+                            value={newZoneCode}
+                            onChange={(e) => setNewZoneCode(e.target.value)}
+                            className="w-1/3 rounded-[var(--radius-sm)]"
+                            maxLength={3}
+                            autoFocus
+                          />
+                          <Input
+                            placeholder="Tên khu (VD: Đông Y)"
+                            value={newZoneName}
+                            onChange={(e) => setNewZoneName(e.target.value)}
+                            className="w-2/3 rounded-[var(--radius-sm)]"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="primary"
+                            size="small"
+                            onClick={handleAddZone}
+                            className="flex-1 bg-[var(--color-primary)] text-xs h-8 rounded-[var(--radius-sm)] flex items-center justify-center font-semibold"
+                          >
+                            Xác nhận
+                          </Button>
+                          <Button
+                            size="small"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setIsAddingZone(false);
+                            }}
+                            className="flex-1 text-xs h-8 rounded-[var(--radius-sm)] flex items-center justify-center font-semibold text-slate-500 hover:text-slate-700"
+                          >
+                            Hủy
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
