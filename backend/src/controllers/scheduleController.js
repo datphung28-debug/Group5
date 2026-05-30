@@ -58,7 +58,7 @@ export const createSchedule = async (req, res) => {
     if (!start || !end) {
       if (shiftType === 'morning') { start = '07:00'; end = '12:00'; }
       else if (shiftType === 'afternoon') { start = '12:00'; end = '17:00'; }
-      else if (shiftType === 'evening') { start = '17:00'; end = '22:00'; }
+      else if (shiftType === 'evening') { start = '17:00'; end = '21:00'; }
       else { start = '08:00'; end = '17:00'; }
     }
 
@@ -117,7 +117,7 @@ export const updateSchedule = async (req, res) => {
     if (shiftType && shiftType !== schedule.shiftType && !startTime && !endTime) {
       if (shiftType === 'morning') { checkStartTime = '07:00'; checkEndTime = '12:00'; }
       else if (shiftType === 'afternoon') { checkStartTime = '12:00'; checkEndTime = '17:00'; }
-      else if (shiftType === 'evening') { checkStartTime = '17:00'; checkEndTime = '22:00'; }
+      else if (shiftType === 'evening') { checkStartTime = '17:00'; checkEndTime = '21:00'; }
       else if (shiftType === 'custom') { checkStartTime = '08:00'; checkEndTime = '17:00'; }
     }
 
@@ -278,7 +278,7 @@ export const autoAssignSchedules = async (req, res) => {
     const shiftTimes = {
       morning: { start: '07:00', end: '12:00' },
       afternoon: { start: '12:00', end: '17:00' },
-      evening: { start: '17:00', end: '22:00' }
+      evening: { start: '17:00', end: '21:00' }
     };
     const areas = ['Quầy thuốc', 'Quầy tư vấn', 'Kho', 'POS'];
     const weekDayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];

@@ -139,7 +139,29 @@ const SchedulePage = () => {
 
   // Map dữ liệu từ DB thành dữ liệu phù hợp với component UI
   const mappedShifts = useMemo(() => {
-    return schedules.map((s) => ({
+    const SHIFT_ORDER = {
+      morning: 1,
+      afternoon: 2,
+      evening: 3,
+      fulltime: 4,
+      custom: 5,
+    };
+
+    const sortedSchedules = [...schedules].sort((a, b) => {
+      // Sắp xếp theo thứ tự ca làm mong muốn (Sáng, Chiều, Tối, Fulltime, Custom)
+      const orderA = SHIFT_ORDER[a.shiftType] || 99;
+      const orderB = SHIFT_ORDER[b.shiftType] || 99;
+      if (orderA !== orderB) return orderA - orderB;
+      
+      // Tiếp theo xếp theo giờ bắt đầu
+      const timeComp = (a.startTime || '').localeCompare(b.startTime || '');
+      if (timeComp !== 0) return timeComp;
+
+      // Cuối cùng xếp theo tên nhân viên
+      return (a.staff?.name || '').localeCompare(b.staff?.name || '');
+    });
+
+    return sortedSchedules.map((s) => ({
       id: s._id,
       day: s.day,
       date: s.date,
@@ -452,7 +474,7 @@ const SchedulePage = () => {
                     let range = null;
                     if (type === 'morning') range = [dayjs('07:00', 'HH:mm'), dayjs('12:00', 'HH:mm')];
                     else if (type === 'afternoon') range = [dayjs('12:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
-                    else if (type === 'evening') range = [dayjs('17:00', 'HH:mm'), dayjs('22:00', 'HH:mm')];
+                    else if (type === 'evening') range = [dayjs('17:00', 'HH:mm'), dayjs('21:00', 'HH:mm')];
                     else if (type === 'fulltime') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
                     else if (type === 'custom') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
                     
@@ -530,7 +552,7 @@ const SchedulePage = () => {
               let range = null;
               if (type === 'morning') range = [dayjs('07:00', 'HH:mm'), dayjs('12:00', 'HH:mm')];
               else if (type === 'afternoon') range = [dayjs('12:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
-              else if (type === 'evening') range = [dayjs('17:00', 'HH:mm'), dayjs('22:00', 'HH:mm')];
+              else if (type === 'evening') range = [dayjs('17:00', 'HH:mm'), dayjs('21:00', 'HH:mm')];
               else if (type === 'fulltime') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
               else if (type === 'custom') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
               
