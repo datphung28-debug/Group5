@@ -9,6 +9,8 @@ const customerSchema = new mongoose.Schema(
     gender: { type: String, enum: ["male", "female", "other"] },
     dateOfBirth: { type: Date },
     notes: { type: String, trim: true },
+    allergies: { type: String, trim: true },
+    chronicDiseases: { type: String, trim: true },
     totalSpent: { type: Number, default: 0 }, // tổng chi tiêu
     isActive: { type: Boolean, default: true },
   },

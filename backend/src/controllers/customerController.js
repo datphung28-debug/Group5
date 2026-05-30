@@ -2,17 +2,23 @@ import Customer from "../models/Customer.js";
 import { sendErrorResponse } from "../utils/errorResponse.js";
 import Sale from "../models/Sale.js";
 
+export const buildCustomerFilter = (query = {}) => {
+  const { search } = query;
+  const filter = { isActive: true };
+  if (search) {
+    filter.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { phone: { $regex: search, $options: "i" } },
+    ];
+  }
+  return filter;
+};
+
 // @GET /api/customers
 export const getCustomers = async (req, res) => {
   try {
-    const { search, page = 1, limit = 20 } = req.query;
-    const filter = { isActive: true };
-    if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { phone: { $regex: search, $options: "i" } },
-      ];
-    }
+    const { page = 1, limit = 20 } = req.query;
+    const filter = buildCustomerFilter(req.query);
 
     const total = await Customer.countDocuments(filter);
     const customers = await Customer.find(filter)
