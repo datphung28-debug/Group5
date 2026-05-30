@@ -87,8 +87,14 @@ const StaffPage = () => {
     )
   ), [users]);
 
-  const handleFilterChange = (nextFilters) => {
-    setFilters((current) => ({ ...current, ...nextFilters }));
+  const handleFilterChange = (nextFilters, isInstant = false) => {
+    setFilters((current) => {
+      const updated = { ...current, ...nextFilters };
+      if (isInstant) {
+        setActiveFilters(updated);
+      }
+      return updated;
+    });
   };
 
   const updateLocalUser = (updatedUser) => {
