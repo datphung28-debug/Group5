@@ -91,6 +91,18 @@ const POSPage = () => {
     }
   }, []);
 
+  const [prescriptions, setPrescriptions] = useState([]);
+
+  const fetchPrescriptions = useCallback(async () => {
+    try {
+      const res = await prescriptionAPI.getAll({ limit: 500, status: 'pending' });
+      const data = res.data?.prescriptions || res.data || [];
+      setPrescriptions(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Không thể tải đơn thuốc:', error);
+    }
+  }, []);
+
   const fetchMedicines = useCallback(async () => {
     setMedicineError('');
     try {
@@ -281,54 +293,73 @@ const POSPage = () => {
       return;
     }
 
-    setCheckoutSubmitting(true);
-    try {
-      const payload = buildSalePayload({
-        cart,
-        customer: activeOrder.customer,
-        prescription: activeOrder.prescription,
-        discount: orderDiscount,
-        paymentMethod,
-        amountPaid: paymentMethod === 'cash' ? customerGiven : total,
-      });
-      const res = await saleAPI.create(payload);
-      message.success(`✅ Thanh toán thành công! Mã HĐ: ${res.data?.code || 'OK'}`);
-
-      // Enrich dữ liệu hóa đơn (do API create không populate)
-      const invoiceData = { ...res.data };
-      if (invoiceData.customer && typeof invoiceData.customer === 'string') {
-        const c = customers.find(x => x._id === invoiceData.customer);
-        if (c) invoiceData.customer = c;
-      }
-      if (invoiceData.items && Array.isArray(invoiceData.items)) {
-        invoiceData.items = invoiceData.items.map(item => {
-           const cartItem = cart.find(ci => ci.medicine._id === item.medicine || ci.medicine._id === item.medicine?._id);
-           if (cartItem) {
-             return { ...item, medicine: cartItem.medicine };
-           }
-           return item;
+    const proceedCheckout = async () => {
+      setCheckoutSubmitting(true);
+      try {
+        const payload = buildSalePayload({
+          cart,
+          customer: activeOrder.customer,
+          prescription: activeOrder.prescription,
+          discount: orderDiscount,
+          paymentMethod,
+          amountPaid: paymentMethod === 'cash' ? customerGiven : total,
         });
-      }
+        const res = await saleAPI.create(payload);
+        message.success(`✅ Thanh toán thành công! Mã HĐ: ${res.data?.code || 'OK'}`);
 
-      // Reset đơn hiện tại
-      updateActiveOrder({ cart: [], discount: 0, customerGiven: null, prescription: null, customer: null });
+        // Enrich dữ liệu hóa đơn (do API create không populate)
+        const invoiceData = { ...res.data };
+        if (invoiceData.customer && typeof invoiceData.customer === 'string') {
+          const c = customers.find(x => x._id === invoiceData.customer);
+          if (c) invoiceData.customer = c;
+        }
+        if (invoiceData.items && Array.isArray(invoiceData.items)) {
+          invoiceData.items = invoiceData.items.map(item => {
+             const cartItem = cart.find(ci => ci.medicine._id === item.medicine || ci.medicine._id === item.medicine?._id);
+             if (cartItem) {
+               return { ...item, medicine: cartItem.medicine };
+             }
+             return item;
+          });
+        }
 
-      // Refresh data
-      fetchTodayInvoices();
-      fetchMedicines();
-      
-      // Auto print preview
-      if (autoPrint) {
-        setSelectedInvoiceToPrint(invoiceData);
-        setIsReceiptModalOpen(true);
+        // Reset đơn hiện tại
+        updateActiveOrder({ cart: [], discount: 0, customerGiven: null, prescription: null, customer: null });
+
+        // Refresh data
+        fetchTodayInvoices();
+        fetchMedicines();
+        fetchPrescriptions();
+        
+        // Auto print preview
+        if (autoPrint) {
+          setSelectedInvoiceToPrint(invoiceData);
+          setIsReceiptModalOpen(true);
+        }
+      } catch (error) {
+        const errMsg = error.response?.data?.message || 'Lỗi khi thanh toán!';
+        message.error(errMsg);
+      } finally {
+        setCheckoutSubmitting(false);
       }
-    } catch (error) {
-      const errMsg = error.response?.data?.message || 'Lỗi khi thanh toán!';
-      message.error(errMsg);
-    } finally {
-      setCheckoutSubmitting(false);
+    };
+
+    const hasRxMedicine = cart.some(item => item.medicine.requiresPrescription);
+    if (hasRxMedicine && !activeOrder.prescription) {
+      Modal.confirm({
+        title: 'Cảnh báo thuốc cần đơn (Rx)',
+        content: 'Giỏ hàng có chứa thuốc cần kê đơn nhưng bạn chưa liên kết đơn thuốc. Bạn có chắc chắn muốn tiếp tục thanh toán không?',
+        okText: 'Vẫn thanh toán',
+        okType: 'danger',
+        cancelText: 'Hủy, chọn đơn',
+        okButtonProps: { className: 'bg-red-600 border-none' },
+        onOk: () => proceedCheckout(),
+      });
+      return;
     }
-  }, [activeOrder.customer, activeOrder.prescription, autoPrint, cart, checkoutSubmitting, customerGiven, fetchMedicines, fetchTodayInvoices, orderDiscount, paymentMethod, total, updateActiveOrder]);
+
+    await proceedCheckout();
+  }, [activeOrder.customer, activeOrder.prescription, autoPrint, cart, checkoutSubmitting, customerGiven, customers, fetchMedicines, fetchTodayInvoices, fetchPrescriptions, orderDiscount, paymentMethod, total, updateActiveOrder]);
 
   // ═══════════════════════════════════════════════════════════════════
   // PHASE 1: PHÍM TẮT TOÀN CỤC
@@ -363,9 +394,10 @@ const POSPage = () => {
     fetchMedicines();
     fetchTodayInvoices();
     fetchCustomers();
+    fetchPrescriptions();
     const timer = setInterval(() => setTime(dayjs()), 1000);
     return () => clearInterval(timer);
-  }, [fetchCustomers, fetchMedicines, fetchTodayInvoices]);
+  }, [fetchCustomers, fetchMedicines, fetchTodayInvoices, fetchPrescriptions]);
 
   const handleCreateCustomer = async () => {
     try {
@@ -752,6 +784,32 @@ const POSPage = () => {
                   options={customers.map(c => ({
                     value: c._id,
                     label: `${c.name} - ${c.phone}`
+                  }))}
+                />
+              </div>
+
+              {/* Đơn thuốc (Rx) */}
+              <div>
+                <div className="text-xs font-bold text-slate-500 mb-1.5 uppercase flex justify-between items-center font-bold">
+                  <span>Liên kết đơn thuốc</span>
+                  {cart.some(item => item.medicine.requiresPrescription) && (
+                    <Tag color="red" className="m-0 font-bold uppercase text-[9px] animate-pulse">Cần đơn thuốc (Rx)</Tag>
+                  )}
+                </div>
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder="Chọn đơn thuốc liên kết..."
+                  className="w-full"
+                  size="large"
+                  value={activeOrder.prescription}
+                  onChange={(val) => updateActiveOrder({ prescription: val })}
+                  filterOption={(input, option) =>
+                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={prescriptions.map(p => ({
+                    value: p._id,
+                    label: `${p.code} - ${p.patientName} (${p.diagnosis || 'Không rõ bệnh'})`
                   }))}
                 />
               </div>
