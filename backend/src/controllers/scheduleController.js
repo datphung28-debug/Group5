@@ -261,7 +261,7 @@ export const autoAssignSchedules = async (req, res) => {
 
     const start = new Date(startDate);
     const end = new Date(startDate);
-    end.setDate(end.getDate() + 6);
+    end.setUTCDate(end.getUTCDate() + 6);
     const endDateStr = end.toISOString().split("T")[0];
 
     const pharmacists = await User.find({ isActive: true, role: "pharmacist" });
@@ -287,7 +287,7 @@ export const autoAssignSchedules = async (req, res) => {
 
     for (let d = 0; d < 7; d++) {
       const currentDate = new Date(startDate);
-      currentDate.setDate(currentDate.getDate() + d);
+      currentDate.setUTCDate(currentDate.getUTCDate() + d);
       const dateStr = currentDate.toISOString().split("T")[0];
       const dayKey = weekDayKeys[d];
 

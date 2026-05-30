@@ -1,7 +1,12 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Button, Descriptions, Space, Tag, message, Modal, Form, Select, Input, DatePicker, Popconfirm, TimePicker } from 'antd';
 import dayjs from 'dayjs';
+import weekOfYear from 'dayjs/plugin/weekOfYear';
+import isoWeek from 'dayjs/plugin/isoWeek';
 import { CalendarPlus, Copy, Save, Trash2, Sparkles } from 'lucide-react';
+
+dayjs.extend(weekOfYear);
+dayjs.extend(isoWeek);
 import PageHeader from '../../components/PageHeader';
 import ScheduleFilter from './components/ScheduleFilter';
 import ScheduleKPIs from './components/ScheduleKPIs';
