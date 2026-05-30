@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { Card, Input, Select, InputNumber, Switch, Button, Space, Typography, Row, Col, Alert, message, Spin } from 'antd';
-import { Save, X, Pill, DollarSign, FileText, Settings, ArrowLeft } from 'lucide-react';
+import { Save, X, Pill, DollarSign, FileText, Settings, ArrowLeft, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import useMedicineStore from '../../stores/useMedicineStore';
@@ -53,6 +53,14 @@ const AddMedicinePage = () => {
       requiresPrescription: false, // tên đúng backend
       isAntibiotic: false,
       isNarcotic: false,
+      location: {
+        storageType: 'room_temp',
+        zone: 'A',
+        shelf: 1,
+        row: 1,
+        column: 1,
+        notes: '',
+      },
     }
   });
 
@@ -116,6 +124,15 @@ const AddMedicinePage = () => {
       importPrice: formData.importPrice || 0,
       sellPrice: formData.sellPrice,      // đúng tên backend (không phải retailPrice)
       minStock: formData.minStock,
+      location: {
+        storageType: formData.location?.storageType || 'room_temp',
+        zone: formData.location?.zone || 'A',
+        shelf: Number(formData.location?.shelf || 1),
+        row: Number(formData.location?.row || 1),
+        column: Number(formData.location?.column || 1),
+        notes: formData.location?.notes || '',
+        label: `${formData.location?.zone || 'A'}-${String(formData.location?.shelf || 1).padStart(2, '0')}-${formData.location?.row || 1}-${formData.location?.column || 1}`,
+      },
     };
 
     // Bỏ các field undefined
@@ -349,6 +366,101 @@ const AddMedicinePage = () => {
                         )}
                       />
                       {errors.sellPrice && <Text type="danger" className="text-[11px]">{errors.sellPrice.message}</Text>}
+                    </div>
+                  </Col>
+                </Row>
+              </Card>
+
+              {/* Section: Vị trí kho */}
+              <Card className="shadow-[var(--shadow-card)] border-[var(--color-border-light)] rounded-[var(--radius-lg)]">
+                <SectionHeader icon={MapPin} title="Vị trí lưu kho" />
+                <Row gutter={[16, 16]}>
+                  <Col span={12}>
+                    <div className="flex flex-col gap-1">
+                      <Text className="text-[var(--font-size-sm)] font-medium text-[var(--color-text-secondary)]">Điều kiện bảo quản</Text>
+                      <Controller
+                        name="location.storageType"
+                        control={control}
+                        render={({ field }) => (
+                          <Select {...field} className="w-full rounded-[var(--radius-md)] h-10">
+                            <Option value="room_temp">Nhiệt độ thường (15-30°C)</Option>
+                            <Option value="cool">Mát (8-15°C)</Option>
+                            <Option value="cold">Lạnh (2-8°C)</Option>
+                            <Option value="freezer">Đông lạnh (&lt; 0°C)</Option>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                  </Col>
+
+                  <Col span={12}>
+                    <div className="flex flex-col gap-1">
+                      <Text className="text-[var(--font-size-sm)] font-medium text-[var(--color-text-secondary)]">Khu vực (Zone)</Text>
+                      <Controller
+                        name="location.zone"
+                        control={control}
+                        render={({ field }) => (
+                          <Select {...field} className="w-full rounded-[var(--radius-md)] h-10">
+                            <Option value="A">Khu A (Kháng sinh)</Option>
+                            <Option value="B">Khu B (Giảm đau/Hô hấp)</Option>
+                            <Option value="C">Khu C (Tiêu hóa/Da liễu)</Option>
+                            <Option value="D">Khu D (Vitamin)</Option>
+                            <Option value="E">Khu E (Tim mạch/Thần kinh)</Option>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                  </Col>
+
+                  <Col span={6}>
+                    <div className="flex flex-col gap-1">
+                      <Text className="text-[var(--font-size-sm)] font-medium text-[var(--color-text-secondary)]">Kệ số</Text>
+                      <Controller
+                        name="location.shelf"
+                        control={control}
+                        render={({ field }) => (
+                          <InputNumber {...field} min={1} max={10} className="w-full rounded-[var(--radius-md)] h-10 flex items-center" />
+                        )}
+                      />
+                    </div>
+                  </Col>
+
+                  <Col span={6}>
+                    <div className="flex flex-col gap-1">
+                      <Text className="text-[var(--font-size-sm)] font-medium text-[var(--color-text-secondary)]">Hàng (Tầng) số</Text>
+                      <Controller
+                        name="location.row"
+                        control={control}
+                        render={({ field }) => (
+                          <InputNumber {...field} min={1} max={10} className="w-full rounded-[var(--radius-md)] h-10 flex items-center" />
+                        )}
+                      />
+                    </div>
+                  </Col>
+
+                  <Col span={6}>
+                    <div className="flex flex-col gap-1">
+                      <Text className="text-[var(--font-size-sm)] font-medium text-[var(--color-text-secondary)]">Ô số (Cột)</Text>
+                      <Controller
+                        name="location.column"
+                        control={control}
+                        render={({ field }) => (
+                          <InputNumber {...field} min={1} max={10} className="w-full rounded-[var(--radius-md)] h-10 flex items-center" />
+                        )}
+                      />
+                    </div>
+                  </Col>
+
+                  <Col span={6}>
+                    <div className="flex flex-col gap-1">
+                      <Text className="text-[var(--font-size-sm)] font-medium text-[var(--color-text-secondary)]">Ghi chú vị trí</Text>
+                      <Controller
+                        name="location.notes"
+                        control={control}
+                        render={({ field }) => (
+                          <Input {...field} placeholder="Ghi chú thêm..." className="rounded-[var(--radius-md)] h-10" />
+                        )}
+                      />
                     </div>
                   </Col>
                 </Row>
