@@ -46,7 +46,7 @@ export default function Sidebar({ collapsed, onCollapse, badges = {} }) {
       items: [
         { path: '/medicines', icon: Pill, label: 'Danh mục thuốc' },
         { path: '/medicine-groups', icon: Tags, label: 'Nhóm thuốc' },
-        { path: '/inventory', icon: Boxes, label: 'Tồn kho', badge: badges.inventory },
+        { path: '/inventory', icon: Boxes, label: 'Tồn kho' },
       ],
     },
     {
