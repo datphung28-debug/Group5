@@ -1,0 +1,73 @@
+{
+  "info": {
+    "_postman_id": "4c7a8b9f-0d9c-4c7a-8f1b-2d3e4f5a6b7c",
+    "name": "04_Imports",
+    "description": "APIs related to Imports (Nhập Hàng)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Lấy danh sách Phiếu Nhập",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/imports",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "imports"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Tạo Phiếu Nhập Hàng",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"supplier\": \"<THAY BẰNG ID NHÀ CUNG CẤP>\",\n    \"items\": [\n        {\n            \"medicine\": \"<THAY BẰNG ID THUỐC>\",\n            \"quantity\": 100,\n            \"importPrice\": 800,\n            \"batchNumber\": \"LOHANG_001\",\n            \"expiryDate\": \"2026-12-31\"\n        }\n    ],\n    \"paymentStatus\": \"paid\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/imports",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "imports"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

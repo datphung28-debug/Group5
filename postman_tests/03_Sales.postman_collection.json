@@ -1,0 +1,83 @@
+{
+  "info": {
+    "_postman_id": "3c7a8b9f-0d9c-4c7a-8f1b-2d3e4f5a6b7c",
+    "name": "03_Sales",
+    "description": "APIs related to Sales (POS)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Lấy danh sách Hóa Đơn",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/sales?page=1&limit=20",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "sales"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Tạo Hóa Đơn (Thanh Toán)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"items\": [\n        {\n            \"medicine\": \"<THAY BẰNG ID THUỐC ĐỂ TEST>\",\n            \"quantity\": 2,\n            \"discount\": 0\n        }\n    ],\n    \"discount\": 0,\n    \"paymentMethod\": \"cash\",\n    \"amountPaid\": 100000\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/sales",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "sales"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
