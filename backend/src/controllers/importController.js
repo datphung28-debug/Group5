@@ -140,10 +140,26 @@ export const createImport = async (req, res) => {
       createdBy: req.user._id,
     });
 
-    // Cộng tồn kho và cập nhật hạn dùng
+    // Increment stock and update expiry/manufacturing dates
     for (const item of processedItems) {
       await Medicine.findByIdAndUpdate(item.medicine, buildMedicineImportUpdate(item), {
         runValidators: true
+      });
+    }
+
+    // Increase supplier debt and append to history if unpaid or partial
+    if (paymentStatus === "unpaid" || paymentStatus === "partial") {
+      await Supplier.findByIdAndUpdate(supplier, {
+        $inc: { currentDebt: totalAmount },
+        $push: {
+          debtHistory: {
+            id: importDoc.code,
+            date: new Date(importDoc.importDate).toISOString().split("T")[0],
+            note: `Purchase - Order ${importDoc.code}`,
+            amount: totalAmount,
+          },
+        },
+        status: "Đang nợ",
       });
     }
 

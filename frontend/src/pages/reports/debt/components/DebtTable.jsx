@@ -11,7 +11,7 @@ const getRisk = (supplier) => {
   return { label: 'An toàn', color: 'var(--color-profit)', bg: 'var(--color-profit-bg)' };
 };
 
-const DebtTable = ({ data }) => {
+const DebtTable = ({ data, loading }) => {
   const navigate = useNavigate();
 
   const columns = [
@@ -138,6 +138,7 @@ const DebtTable = ({ data }) => {
           rowKey="id"
           columns={columns}
           dataSource={data}
+          loading={loading}
           locale={{ emptyText: <Empty description="Không có dữ liệu công nợ" /> }}
           pagination={{
             pageSize: 10,

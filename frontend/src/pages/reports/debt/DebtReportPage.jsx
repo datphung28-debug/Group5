@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Button, Space, message } from 'antd';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Space, message } from 'antd';
 import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 import PageHeader from '../../../components/PageHeader';
 import useSupplierStore from '../../../stores/useSupplierStore';
@@ -22,8 +22,15 @@ const getRiskValue = (supplier) => {
 
 const DebtReportPage = () => {
   const suppliers = useSupplierStore((state) => state.suppliers);
+  const loading = useSupplierStore((state) => state.loading);
+  const error = useSupplierStore((state) => state.error);
+  const fetchSuppliers = useSupplierStore((state) => state.fetchSuppliers);
   const [filters, setFilters] = useState(initialFilters);
   const [messageApi, contextHolder] = message.useMessage();
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, [fetchSuppliers]);
 
   const debtRows = useMemo(() => (
     suppliers.map((supplier) => ({
@@ -117,8 +124,17 @@ const DebtReportPage = () => {
         onReset={() => setFilters(initialFilters)}
       />
 
+      {error && (
+        <Alert
+          type="error"
+          showIcon
+          message={error}
+          className="mb-6 rounded-[var(--radius-lg)] border-[var(--color-debt)]"
+        />
+      )}
+
       <DebtKPIs summary={summary} />
-      <DebtTable data={filteredRows} />
+      <DebtTable data={filteredRows} loading={loading} />
     </div>
   );
 };
