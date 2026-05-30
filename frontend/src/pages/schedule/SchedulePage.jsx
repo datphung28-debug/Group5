@@ -161,7 +161,7 @@ const SchedulePage = () => {
         staffId: values.staffId,
         shiftType: values.shiftType,
         area: values.area,
-        status: values.status,
+        status: 'pending', // Mặc định là chờ xác nhận khi tạo mới
         note: values.note,
       });
 
@@ -431,10 +431,6 @@ const SchedulePage = () => {
                 { value: 'POS', label: 'POS' },
               ]}
             />
-          </Form.Item>
-
-          <Form.Item label="Trạng thái" name="status" rules={[{ required: true }]}>
-            <Select options={Object.entries(STATUS_META).map(([value, meta]) => ({ value, label: meta.label }))} />
           </Form.Item>
 
           <Form.Item label="Ghi chú" name="note">
