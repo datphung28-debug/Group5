@@ -3,6 +3,7 @@ import { sendErrorResponse } from "../utils/errorResponse.js";
 import Medicine from "../models/Medicine.js";
 import Supplier from "../models/Supplier.js";
 import mongoose from "mongoose";
+import { executeTransaction } from "../utils/transaction.js";
 
 // Tạo mã phiếu nhập
 const generateImportCode = async () => {
@@ -129,7 +130,7 @@ export const createImport = async (req, res) => {
     }
 
     const code = await generateImportCode();
-    const importDoc = await Import.create({
+    const importPayload = {
       code,
       supplier,
       items: processedItems,
@@ -138,65 +139,78 @@ export const createImport = async (req, res) => {
       importDate: importDate || new Date(),
       notes,
       createdBy: req.user._id,
-    });
+    };
 
-    // Increment stock, add to batch, and update expiry/manufacturing dates
-    for (const item of processedItems) {
-      const med = await Medicine.findById(item.medicine);
-      if (med) {
-        med.stock += Number(item.quantity);
-        if (item.importPrice !== undefined && item.importPrice !== null) {
-          med.importPrice = Number(item.importPrice);
-        }
-        if (item.expiryDate) med.expiryDate = item.expiryDate;
-        if (item.manufacturingDate) med.manufacturingDate = item.manufacturingDate;
+    const processImportDbOps = async (session = null) => {
+      const options = session ? { session } : {};
+      const importDocArray = await Import.create([importPayload], options);
+      const importDoc = importDocArray[0];
 
-        // Xử lý số lô (batch)
-        if (item.batchNumber) {
-          if (!med.batches) med.batches = [];
-          const existingBatchIdx = med.batches.findIndex(b => b.batchNumber === item.batchNumber);
-          if (existingBatchIdx > -1) {
-            med.batches[existingBatchIdx].quantity += Number(item.quantity);
-            if (item.importPrice !== undefined) {
-              med.batches[existingBatchIdx].importPrice = Number(item.importPrice);
-            }
-            if (item.expiryDate) {
-              med.batches[existingBatchIdx].expiryDate = item.expiryDate;
-            }
-          } else {
-            med.batches.push({
-              batchNumber: item.batchNumber,
-              expiryDate: item.expiryDate || new Date(Date.now() + 365*24*60*60*1000), // Mặc định 1 năm nếu không có hạn dùng
-              quantity: Number(item.quantity),
-              importPrice: Number(item.importPrice || med.importPrice || 0),
-            });
+      // Increment stock, add to batch, and update expiry/manufacturing dates
+      for (const item of processedItems) {
+        const med = await Medicine.findById(item.medicine).session(session);
+        if (med) {
+          med.stock += Number(item.quantity);
+          if (item.importPrice !== undefined && item.importPrice !== null) {
+            med.importPrice = Number(item.importPrice);
           }
+          if (item.expiryDate) med.expiryDate = item.expiryDate;
+          if (item.manufacturingDate) med.manufacturingDate = item.manufacturingDate;
 
-          // Cập nhật lại hạn sử dụng của thuốc theo lô sắp hết hạn nhất
-          if (med.batches.length > 0) {
-            med.batches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
-            med.expiryDate = med.batches[0].expiryDate;
+          // Xử lý số lô (batch)
+          if (item.batchNumber) {
+            if (!med.batches) med.batches = [];
+            const existingBatchIdx = med.batches.findIndex(b => b.batchNumber === item.batchNumber);
+            if (existingBatchIdx > -1) {
+              med.batches[existingBatchIdx].quantity += Number(item.quantity);
+              if (item.importPrice !== undefined) {
+                med.batches[existingBatchIdx].importPrice = Number(item.importPrice);
+              }
+              if (item.expiryDate) {
+                med.batches[existingBatchIdx].expiryDate = item.expiryDate;
+              }
+            } else {
+              med.batches.push({
+                batchNumber: item.batchNumber,
+                expiryDate: item.expiryDate || new Date(Date.now() + 365*24*60*60*1000), // Mặc định 1 năm nếu không có hạn dùng
+                quantity: Number(item.quantity),
+                importPrice: Number(item.importPrice || med.importPrice || 0),
+              });
+            }
+
+            // Cập nhật lại hạn sử dụng của thuốc theo lô sắp hết hạn nhất
+            if (med.batches.length > 0) {
+              med.batches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+              med.expiryDate = med.batches[0].expiryDate;
+            }
           }
+          await med.save(options);
         }
-        await med.save();
       }
-    }
 
-    // Increase supplier debt and append to history if unpaid or partial
-    if (paymentStatus === "unpaid" || paymentStatus === "partial") {
-      await Supplier.findByIdAndUpdate(supplier, {
-        $inc: { currentDebt: totalAmount },
-        $push: {
-          debtHistory: {
-            id: importDoc.code,
-            date: new Date(importDoc.importDate).toISOString().split("T")[0],
-            note: `Purchase - Order ${importDoc.code}`,
-            amount: totalAmount,
+      // Increase supplier debt and append to history if unpaid or partial
+      if (paymentStatus === "unpaid" || paymentStatus === "partial") {
+        await Supplier.findByIdAndUpdate(supplier, {
+          $inc: { currentDebt: totalAmount },
+          $push: {
+            debtHistory: {
+              id: importDoc.code,
+              date: new Date(importDoc.importDate).toISOString().split("T")[0],
+              note: `Purchase - Order ${importDoc.code}`,
+              amount: totalAmount,
+            },
           },
-        },
-        status: "Đang nợ",
-      });
-    }
+          status: "Đang nợ",
+        }, options);
+      }
+
+      return importDoc;
+    };
+
+    const importDoc = await executeTransaction(
+      (session) => processImportDbOps(session),
+      () => processImportDbOps(null)
+    );
 
     res.status(201).json(importDoc);
   } catch (error) {

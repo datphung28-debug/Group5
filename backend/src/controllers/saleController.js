@@ -3,6 +3,7 @@ import { sendErrorResponse } from "../utils/errorResponse.js";
 import Medicine from "../models/Medicine.js";
 import Customer from "../models/Customer.js";
 import mongoose from "mongoose";
+import { executeTransaction } from "../utils/transaction.js";
 
 // Hàm tạo mã hóa đơn tự động
 const generateSaleCode = async () => {
@@ -177,7 +178,7 @@ export const getSaleById = async (req, res) => {
     const sale = await Sale.findById(req.params.id)
       .populate("customer", "name phone address")
       .populate("items.medicine", "name code unit")
-      .populate("prescription", "code patientName")
+      .populate("prescription", "code patientName imageUrl")
       .populate("createdBy", "name");
     if (!sale) return res.status(404).json({ message: "Không tìm thấy hóa đơn" });
     res.json(sale);
@@ -223,89 +224,45 @@ export const createSale = async (req, res) => {
 
     const code = await generateSaleCode();
 
-    // Thử sử dụng Transaction, nếu standalone DB không hỗ trợ thì chạy fallback thông thường
-    const session = await mongoose.startSession();
-    try {
-      session.startTransaction();
+    const salePayload = {
+      code,
+      customer,
+      prescription,
+      items: processedItems,
+      subTotal,
+      discount: Number(discount || 0),
+      totalAmount: payment.totalAmount,
+      paymentMethod,
+      amountPaid: payment.amountPaid,
+      changeAmount: payment.changeAmount,
+      notes,
+      createdBy: req.user._id,
+    };
 
-      const sale = await Sale.create([{
-        code,
-        customer,
-        prescription,
-        items: processedItems,
-        subTotal,
-        discount: Number(discount || 0),
-        totalAmount: payment.totalAmount,
-        paymentMethod,
-        amountPaid: payment.amountPaid,
-        changeAmount: payment.changeAmount,
-        notes,
-        createdBy: req.user._id,
-      }], { session });
-
-      // Trừ tồn kho theo FEFO
-      for (const item of processedItems) {
-        await deductMedicineStockFEFO(item.medicine, item.quantity, session);
-      }
-
-      // Cộng tổng chi tiêu khách hàng
-      if (customer) {
-        await Customer.findByIdAndUpdate(
-          customer, 
-          { $inc: { totalSpent: payment.totalAmount } },
-          { session }
-        );
-      }
-
-      await session.commitTransaction();
-      session.endSession();
-      
-      // sale.create trả về mảng khi truyền option session
-      return res.status(201).json(sale[0]);
-    } catch (error) {
-      await session.abortTransaction();
-      session.endSession();
-
-      // Phát hiện lỗi không hỗ trợ Transaction (do DB standalone trong môi trường dev)
-      const isTxNotSupported = error.message?.includes("Transaction") || error.codeName === "TransactionOutcomeUnknown" || error.message?.includes("replica set");
-      if (isTxNotSupported) {
-        // Fallback không dùng Transaction
-        try {
-          const sale = await Sale.create({
-            code,
-            customer,
-            prescription,
-            items: processedItems,
-            subTotal,
-            discount: Number(discount || 0),
-            totalAmount: payment.totalAmount,
-            paymentMethod,
-            amountPaid: payment.amountPaid,
-            changeAmount: payment.changeAmount,
-            notes,
-            createdBy: req.user._id,
-          });
-
-          // Trừ tồn kho theo FEFO
-          for (const item of processedItems) {
-            await deductMedicineStockFEFO(item.medicine, item.quantity);
-          }
-
-          // Cộng tổng chi tiêu khách hàng
-          if (customer) {
-            await Customer.findByIdAndUpdate(customer, {
-              $inc: { totalSpent: payment.totalAmount },
-            });
-          }
-
-          return res.status(201).json(sale);
-        } catch (fallbackError) {
-          return sendErrorResponse(res, fallbackError);
+    const result = await executeTransaction(
+      async (session) => {
+        const sale = await Sale.create([salePayload], { session });
+        for (const item of processedItems) {
+          await deductMedicineStockFEFO(item.medicine, item.quantity, session);
         }
+        if (customer) {
+          await Customer.findByIdAndUpdate(customer, { $inc: { totalSpent: payment.totalAmount } }, { session });
+        }
+        return sale[0];
+      },
+      async () => {
+        const sale = await Sale.create(salePayload);
+        for (const item of processedItems) {
+          await deductMedicineStockFEFO(item.medicine, item.quantity);
+        }
+        if (customer) {
+          await Customer.findByIdAndUpdate(customer, { $inc: { totalSpent: payment.totalAmount } });
+        }
+        return sale;
       }
+    );
 
-      return sendErrorResponse(res, error);
-    }
+    return res.status(201).json(result);
   } catch (error) {
     return sendErrorResponse(res, error);
   }
