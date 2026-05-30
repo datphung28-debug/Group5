@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, DatePicker, Descriptions, Drawer, Dropdown, Empty, Input, Select, Space, Table, Tag, message } from 'antd';
+import { Alert, Button, Card, DatePicker, Descriptions, Dropdown, Empty, Input, Modal, Select, Space, Table, Tag, message } from 'antd';
 import { Eye, Filter, MoreVertical, Plus, Printer, RotateCcw, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
@@ -257,7 +257,16 @@ const SalesInvoicePage = () => {
         locale={{ emptyText: <Empty description="Chưa có hóa đơn bán hàng" /> }}
       />
 
-      <Drawer title={selectedInvoice?.code || 'Chi tiết hóa đơn'} width={720} open={!!selectedInvoice} onClose={() => setSelectedInvoice(null)}>
+      <Modal
+        title={selectedInvoice?.code || 'Chi tiết hóa đơn'}
+        width={720}
+        open={!!selectedInvoice}
+        onCancel={() => setSelectedInvoice(null)}
+        centered
+        footer={null}
+        destroyOnClose
+        styles={{ body: { maxHeight: '70vh', overflowY: 'auto', padding: '10px 0' } }}
+      >
         {selectedInvoice && (
           <div className="space-y-5">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -298,7 +307,7 @@ const SalesInvoicePage = () => {
             </Space>
           </div>
         )}
-      </Drawer>
+      </Modal>
     </div>
   );
 };
