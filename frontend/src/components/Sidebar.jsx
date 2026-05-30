@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Tooltip } from 'antd';
+import useAuthStore from '../stores/useAuthStore';
 import {
   LayoutDashboard,
   Pill,
@@ -30,6 +31,8 @@ import {
 
 export default function Sidebar({ collapsed, onCollapse }) {
   const location = useLocation();
+  const user = useAuthStore((state) => state.user);
+  const role = user?.role || 'pharmacist';
 
   const menuGroups = [
     {
@@ -70,9 +73,9 @@ export default function Sidebar({ collapsed, onCollapse }) {
     {
       title: 'BÁO CÁO',
       items: [
-        { path: '/report-revenue', icon: TrendingUp, label: 'Doanh thu' },
-        { path: '/report-io', icon: FileBox, label: 'Báo cáo NXT' },
-        { path: '/report-debt', icon: BadgeAlert, label: 'Công nợ' },
+        { path: '/report-revenue', icon: TrendingUp, label: 'Doanh thu', roles: ['admin'] },
+        { path: '/report-io', icon: FileBox, label: 'Báo cáo NXT', roles: ['admin'] },
+        { path: '/report-debt', icon: BadgeAlert, label: 'Công nợ', roles: ['admin'] },
       ],
     },
     {
@@ -84,19 +87,20 @@ export default function Sidebar({ collapsed, onCollapse }) {
     {
       title: 'HỆ THỐNG',
       items: [
-        { path: '/activity', icon: ActivitySquare, label: 'Lịch sử hoạt động' },
-        { path: '/staff', icon: UserSquare2, label: 'Nhân viên' },
-        { path: '/schedule', icon: CalendarDays, label: 'Lịch phân ca' },
-        { path: '/timesheet', icon: Clock, label: 'Chấm công' },
-        { path: '/payroll', icon: Banknote, label: 'Bảng lương' },
-        { path: '/settings', icon: Settings, label: 'Cài đặt' },
+        { path: '/activity', icon: ActivitySquare, label: 'Lịch sử hoạt động', roles: ['admin'] },
+        { path: '/staff', icon: UserSquare2, label: 'Nhân viên', roles: ['admin'] },
+        { path: '/schedule', icon: CalendarDays, label: 'Lịch phân ca', roles: ['admin'] },
+        { path: '/timesheet', icon: Clock, label: 'Chấm công', roles: ['admin'] },
+        { path: '/payroll', icon: Banknote, label: 'Bảng lương', roles: ['admin'] },
+        { path: '/settings', icon: Settings, label: 'Cài đặt', roles: ['admin'] },
       ],
     },
     {
       title: 'NHÂN VIÊN',
       items: [
-        { path: '/my-schedule', icon: CalendarDays, label: 'Lịch của tôi' },
-        { path: '/my-timesheet', icon: Clock, label: 'Chấm công POS' },
+        { path: '/schedule', icon: CalendarDays, label: 'Lịch làm việc', roles: ['pharmacist'] },
+        { path: '/my-schedule', icon: CalendarDays, label: 'Lịch của tôi', roles: ['pharmacist'] },
+        { path: '/my-timesheet', icon: Clock, label: 'Chấm công POS', roles: ['pharmacist'] },
       ],
     },
   ];
@@ -105,7 +109,6 @@ export default function Sidebar({ collapsed, onCollapse }) {
   const BACKLOG_PATHS = new Set([
     '/returns',
     '/activity',
-    '/schedule',
     '/timesheet',
     '/payroll',
     '/settings',
@@ -116,7 +119,11 @@ export default function Sidebar({ collapsed, onCollapse }) {
   const filteredMenuGroups = menuGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !BACKLOG_PATHS.has(item.path)),
+      items: group.items.filter(
+        (item) => 
+          !BACKLOG_PATHS.has(item.path) && 
+          (!item.roles || item.roles.includes(role))
+      ),
     }))
     .filter((group) => group.items.length > 0);
 
