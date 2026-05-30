@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Drawer, Form, Input, Select, Space, message } from 'antd';
+import { Button, Modal, Form, Input, Select, Space, message } from 'antd';
 import { Plus, Save, UserCog } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { userAPI } from '../../api/api';
@@ -179,32 +179,31 @@ const StaffPage = () => {
       <UserKPIs summary={summary} />
       <UserTable data={filteredUsers} loading={loading} onEdit={setEditingUser} onToggleStatus={handleToggleStatus} />
 
-      <Drawer
+      <Modal
         title={
           <div className="flex items-center gap-2">
             <UserCog size={19} className="text-[var(--color-primary)]" />
             <span>{editingUser?.isNew ? 'Thêm người dùng mới' : 'Chỉnh sửa người dùng'}</span>
           </div>
         }
-        placement="right"
+        centered
         width={520}
         open={Boolean(editingUser)}
-        onClose={() => setEditingUser(null)}
-        extra={
-          <Space size={10}>
-            <Button className="rounded-[var(--radius-md)]" onClick={() => setEditingUser(null)}>Hủy</Button>
-            <Button
-              type="primary"
-              icon={<Save size={16} />}
-              className="rounded-[var(--radius-md)] border-none bg-[var(--color-primary)]"
-              onClick={() => form.submit()}
-            >
-              Lưu
-            </Button>
-          </Space>
-        }
+        onCancel={() => setEditingUser(null)}
+        footer={[
+          <Button key="cancel" className="rounded-[var(--radius-md)]" onClick={() => setEditingUser(null)}>Hủy</Button>,
+          <Button
+            key="submit"
+            type="primary"
+            icon={<Save size={16} />}
+            className="rounded-[var(--radius-md)] border-none bg-[var(--color-primary)] inline-flex items-center justify-center"
+            onClick={() => form.submit()}
+          >
+            Lưu
+          </Button>
+        ]}
       >
-        <Form form={form} layout="vertical" onFinish={handleSave}>
+        <Form form={form} layout="vertical" onFinish={handleSave} className="mt-4">
           <Form.Item label="Họ tên" name="name" rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}>
             <Input className="h-10 rounded-[var(--radius-md)]" placeholder="Nhập họ tên" />
           </Form.Item>
@@ -245,7 +244,7 @@ const StaffPage = () => {
             />
           </Form.Item>
         </Form>
-      </Drawer>
+      </Modal>
     </div>
   );
 };
