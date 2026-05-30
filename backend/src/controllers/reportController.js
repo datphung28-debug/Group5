@@ -65,7 +65,55 @@ const getItemGrossProfit = (item) => {
   return revenue - importPrice * quantity;
 };
 
-export const buildRevenueReportPayload = ({ sales = [], groupType = "daily" } = {}) => {
+const getSalesStatsInRange = async (startDate, endDate) => {
+  const match = {
+    status: "completed",
+    createdAt: { $gte: startDate }
+  };
+  if (endDate) {
+    match.createdAt.$lte = endDate;
+  }
+
+  const result = await Sale.aggregate([
+    { $match: match },
+    { $unwind: "$items" },
+    {
+      $lookup: {
+        from: "medicines",
+        localField: "items.medicine",
+        foreignField: "_id",
+        as: "medicine"
+      }
+    },
+    { $unwind: { path: "$medicine", preserveNullAndEmptyArrays: true } },
+    {
+      $group: {
+        _id: "$_id",
+        totalAmount: { $first: "$totalAmount" },
+        profit: {
+          $sum: {
+            $subtract: [
+              "$items.total",
+              { $multiply: ["$items.quantity", { $ifNull: ["$medicine.importPrice", 0] }] }
+            ]
+          }
+        }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        revenue: { $sum: "$totalAmount" },
+        profit: { $sum: "$profit" },
+        orders: { $sum: 1 }
+      }
+    }
+  ]);
+
+  return result[0] || { revenue: 0, profit: 0, orders: 0 };
+};
+
+export const buildRevenueReportPayload = ({ salesData = [], groupType = "daily" } = {}) => {
   const trendMap = new Map();
   const paymentMap = new Map();
   const categoryMap = new Map();
@@ -73,13 +121,16 @@ export const buildRevenueReportPayload = ({ sales = [], groupType = "daily" } = 
   let totalRevenue = 0;
   let grossProfit = 0;
 
-  sales.forEach((sale) => {
+  salesData.forEach((sale) => {
     const saleTotal = Number(sale.totalAmount || 0);
     totalRevenue += saleTotal;
+    grossProfit += Number(sale.saleProfit || 0);
 
     const trendKey = formatTrendDate(new Date(sale.createdAt), groupType);
     const currentTrend = trendMap.get(trendKey) || { revenue: 0, grossProfit: 0 };
     currentTrend.revenue += saleTotal;
+    currentTrend.grossProfit += Number(sale.saleProfit || 0);
+    trendMap.set(trendKey, currentTrend);
 
     const paymentKey = sale.paymentMethod || "cash";
     const currentPayment = paymentMap.get(paymentKey) || { value: 0, count: 0 };
@@ -87,17 +138,11 @@ export const buildRevenueReportPayload = ({ sales = [], groupType = "daily" } = 
     currentPayment.count += 1;
     paymentMap.set(paymentKey, currentPayment);
 
-    (sale.items || []).forEach((item) => {
-      const itemRevenue = Number(item.total || 0);
-      const itemProfit = getItemGrossProfit(item);
-      grossProfit += itemProfit;
-      currentTrend.grossProfit += itemProfit;
-
-      const categoryName = getMedicineCategoryName(item.medicine);
-      categoryMap.set(categoryName, (categoryMap.get(categoryName) || 0) + itemRevenue);
+    (sale.categories || []).forEach((cat) => {
+      const categoryName = cat.name || "Khác";
+      const catTotal = Number(cat.total || 0);
+      categoryMap.set(categoryName, (categoryMap.get(categoryName) || 0) + catTotal);
     });
-
-    trendMap.set(trendKey, currentTrend);
   });
 
   const trendData = [];
@@ -111,8 +156,8 @@ export const buildRevenueReportPayload = ({ sales = [], groupType = "daily" } = 
       totalRevenue,
       grossProfit,
       margin: totalRevenue > 0 ? Number(((grossProfit / totalRevenue) * 100).toFixed(2)) : 0,
-      invoiceCount: sales.length,
-      avgOrderValue: sales.length > 0 ? Math.round(totalRevenue / sales.length) : 0,
+      invoiceCount: salesData.length,
+      avgOrderValue: salesData.length > 0 ? Math.round(totalRevenue / salesData.length) : 0,
     },
     trendData,
     paymentData: Array.from(paymentMap.entries()).map(([method, value]) => ({
@@ -136,31 +181,15 @@ export const getDashboard = async (req, res) => {
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
 
     const [
-      todaySales,
-      monthSales,
       totalMedicines,
       lowStockMedicines,
       totalCustomers,
       totalStaff,
-      activeSuppliers,
-      medicinesForValuation,
-      allSalesForDebt
     ] = await Promise.all([
-      Sale.find({
-        status: "completed",
-        createdAt: { $gte: startOfDay, $lte: endOfDay }
-      }).populate("items.medicine"),
-      Sale.find({
-        status: "completed",
-        createdAt: { $gte: startOfMonth }
-      }).populate("items.medicine"),
       Medicine.countDocuments({ isActive: true }),
       Medicine.countDocuments({ isActive: true, $expr: { $lte: ["$stock", "$minStock"] } }),
       Customer.countDocuments({ isActive: true }),
       User.countDocuments({ isActive: true, role: { $in: ["admin", "pharmacist"] } }),
-      Supplier.find({ isActive: true }),
-      Medicine.find({ isActive: true }),
-      Sale.find({ status: "completed" })
     ]);
 
     // Thuốc sắp hết hạn (30 ngày)
@@ -171,46 +200,105 @@ export const getDashboard = async (req, res) => {
       expiryDate: { $lte: expiringDate, $gte: new Date() },
     });
 
-    // 1. Calculate Today's metrics
-    let revenueToday = 0;
-    let profitToday = 0;
-    todaySales.forEach(sale => {
-      revenueToday += sale.totalAmount || 0;
-      (sale.items || []).forEach(item => {
-        profitToday += getItemGrossProfit(item);
-      });
-    });
+    // Tính giá trị tồn kho bằng Aggregation
+    const inventoryValuation = await Medicine.aggregate([
+      { $match: { isActive: true } },
+      { 
+        $group: { 
+          _id: null, 
+          totalValue: { $sum: { $multiply: ["$stock", "$importPrice"] } } 
+        } 
+      }
+    ]);
+    const inventoryValue = inventoryValuation[0]?.totalValue || 0;
 
-    // 2. Calculate Month's metrics
-    let revenueMonth = 0;
-    let profitMonth = 0;
-    monthSales.forEach(sale => {
-      revenueMonth += sale.totalAmount || 0;
-      (sale.items || []).forEach(item => {
-        profitMonth += getItemGrossProfit(item);
-      });
-    });
+    // Tính công nợ nhà cung cấp bằng Aggregation
+    const supplierDebtAggregation = await Supplier.aggregate([
+      { $match: { isActive: true } },
+      {
+        $group: {
+          _id: null,
+          totalDebt: { $sum: { $ifNull: ["$currentDebt", 0] } }
+        }
+      }
+    ]);
+    const supplierDebt = supplierDebtAggregation[0]?.totalDebt || 0;
 
-    // 3. Calculate Debts & Inventory value
-    const supplierDebt = activeSuppliers.reduce((sum, s) => sum + (s.currentDebt || 0), 0);
-    const inventoryValue = medicinesForValuation.reduce((sum, m) => sum + (m.stock || 0) * (m.importPrice || 0), 0);
-    
-    let customerDebt = 0;
-    allSalesForDebt.forEach(sale => {
-      const paid = sale.amountPaid !== undefined && sale.amountPaid !== null ? sale.amountPaid : sale.totalAmount;
-      const debt = Math.max(sale.totalAmount - paid, 0);
-      customerDebt += debt;
-    });
+    // Tính công nợ khách hàng bằng Aggregation
+    const customerDebtAggregation = await Sale.aggregate([
+      { $match: { status: "completed" } },
+      {
+        $project: {
+          debt: {
+            $max: [
+              { $subtract: ["$totalAmount", { $ifNull: ["$amountPaid", "$totalAmount"] }] },
+              0
+            ]
+          }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalDebt: { $sum: "$debt" }
+        }
+      }
+    ]);
+    const customerDebt = customerDebtAggregation[0]?.totalDebt || 0;
+
+    // Tính doanh thu & lợi nhuận ngày hôm nay và tháng này bằng Aggregation
+    const [todayStats, monthStats] = await Promise.all([
+      getSalesStatsInRange(startOfDay, endOfDay),
+      getSalesStatsInRange(startOfMonth),
+    ]);
 
     // 4. Daily revenue & profit for the last 30 days
     const startOf30DaysAgo = new Date();
     startOf30DaysAgo.setDate(startOf30DaysAgo.getDate() - 29);
     startOf30DaysAgo.setHours(0, 0, 0, 0);
 
-    const last30DaysSales = await Sale.find({
-      status: "completed",
-      createdAt: { $gte: startOf30DaysAgo }
-    }).populate("items.medicine");
+    const last30DaysSalesResult = await Sale.aggregate([
+      {
+        $match: {
+          status: "completed",
+          createdAt: { $gte: startOf30DaysAgo }
+        }
+      },
+      { $unwind: "$items" },
+      {
+        $lookup: {
+          from: "medicines",
+          localField: "items.medicine",
+          foreignField: "_id",
+          as: "medicine"
+        }
+      },
+      { $unwind: { path: "$medicine", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          totalAmount: 1,
+          createdAt: 1,
+          itemTotal: "$items.total",
+          itemQty: "$items.quantity",
+          importPrice: { $ifNull: ["$medicine.importPrice", 0] }
+        }
+      },
+      {
+        $group: {
+          _id: "$_id",
+          createdAt: { $first: "$createdAt" },
+          totalAmount: { $first: "$totalAmount" },
+          profit: {
+            $sum: {
+              $subtract: [
+                "$itemTotal",
+                { $multiply: ["$itemQty", "$importPrice"] }
+              ]
+            }
+          }
+        }
+      }
+    ]);
 
     const dailyMap = new Map();
     for (let i = 29; i >= 0; i--) {
@@ -220,21 +308,24 @@ export const getDashboard = async (req, res) => {
       dailyMap.set(key, { date: key, revenue: 0, profit: 0 });
     }
 
-    last30DaysSales.forEach(sale => {
+    last30DaysSalesResult.forEach(sale => {
       const d = new Date(sale.createdAt);
       const key = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (dailyMap.has(key)) {
         const item = dailyMap.get(key);
         item.revenue += sale.totalAmount || 0;
-        (sale.items || []).forEach(si => {
-          item.profit += getItemGrossProfit(si);
-        });
+        item.profit += sale.profit || 0;
         dailyMap.set(key, item);
       }
     });
     const revenueProfit30Days = Array.from(dailyMap.values());
 
     // 5. Hourly Revenue for Today (7h to 21h)
+    const todaySales = await Sale.find({
+      status: "completed",
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    }).select("createdAt totalAmount");
+
     const hourlyMap = new Map();
     for (let h = 7; h <= 21; h++) {
       const key = `${h}h`;
@@ -256,10 +347,56 @@ export const getDashboard = async (req, res) => {
     const currentYear = today.getFullYear();
     const startOfLastYear = new Date(currentYear - 1, 0, 1, 0, 0, 0, 0);
 
-    const yearlySales = await Sale.find({
-      status: "completed",
-      createdAt: { $gte: startOfLastYear }
-    }).populate("items.medicine");
+    const yearlySalesResult = await Sale.aggregate([
+      {
+        $match: {
+          status: "completed",
+          createdAt: { $gte: startOfLastYear }
+        }
+      },
+      { $unwind: "$items" },
+      {
+        $lookup: {
+          from: "medicines",
+          localField: "items.medicine",
+          foreignField: "_id",
+          as: "medicine"
+        }
+      },
+      { $unwind: { path: "$medicine", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          totalAmount: 1,
+          createdAt: 1,
+          itemTotal: "$items.total",
+          itemQty: "$items.quantity",
+          importPrice: { $ifNull: ["$medicine.importPrice", 0] }
+        }
+      },
+      {
+        $group: {
+          _id: "$_id",
+          createdAt: { $first: "$createdAt" },
+          totalAmount: { $first: "$totalAmount" },
+          profit: {
+            $sum: {
+              $subtract: [
+                "$itemTotal",
+                { $multiply: ["$itemQty", "$importPrice"] }
+              ]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          year: { $year: "$createdAt" },
+          month: { $month: "$createdAt" },
+          totalAmount: 1,
+          profit: 1
+        }
+      }
+    ]);
 
     const yearlyMap = new Map();
     const monthLabels = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
@@ -271,21 +408,17 @@ export const getDashboard = async (req, res) => {
     let totalRevLastYear = 0;
     let totalProfitThisYear = 0;
 
-    yearlySales.forEach(sale => {
-      const d = new Date(sale.createdAt);
-      const saleYear = d.getFullYear();
-      const monthIdx = d.getMonth();
+    yearlySalesResult.forEach(sale => {
+      const saleYear = sale.year;
+      const monthIdx = sale.month - 1; // MongoDB $month is 1-indexed
 
       const val = yearlyMap.get(monthIdx);
       if (val) {
         if (saleYear === currentYear) {
           val.revenueThisYear += sale.totalAmount || 0;
           totalRevThisYear += sale.totalAmount || 0;
-          (sale.items || []).forEach(si => {
-            const profit = getItemGrossProfit(si);
-            val.profitThisYear += profit;
-            totalProfitThisYear += profit;
-          });
+          val.profitThisYear += sale.profit || 0;
+          totalProfitThisYear += sale.profit || 0;
         } else if (saleYear === currentYear - 1) {
           val.revenueLastYear += sale.totalAmount || 0;
           totalRevLastYear += sale.totalAmount || 0;
@@ -303,14 +436,14 @@ export const getDashboard = async (req, res) => {
 
     res.json({
       today: {
-        revenue: revenueToday,
-        profit: profitToday,
-        orders: todaySales.length,
+        revenue: todayStats.revenue,
+        profit: todayStats.profit,
+        orders: todayStats.orders,
       },
       month: {
-        revenue: revenueMonth,
-        profit: profitMonth,
-        orders: monthSales.length,
+        revenue: monthStats.revenue,
+        profit: monthStats.profit,
+        orders: monthStats.orders,
       },
       inventory: {
         total: totalMedicines,
@@ -336,18 +469,59 @@ export const getDashboard = async (req, res) => {
 export const getRevenueReport = async (req, res) => {
   try {
     const { start, end, groupType } = normalizeRevenueRange(req.query);
-    const sales = await Sale.find({
-      status: "completed",
-      createdAt: { $gte: start, $lte: end },
-    })
-      .populate({
-        path: "items.medicine",
-        select: "name code importPrice category",
-        populate: { path: "category", select: "name" },
-      })
-      .sort({ createdAt: 1 });
 
-    res.json(buildRevenueReportPayload({ sales, groupType }));
+    const salesData = await Sale.aggregate([
+      {
+        $match: {
+          status: "completed",
+          createdAt: { $gte: start, $lte: end }
+        }
+      },
+      { $unwind: "$items" },
+      {
+        $lookup: {
+          from: "medicines",
+          localField: "items.medicine",
+          foreignField: "_id",
+          as: "medicine"
+        }
+      },
+      { $unwind: { path: "$medicine", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "medicine.category",
+          foreignField: "_id",
+          as: "category"
+        }
+      },
+      { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: "$_id",
+          createdAt: { $first: "$createdAt" },
+          totalAmount: { $first: "$totalAmount" },
+          paymentMethod: { $first: "$paymentMethod" },
+          saleProfit: {
+            $sum: {
+              $subtract: [
+                "$items.total",
+                { $multiply: ["$items.quantity", { $ifNull: ["$medicine.importPrice", 0] }] }
+              ]
+            }
+          },
+          categories: {
+            $push: {
+              name: { $ifNull: ["$category.name", "Khác"] },
+              total: "$items.total"
+            }
+          }
+        }
+      },
+      { $sort: { createdAt: 1 } }
+    ]);
+
+    res.json(buildRevenueReportPayload({ salesData, groupType }));
   } catch (error) {
     return sendErrorResponse(res, error);
   }

@@ -155,36 +155,96 @@ export const createSale = async (req, res) => {
     }
 
     const code = await generateSaleCode();
-    const sale = await Sale.create({
-      code,
-      customer,
-      prescription,
-      items: processedItems,
-      subTotal,
-      discount: Number(discount || 0),
-      totalAmount: payment.totalAmount,
-      paymentMethod,
-      amountPaid: payment.amountPaid,
-      changeAmount: payment.changeAmount,
-      notes,
-      createdBy: req.user._id,
-    });
 
-    // Trừ tồn kho
-    for (const item of processedItems) {
-      await Medicine.findByIdAndUpdate(item.medicine, buildMedicineStockDecreaseUpdate(item), {
-        runValidators: true
-      });
+    // Thử sử dụng Transaction, nếu standalone DB không hỗ trợ thì chạy fallback thông thường
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
+
+      const sale = await Sale.create([{
+        code,
+        customer,
+        prescription,
+        items: processedItems,
+        subTotal,
+        discount: Number(discount || 0),
+        totalAmount: payment.totalAmount,
+        paymentMethod,
+        amountPaid: payment.amountPaid,
+        changeAmount: payment.changeAmount,
+        notes,
+        createdBy: req.user._id,
+      }], { session });
+
+      // Trừ tồn kho
+      for (const item of processedItems) {
+        await Medicine.findByIdAndUpdate(
+          item.medicine, 
+          buildMedicineStockDecreaseUpdate(item), 
+          { session, runValidators: true }
+        );
+      }
+
+      // Cộng tổng chi tiêu khách hàng
+      if (customer) {
+        await Customer.findByIdAndUpdate(
+          customer, 
+          { $inc: { totalSpent: payment.totalAmount } },
+          { session }
+        );
+      }
+
+      await session.commitTransaction();
+      session.endSession();
+      
+      // sale.create trả về mảng khi truyền option session
+      return res.status(201).json(sale[0]);
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+
+      // Phát hiện lỗi không hỗ trợ Transaction (do DB standalone trong môi trường dev)
+      const isTxNotSupported = error.message?.includes("Transaction") || error.codeName === "TransactionOutcomeUnknown" || error.message?.includes("replica set");
+      if (isTxNotSupported) {
+        // Fallback không dùng Transaction
+        try {
+          const sale = await Sale.create({
+            code,
+            customer,
+            prescription,
+            items: processedItems,
+            subTotal,
+            discount: Number(discount || 0),
+            totalAmount: payment.totalAmount,
+            paymentMethod,
+            amountPaid: payment.amountPaid,
+            changeAmount: payment.changeAmount,
+            notes,
+            createdBy: req.user._id,
+          });
+
+          // Trừ tồn kho
+          for (const item of processedItems) {
+            await Medicine.findByIdAndUpdate(item.medicine, buildMedicineStockDecreaseUpdate(item), {
+              runValidators: true
+            });
+          }
+
+          // Cộng tổng chi tiêu khách hàng
+          if (customer) {
+            await Customer.findByIdAndUpdate(customer, {
+              $inc: { totalSpent: payment.totalAmount },
+            });
+          }
+
+          return res.status(201).json(sale);
+        } catch (fallbackError) {
+          return sendErrorResponse(res, fallbackError);
+        }
+      }
+
+      return sendErrorResponse(res, error);
     }
-
-    // Cộng tổng chi tiêu khách hàng
-    if (customer) {
-      await Customer.findByIdAndUpdate(customer, {
-        $inc: { totalSpent: payment.totalAmount },
-      });
-    }
-
-    res.status(201).json(sale);
   } catch (error) {
     return sendErrorResponse(res, error);
   }
@@ -201,24 +261,63 @@ export const cancelSale = async (req, res) => {
       return res.status(400).json({ message: "Chỉ có thể hủy hóa đơn đã hoàn thành" });
     }
 
-    sale.status = "cancelled";
-    await sale.save();
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
 
-    // Hoàn kho
-    for (const item of sale.items) {
-      await Medicine.findByIdAndUpdate(item.medicine, {
-        $inc: { stock: item.quantity },
-      });
+      sale.status = "cancelled";
+      await sale.save({ session });
+
+      // Hoàn kho
+      for (const item of sale.items) {
+        await Medicine.findByIdAndUpdate(
+          item.medicine, 
+          { $inc: { stock: item.quantity } },
+          { session }
+        );
+      }
+
+      // Trừ tổng chi tiêu khách hàng
+      if (sale.customer) {
+        await Customer.findByIdAndUpdate(
+          sale.customer, 
+          { $inc: { totalSpent: -sale.totalAmount } },
+          { session }
+        );
+      }
+
+      await session.commitTransaction();
+      session.endSession();
+      return res.json({ message: "Hóa đơn đã được hủy" });
+    } catch (txError) {
+      await session.abortTransaction();
+      session.endSession();
+
+      const isTxNotSupported = txError.message?.includes("Transaction") || txError.codeName === "TransactionOutcomeUnknown" || txError.message?.includes("replica set");
+      if (isTxNotSupported) {
+        // Fallback
+        sale.status = "cancelled";
+        await sale.save();
+
+        // Hoàn kho
+        for (const item of sale.items) {
+          await Medicine.findByIdAndUpdate(item.medicine, {
+            $inc: { stock: item.quantity },
+          });
+        }
+
+        // Trừ tổng chi tiêu khách hàng
+        if (sale.customer) {
+          await Customer.findByIdAndUpdate(sale.customer, {
+            $inc: { totalSpent: -sale.totalAmount },
+          });
+        }
+
+        return res.json({ message: "Hóa đơn đã được hủy" });
+      }
+
+      throw txError;
     }
-
-    // Trừ tổng chi tiêu khách hàng
-    if (sale.customer) {
-      await Customer.findByIdAndUpdate(sale.customer, {
-        $inc: { totalSpent: -sale.totalAmount },
-      });
-    }
-
-    res.json({ message: "Hóa đơn đã được hủy" });
   } catch (error) {
     return sendErrorResponse(res, error);
   }

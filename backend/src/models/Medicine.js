@@ -38,5 +38,8 @@ const medicineSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+medicineSchema.index({ isActive: 1, stock: 1 });
+medicineSchema.index({ isActive: 1, expiryDate: 1 });
+
 const Medicine = mongoose.model("Medicine", medicineSchema);
 export default Medicine;
