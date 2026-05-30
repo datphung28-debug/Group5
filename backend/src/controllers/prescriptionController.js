@@ -1,4 +1,5 @@
 import Prescription from "../models/Prescription.js";
+import Medicine from "../models/Medicine.js";
 import { sendErrorResponse } from "../utils/errorResponse.js";
 
 // Tạo mã đơn thuốc
@@ -48,6 +49,24 @@ export const getPrescriptionById = async (req, res) => {
 // @POST /api/prescriptions
 export const createPrescription = async (req, res) => {
   try {
+    const { items, patientName } = req.body;
+    if (!patientName || patientName.trim() === "") {
+      return res.status(400).json({ message: "Vui lòng nhập tên bệnh nhân" });
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "Đơn thuốc phải có ít nhất một mặt hàng" });
+    }
+
+    for (const item of items) {
+      if (!item.medicine) {
+        return res.status(400).json({ message: "Vui lòng chọn thuốc cho đơn thuốc" });
+      }
+      const medicineExists = await Medicine.findOne({ _id: item.medicine, isActive: true });
+      if (!medicineExists) {
+        return res.status(400).json({ message: `Thuốc không tồn tại hoặc đã bị xóa: ${item.medicine}` });
+      }
+    }
+
     const code = await generatePrescriptionCode();
     const prescription = await Prescription.create({
       ...req.body,
