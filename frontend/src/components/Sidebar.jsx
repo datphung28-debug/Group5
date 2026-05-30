@@ -20,19 +20,16 @@ import {
   CalendarDays,
   Clock,
   Banknote,
-  LogOut,
   ChevronLeft,
   ChevronRight,
   ShieldPlus,
   Settings,
   FilePlus
 } from 'lucide-react';
-import useAuthStore from '../stores/useAuthStore';
 
 
 export default function Sidebar({ collapsed, onCollapse }) {
   const location = useLocation();
-  const logout = useAuthStore((state) => state.logout);
 
   const menuGroups = [
     {
@@ -259,23 +256,7 @@ export default function Sidebar({ collapsed, onCollapse }) {
         ))}
       </div>
 
-      {/* Footer / Logout */}
-      <div className="p-3 border-t flex-shrink-0" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-        <button
-          onClick={logout}
-          className="w-full flex items-center rounded-lg px-3 py-2.5 transition-colors cursor-pointer"
-          style={{ color: 'var(--color-debt)' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.1)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-        >
-          <div className="flex items-center justify-center w-6 h-6 flex-shrink-0">
-            <LogOut size={18} />
-          </div>
-          {!collapsed && (
-            <span className="ml-3 text-[13px] font-medium whitespace-nowrap">Đăng xuất</span>
-          )}
-        </button>
-      </div>
+
     </aside>
   );
 }
