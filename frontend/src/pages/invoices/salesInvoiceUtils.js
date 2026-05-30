@@ -11,6 +11,9 @@ export const normalizeInvoice = (sale = {}) => ({
   customerName: sale.customer?.name || 'Khách lẻ',
   customerPhone: sale.customer?.phone || '—',
   staff: sale.createdBy?.name || '—',
+  prescriptionCode: sale.prescription?.code || null,
+  prescriptionPatient: sale.prescription?.patientName || null,
+  prescriptionImage: sale.prescription?.imageUrl || null,
   total: sale.totalAmount || 0,
   paid: sale.amountPaid || sale.totalAmount || 0,
   items: (sale.items || []).map((item, index) => ({

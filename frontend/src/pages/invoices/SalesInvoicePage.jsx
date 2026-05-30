@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, DatePicker, Descriptions, Dropdown, Empty, Input, Modal, Select, Space, Table, Tag, message } from 'antd';
-import { Eye, Filter, MoreVertical, Plus, Printer, RotateCcw, UserRound } from 'lucide-react';
+import { Alert, Button, Card, DatePicker, Descriptions, Dropdown, Empty, Input, Modal, Select, Space, Table, Tag, message, Image } from 'antd';
+import { Eye, Filter, MoreVertical, Plus, Printer, RotateCcw, UserRound, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import { saleAPI } from '../../api/api';
@@ -283,6 +283,26 @@ const SalesInvoicePage = () => {
               <Descriptions.Item label="Thanh toán">{PAYMENT_METHOD_LABELS[selectedInvoice.paymentMethod] || selectedInvoice.paymentMethod}</Descriptions.Item>
               <Descriptions.Item label="Trạng thái"><StatusTag status={selectedInvoice.status} /></Descriptions.Item>
             </Descriptions>
+
+            {selectedInvoice.prescriptionImage && (
+              <Card size="small" className="rounded-[var(--radius-md)] border-[var(--color-border-light)] bg-[var(--color-bg-subtle)]" title={<span className="flex items-center text-[var(--color-text-primary)] font-medium"><FileText size={16} className="mr-2 text-[var(--color-primary)]" /> Chứng từ đính kèm (Ảnh đơn thuốc)</span>}>
+                <div className="flex flex-col items-center justify-center p-2">
+                  <Image
+                    width={200}
+                    src={selectedInvoice.prescriptionImage}
+                    className="rounded-[var(--radius-md)] border border-[var(--color-border)] shadow-sm object-cover"
+                    fallback="https://via.placeholder.com/200?text=Lỗi+tải+ảnh"
+                    preview={{
+                      mask: <div className="text-white flex items-center justify-center"><Eye size={20} className="mr-1"/> Phóng to</div>,
+                      maskClassName: "rounded-[var(--radius-md)]"
+                    }}
+                  />
+                  <p className="mt-2 text-[var(--font-size-xs)] text-[var(--color-text-muted)] text-center">
+                    Mã đơn: <span className="font-medium text-[var(--color-primary)]">{selectedInvoice.prescriptionCode}</span> - Bệnh nhân: {selectedInvoice.prescriptionPatient}
+                  </p>
+                </div>
+              </Card>
+            )}
 
             <Table rowKey="id" columns={detailColumns} dataSource={selectedInvoice.items} pagination={false} scroll={{ x: 640 }} locale={{ emptyText: <Empty description="Hóa đơn chưa có chi tiết sản phẩm" /> }} />
 

@@ -292,8 +292,14 @@ const POSPage = () => {
       
       if (matchedCustomer) {
         message.success(`Đã tự động chọn khách hàng: ${matchedCustomer.name}`);
+      } else if (prescriptionInfo.patientName && prescriptionInfo.patientName !== 'Khách vãng lai') {
+        // Tự động nhảy tên bệnh nhân vào form thêm khách hàng mới
+        customerForm.setFieldsValue({ name: prescriptionInfo.patientName });
+        setIsAddCustomerOpen(true);
+        message.info(`Vui lòng nhập thêm SĐT để lưu khách hàng: ${prescriptionInfo.patientName}`);
+      } else {
+        message.success(`Đã lưu đơn thuốc và đưa ${matchedMedicines.length} loại thuốc vào giỏ hàng!`);
       }
-      message.success(`Đã lưu đơn thuốc và đưa ${matchedMedicines.length} loại thuốc vào giỏ hàng!`);
     } catch(err) {
       console.error(err);
       message.error('Lỗi khi lưu thông tin đơn thuốc');
@@ -419,9 +425,9 @@ const POSPage = () => {
           if (c) invoiceData.customer = c;
         }
         if (invoiceData.items && Array.isArray(invoiceData.items)) {
-          invoiceData.items = invoiceData.items.map(item => {
-             const cartItem = cart.find(ci => ci.medicine._id === item.medicine || ci.medicine._id === item.medicine?._id);
-             if (cartItem) {
+          invoiceData.items = invoiceData.items.map((item, idx) => {
+             const cartItem = cart[idx];
+             if (cartItem && cartItem.medicine) {
                return { ...item, medicine: cartItem.medicine };
              }
              return item;
@@ -1214,7 +1220,19 @@ const POSPage = () => {
                       inv.status === 'cancelled' ? 'bg-red-50 border-red-200 opacity-60' : 'bg-white border-slate-200 hover:border-blue-300'
                     }`}
                     onClick={() => {
-                      setSelectedInvoiceToPrint(inv);
+                      // Ánh xạ lại tên thuốc từ danh sách medicines đã tải sẵn
+                      const enrichedInvoice = {
+                        ...inv,
+                        items: inv.items?.map(item => {
+                          const medId = typeof item.medicine === 'object' ? item.medicine?._id : item.medicine;
+                          const medObj = medicines.find(m => m._id === medId);
+                          return {
+                            ...item,
+                            medicine: medObj || item.medicine
+                          };
+                        }) || []
+                      };
+                      setSelectedInvoiceToPrint(enrichedInvoice);
                       setIsReceiptModalOpen(true);
                     }}
                   >
@@ -1318,7 +1336,15 @@ const POSPage = () => {
                   <div className="flex gap-3 w-full">
                     <Button block size="large" onClick={() => setIsReceiptModalOpen(false)}>Đóng</Button>
                     <Button type="primary" block size="large" icon={<PrinterOutlined />} className="bg-slate-800" onClick={() => {
+                       const printElement = document.querySelector('.print-receipt-area').cloneNode(true);
+                       const printContainer = document.createElement('div');
+                       printContainer.id = 'global-print-container';
+                       printContainer.appendChild(printElement);
+                       document.body.appendChild(printContainer);
+                       
                        window.print();
+                       
+                       document.body.removeChild(printContainer);
                        setIsReceiptModalOpen(false);
                     }}>In ngay</Button>
                   </div>
@@ -1391,6 +1417,24 @@ const POSPage = () => {
         .pos-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .pos-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .pos-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Print Settings for 80mm Receipt */
+        @media print {
+          #root, .ant-modal-root {
+            display: none !important;
+          }
+          #global-print-container {
+            display: flex !important;
+            justify-content: center !important;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+          }
+        }
+        @page {
+          size: 80mm auto;
+          margin: 0;
+        }
       `}</style>
     </div>
   );
