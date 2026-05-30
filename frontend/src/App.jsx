@@ -1,6 +1,6 @@
 import { useState, Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Spin } from 'antd';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Button, Result, Spin } from 'antd';
 import useAuthStore from './stores/useAuthStore';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -34,8 +34,28 @@ const RevenueReportPage = lazy(() => import('./pages/reports/revenue/RevenueRepo
 const InventoryFlowReportPage = lazy(() => import('./pages/reports/inventory-flow/InventoryFlowReportPage'));
 const DebtReportPage = lazy(() => import('./pages/reports/debt/DebtReportPage'));
 
-// Placeholder components
-const Sales = () => <div className="p-6"><PageHeader title="Quản lý bán hàng" subtitle="Tạo hóa đơn và quản lý giao dịch bán hàng" /></div>;
+// Generic Backlog component for under-construction features
+const BacklogPage = ({ title }) => {
+  const navigate = useNavigate();
+  return (
+    <div className="flex items-center justify-center min-h-[calc(100vh-160px)] p-6 bg-[var(--color-bg-app)]">
+      <Result
+        status="info"
+        title={<span className="text-xl font-bold text-[var(--color-text-primary)]">{title} đang được phát triển</span>}
+        subTitle={<span className="text-[var(--color-text-secondary)]">Tính năng này nằm trong lộ trình cập nhật tiếp theo của hệ thống GPP Manager.</span>}
+        extra={
+          <Button 
+            type="primary" 
+            onClick={() => navigate('/')}
+            className="bg-[var(--color-primary)] border-none h-10 px-6 rounded-[var(--radius-md)] font-medium hover:bg-[var(--color-primary-hover)]"
+          >
+            Quay lại trang chủ
+          </Button>
+        }
+      />
+    </div>
+  );
+};
 
 // Màn hình tải (Loading) chung
 const PageLoader = () => (
@@ -84,17 +104,22 @@ function AppLayout() {
               <Route path="/suppliers" element={<SuppliersPage />} />
               <Route path="/suppliers/:supplierId" element={<SupplierDetailPage />} />
               <Route path="/staff" element={<StaffPage />} />
-              <Route path="/activity" element={<ActivityPage />} />
-              <Route path="/schedule" element={<SchedulePage />} />
-              <Route path="/timesheet" element={<TimesheetPage />} />
-              <Route path="/payroll" element={<PayrollPage />} />
               <Route path="/cash-book" element={<CashbookPage />} />
               <Route path="/report-revenue" element={<RevenueReportPage />} />
               <Route path="/report-io" element={<InventoryFlowReportPage />} />
               <Route path="/report-debt" element={<DebtReportPage />} />
-              <Route path="/returns" element={<ReturnsPage />} />
+              
+              {/* Backlog routes routed to the construction/backlog screen */}
+              <Route path="/activity" element={<BacklogPage title="Lịch sử hoạt động" />} />
+              <Route path="/schedule" element={<BacklogPage title="Lịch phân ca" />} />
+              <Route path="/timesheet" element={<BacklogPage title="Chấm công" />} />
+              <Route path="/payroll" element={<BacklogPage title="Bảng lương" />} />
+              <Route path="/returns" element={<BacklogPage title="Trả hàng" />} />
+              <Route path="/settings" element={<BacklogPage title="Cài đặt hệ thống" />} />
+              <Route path="/my-schedule" element={<BacklogPage title="Lịch cá nhân" />} />
+              <Route path="/my-timesheet" element={<BacklogPage title="Chấm công cá nhân" />} />
+
               <Route path="/prescriptions/new" element={<div className="p-6"><PrescriptionScanPage /></div>} />
-              <Route path="/settings" element={<div className="p-6"><PageHeader title="Cài đặt hệ thống" subtitle="Tùy chỉnh cấu hình hệ thống" /></div>} />
             </Routes>
           </Suspense>
         </main>
