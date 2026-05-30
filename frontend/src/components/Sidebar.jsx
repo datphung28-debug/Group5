@@ -42,7 +42,7 @@ export default function Sidebar({ collapsed, onCollapse }) {
       title: 'DANH MỤC',
       items: [
         { path: '/medicines', icon: Pill, label: 'Danh mục thuốc' },
-        { path: '/medicine-groups', icon: Tags, label: 'Nhóm thuốc' },
+        { path: '/medicine-groups', icon: Tags, label: 'Nhóm thuốc & Tủ kho' },
         { path: '/inventory', icon: Boxes, label: 'Tồn kho' },
       ],
     },

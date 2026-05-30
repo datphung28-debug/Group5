@@ -53,7 +53,26 @@ const MedicineTable = () => {
       });
     }
 
-    // 2. Thêm các Khu vực do người dùng vừa thêm trực tiếp trên giao diện
+    // 2. Thêm các Khu vực do người dùng cấu hình ở trang Cài đặt (localStorage)
+    const saved = localStorage.getItem('gpp_custom_zones');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        parsed.forEach(z => {
+          if (!existingValues.has(z.code)) {
+            existingValues.add(z.code);
+            list.push({
+              value: z.code,
+              label: `Khu ${z.code} (${z.name})`
+            });
+          }
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // 3. Thêm các Khu vực do người dùng vừa thêm trực tiếp trên giao diện
     addedZones.forEach(z => {
       if (!existingValues.has(z.value)) {
         existingValues.add(z.value);
@@ -78,6 +97,24 @@ const MedicineTable = () => {
     }
     const newZone = { value: code, label: `Khu ${code} (${newZoneName.trim()})` };
     setAddedZones(prev => [...prev, newZone]);
+
+    // Lưu vào localStorage đồng bộ
+    try {
+      const saved = localStorage.getItem('gpp_custom_zones');
+      const currentSaved = saved ? JSON.parse(saved) : [];
+      if (!currentSaved.some(z => z.code === code)) {
+        currentSaved.push({
+          code,
+          name: newZoneName.trim(),
+          storageType: 'room_temp',
+          notes: 'Thêm nhanh từ biểu mẫu thuốc'
+        });
+        localStorage.setItem('gpp_custom_zones', JSON.stringify(currentSaved));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
     setNewZoneCode('');
     setNewZoneName('');
     setIsAddingZone(false);
