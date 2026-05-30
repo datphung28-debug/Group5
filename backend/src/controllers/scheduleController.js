@@ -285,37 +285,116 @@ export const autoAssignSchedules = async (req, res) => {
 
     const newSchedules = [];
 
-    for (let d = 0; d < 7; d++) {
-      const currentDate = new Date(startDate);
-      currentDate.setUTCDate(currentDate.getUTCDate() + d);
-      const dateStr = currentDate.toISOString().split("T")[0];
-      const dayKey = weekDayKeys[d];
+    if (strategy === 'rotate') {
+      for (let d = 0; d < 7; d++) {
+        const currentDate = new Date(startDate);
+        currentDate.setUTCDate(currentDate.getUTCDate() + d);
+        const dateStr = currentDate.toISOString().split("T")[0];
+        const dayKey = weekDayKeys[d];
 
-      pharmacists.forEach((pharmacist, index) => {
-        let shiftIndex = 0;
-        if (strategy === 'rotate') {
-          shiftIndex = (index + d) % shiftTypes.length;
+        if (pharmacists.length >= 3) {
+          // Khi số nhân viên >= 3: mỗi nhân viên làm 1 ca/ngày, xoay ca đều để phủ kín 3 ca
+          pharmacists.forEach((pharmacist, index) => {
+            const shiftIndex = (index + d) % shiftTypes.length;
+            const shiftType = shiftTypes[shiftIndex];
+            const { start: startTime, end: endTime } = shiftTimes[shiftType];
+            const areaIndex = (index + d) % areas.length;
+            const area = areas[areaIndex];
+
+            newSchedules.push({
+              date: dateStr,
+              day: dayKey,
+              staff: pharmacist._id,
+              shiftType,
+              startTime,
+              endTime,
+              area,
+              status: "confirmed",
+              note: "Tự động xếp ca (Xoay ca)"
+            });
+          });
         } else {
-          shiftIndex = index % shiftTypes.length;
+          // Khi số nhân viên < 3: duyệt qua cả 3 ca để chắc chắn ca nào cũng có người làm
+          shiftTypes.forEach((shiftType, sIndex) => {
+            const pharmacistIndex = (sIndex + d) % pharmacists.length;
+            const pharmacist = pharmacists[pharmacistIndex];
+            const { start: startTime, end: endTime } = shiftTimes[shiftType];
+            const areaIndex = (pharmacistIndex + d) % areas.length;
+            const area = areas[areaIndex];
+
+            newSchedules.push({
+              date: dateStr,
+              day: dayKey,
+              staff: pharmacist._id,
+              shiftType,
+              startTime,
+              endTime,
+              area,
+              status: "confirmed",
+              note: "Tự động xếp ca (Xoay ca)"
+            });
+          });
         }
+      }
+    } else {
+      // Chiến lược Cố định (Fixed)
+      if (pharmacists.length >= 3) {
+        // Mỗi nhân viên làm 1 ca cố định cả tuần, phủ kín cả 3 ca
+        pharmacists.forEach((pharmacist, index) => {
+          const shiftIndex = index % shiftTypes.length;
+          const shiftType = shiftTypes[shiftIndex];
+          const { start: startTime, end: endTime } = shiftTimes[shiftType];
+          
+          for (let d = 0; d < 7; d++) {
+            const currentDate = new Date(startDate);
+            currentDate.setUTCDate(currentDate.getUTCDate() + d);
+            const dateStr = currentDate.toISOString().split("T")[0];
+            const dayKey = weekDayKeys[d];
+            const areaIndex = (index + d) % areas.length;
+            const area = areas[areaIndex];
 
-        const shiftType = shiftTypes[shiftIndex];
-        const { start: startTime, end: endTime } = shiftTimes[shiftType];
-        const areaIndex = (index + d) % areas.length;
-        const area = areas[areaIndex];
-
-        newSchedules.push({
-          date: dateStr,
-          day: dayKey,
-          staff: pharmacist._id,
-          shiftType,
-          startTime,
-          endTime,
-          area,
-          status: "confirmed",
-          note: `Tự động xếp ca (${strategy === 'rotate' ? 'Xoay ca' : 'Cố định'})`
+            newSchedules.push({
+              date: dateStr,
+              day: dayKey,
+              staff: pharmacist._id,
+              shiftType,
+              startTime,
+              endTime,
+              area,
+              status: "confirmed",
+              note: "Tự động xếp ca (Cố định)"
+            });
+          }
         });
-      });
+      } else {
+        // Khi số nhân viên < 3: duyệt qua cả 3 ca cho từng ngày để không trống ca
+        for (let d = 0; d < 7; d++) {
+          const currentDate = new Date(startDate);
+          currentDate.setUTCDate(currentDate.getUTCDate() + d);
+          const dateStr = currentDate.toISOString().split("T")[0];
+          const dayKey = weekDayKeys[d];
+
+          shiftTypes.forEach((shiftType, sIndex) => {
+            const pharmacistIndex = sIndex % pharmacists.length;
+            const pharmacist = pharmacists[pharmacistIndex];
+            const { start: startTime, end: endTime } = shiftTimes[shiftType];
+            const areaIndex = (pharmacistIndex + d) % areas.length;
+            const area = areas[areaIndex];
+
+            newSchedules.push({
+              date: dateStr,
+              day: dayKey,
+              staff: pharmacist._id,
+              shiftType,
+              startTime,
+              endTime,
+              area,
+              status: "confirmed",
+              note: "Tự động xếp ca (Cố định)"
+            });
+          });
+        }
+      }
     }
 
     await Schedule.insertMany(newSchedules);
