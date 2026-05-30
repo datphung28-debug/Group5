@@ -147,4 +147,5 @@ export const scheduleAPI = {
   update: (id, data) => api.put(`/schedule/${id}`, data),
   delete: (id) => api.delete(`/schedule/${id}`),
   copyWeek: (data) => api.post('/schedule/copy-week', data),
+  autoAssign: (data) => api.post('/schedule/auto-assign', data),
 };

@@ -17,9 +17,9 @@ const scheduleSchema = new mongoose.Schema(
       required: true,
     },
     shiftType: {
-      type: String, // 'morning', 'afternoon', 'evening', 'custom'
+      type: String, // 'morning', 'afternoon', 'evening', 'custom', 'fulltime'
       required: true,
-      enum: ["morning", "afternoon", "evening", "custom"],
+      enum: ["morning", "afternoon", "evening", "custom", "fulltime"],
     },
     startTime: {
       type: String, // Định dạng HH:mm

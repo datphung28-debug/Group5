@@ -1,5 +1,5 @@
 import express from "express";
-import { getSchedules, createSchedule, updateSchedule, deleteSchedule, copyWeekSchedules } from "../controllers/scheduleController.js";
+import { getSchedules, createSchedule, updateSchedule, deleteSchedule, copyWeekSchedules, autoAssignSchedules } from "../controllers/scheduleController.js";
 import { protect, staffOnly, adminOnly } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
@@ -14,5 +14,6 @@ router.post("/", staffOnly, adminOnly, createSchedule);
 router.put("/:id", staffOnly, adminOnly, updateSchedule);
 router.delete("/:id", staffOnly, adminOnly, deleteSchedule);
 router.post("/copy-week", staffOnly, adminOnly, copyWeekSchedules);
+router.post("/auto-assign", staffOnly, adminOnly, autoAssignSchedules);
 
 export default router;

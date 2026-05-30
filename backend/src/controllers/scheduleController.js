@@ -245,3 +245,86 @@ export const copyWeekSchedules = async (req, res) => {
     return sendErrorResponse(res, error);
   }
 };
+
+// @POST /api/schedule/auto-assign - Tự động xếp ca làm cả tuần
+export const autoAssignSchedules = async (req, res) => {
+  try {
+    const { startDate, strategy } = req.body;
+
+    if (!startDate || !strategy) {
+      return res.status(400).json({ message: "Vui lòng cung cấp ngày bắt đầu và chiến lược xếp ca" });
+    }
+
+    if (strategy !== 'rotate' && strategy !== 'fixed') {
+      return res.status(400).json({ message: "Chiến lược xếp ca không hợp lệ" });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(startDate);
+    end.setDate(end.getDate() + 6);
+    const endDateStr = end.toISOString().split("T")[0];
+
+    const pharmacists = await User.find({ isActive: true, role: "pharmacist" });
+    if (pharmacists.length === 0) {
+      return res.status(400).json({ message: "Không tìm thấy dược sĩ nào đang hoạt động để xếp ca" });
+    }
+
+    // Xóa các ca làm cũ trong tuần này
+    await Schedule.deleteMany({
+      date: { $gte: startDate, $lte: endDateStr }
+    });
+
+    const shiftTypes = ['morning', 'afternoon', 'evening'];
+    const shiftTimes = {
+      morning: { start: '07:00', end: '12:00' },
+      afternoon: { start: '12:00', end: '17:00' },
+      evening: { start: '17:00', end: '22:00' }
+    };
+    const areas = ['Quầy thuốc', 'Quầy tư vấn', 'Kho', 'POS'];
+    const weekDayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+    const newSchedules = [];
+
+    for (let d = 0; d < 7; d++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(currentDate.getDate() + d);
+      const dateStr = currentDate.toISOString().split("T")[0];
+      const dayKey = weekDayKeys[d];
+
+      pharmacists.forEach((pharmacist, index) => {
+        let shiftIndex = 0;
+        if (strategy === 'rotate') {
+          shiftIndex = (index + d) % shiftTypes.length;
+        } else {
+          shiftIndex = index % shiftTypes.length;
+        }
+
+        const shiftType = shiftTypes[shiftIndex];
+        const { start: startTime, end: endTime } = shiftTimes[shiftType];
+        const areaIndex = (index + d) % areas.length;
+        const area = areas[areaIndex];
+
+        newSchedules.push({
+          date: dateStr,
+          day: dayKey,
+          staff: pharmacist._id,
+          shiftType,
+          startTime,
+          endTime,
+          area,
+          status: "confirmed",
+          note: `Tự động xếp ca (${strategy === 'rotate' ? 'Xoay ca' : 'Cố định'})`
+        });
+      });
+    }
+
+    await Schedule.insertMany(newSchedules);
+
+    res.status(201).json({
+      message: `Tự động xếp ca thành công! Đã xếp ${newSchedules.length} ca làm việc cho ${pharmacists.length} dược sĩ.`,
+      count: newSchedules.length
+    });
+  } catch (error) {
+    return sendErrorResponse(res, error);
+  }
+};

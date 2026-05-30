@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Button, Descriptions, Space, Tag, message, Modal, Form, Select, Input, DatePicker, Popconfirm, TimePicker } from 'antd';
 import dayjs from 'dayjs';
-import { CalendarPlus, Copy, Save, Trash2 } from 'lucide-react';
+import { CalendarPlus, Copy, Save, Trash2, Sparkles } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import ScheduleFilter from './components/ScheduleFilter';
 import ScheduleKPIs from './components/ScheduleKPIs';
@@ -35,6 +35,9 @@ const SchedulePage = () => {
 
   const [createForm] = Form.useForm();
   const [editForm] = Form.useForm();
+  
+  const [autoModalOpen, setAutoModalOpen] = useState(false);
+  const [autoForm] = Form.useForm();
 
   // Tính toán dynamic weekDays dựa trên bộ lọc tuần đang chọn
   const weekDays = useMemo(() => {
@@ -246,6 +249,24 @@ const SchedulePage = () => {
     }
   };
 
+  // 7. Xử lý tự động xếp ca làm cả tuần
+  const handleAutoAssign = async (values) => {
+    setSubmitting(true);
+    try {
+      const res = await scheduleAPI.autoAssign({
+        startDate: activeDateRange.start,
+        strategy: values.strategy,
+      });
+      messageApi.success(res.data?.message || "Tự động xếp ca tuần thành công!");
+      setAutoModalOpen(false);
+      fetchSchedules();
+    } catch (err) {
+      messageApi.error(err.response?.data?.message || "Không thể tự động xếp ca");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Khi chọn xem chi tiết ca làm, thiết lập giá trị cho Form sửa đổi
   useEffect(() => {
     if (selectedShift) {
@@ -281,11 +302,18 @@ const SchedulePage = () => {
               >
                 <Button
                   icon={<Copy size={18} className="mr-2 inline" />}
-                  className="h-10 rounded-[var(--radius-md)] border-[var(--color-border)] px-4 font-medium text-[var(--color-text-primary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                  className="h-10 rounded-[var(--radius-md)] border-[var(--color-border)] px-4 font-medium text-[var(--color-text-primary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] bg-white"
                 >
                   Sao chép tuần
                 </Button>
               </Popconfirm>
+              <Button
+                icon={<Sparkles size={18} className="mr-2 inline" />}
+                className="h-10 rounded-[var(--radius-md)] border-[var(--color-border)] px-4 font-medium text-[var(--color-text-primary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] bg-white"
+                onClick={() => setAutoModalOpen(true)}
+              >
+                Tự động xếp ca
+              </Button>
               <Button
                 type="primary"
                 icon={<CalendarPlus size={18} className="mr-2 inline" />}
@@ -386,6 +414,7 @@ const SchedulePage = () => {
                     if (type === 'morning') range = [dayjs('07:00', 'HH:mm'), dayjs('12:00', 'HH:mm')];
                     else if (type === 'afternoon') range = [dayjs('12:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
                     else if (type === 'evening') range = [dayjs('17:00', 'HH:mm'), dayjs('22:00', 'HH:mm')];
+                    else if (type === 'fulltime') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
                     else if (type === 'custom') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
                     
                     if (range) {
@@ -463,6 +492,7 @@ const SchedulePage = () => {
               if (type === 'morning') range = [dayjs('07:00', 'HH:mm'), dayjs('12:00', 'HH:mm')];
               else if (type === 'afternoon') range = [dayjs('12:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
               else if (type === 'evening') range = [dayjs('17:00', 'HH:mm'), dayjs('22:00', 'HH:mm')];
+              else if (type === 'fulltime') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
               else if (type === 'custom') range = [dayjs('08:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
               
               if (range) {
@@ -503,6 +533,59 @@ const SchedulePage = () => {
 
           <Form.Item label="Ghi chú" name="note">
             <Input.TextArea rows={3} placeholder="Ghi chú phân công ca..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal Tự động xếp ca làm cả tuần */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <Sparkles size={19} className="text-[var(--color-primary)]" />
+            <span>Tự động xếp ca làm cả tuần</span>
+          </div>
+        }
+        open={autoModalOpen}
+        onCancel={() => setAutoModalOpen(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setAutoModalOpen(false)}>Hủy</Button>,
+          <Button
+            key="submit"
+            type="primary"
+            loading={submitting}
+            className="bg-[var(--color-primary)] border-none"
+            onClick={() => autoForm.submit()}
+          >
+            Bắt đầu xếp ca
+          </Button>
+        ]}
+        width={480}
+      >
+        <div className="my-4 text-[13px] text-[var(--color-text-secondary)]">
+          Hệ thống sẽ tự động phân bổ ca làm việc (Sáng, Chiều, Tối) và luân chuyển khu vực làm việc cho tất cả dược sĩ đang hoạt động trong tuần đang hiển thị (<span className="font-semibold">{activeDateRange.start} đến {activeDateRange.end}</span>).
+        </div>
+        
+        <div className="mb-4 rounded-[var(--radius-md)] border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-700 font-medium">
+          ⚠️ Chú ý: Hành động này sẽ xóa toàn bộ ca làm hiện tại trong tuần này trước khi tạo lịch tự động mới.
+        </div>
+
+        <Form
+          form={autoForm}
+          layout="vertical"
+          onFinish={handleAutoAssign}
+          initialValues={{ strategy: 'rotate' }}
+        >
+          <Form.Item
+            label="Chọn chiến lược xếp ca"
+            name="strategy"
+            rules={[{ required: true }]}
+          >
+            <Select
+              options={[
+                { value: 'rotate', label: 'Xoay ca (Xoay ca mỗi ngày tiếp theo, đảm bảo công bằng)' },
+                { value: 'fixed', label: 'Cố định (Giữ nguyên cùng 1 ca làm suốt cả tuần)' },
+              ]}
+            />
           </Form.Item>
         </Form>
       </Modal>
