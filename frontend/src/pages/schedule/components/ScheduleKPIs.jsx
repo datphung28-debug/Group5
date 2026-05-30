@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Col, Row } from 'antd';
+import { Card } from 'antd';
 import { CalendarCheck2, Clock3, UserCheck, UserX } from 'lucide-react';
 
 const KPICard = ({ label, value, subtitle, icon, color, bgColor }) => {
@@ -25,17 +25,18 @@ const ScheduleKPIs = ({ summary }) => {
   const cards = [
     { label: 'Tổng ca tuần', value: summary.total.toLocaleString('vi-VN'), subtitle: 'Ca làm đang hiển thị', icon: CalendarCheck2, color: '#0D9488', bgColor: '#F0FDFA' },
     { label: 'Có mặt', value: summary.confirmed.toLocaleString('vi-VN'), subtitle: 'Nhân sự đi làm đầy đủ', icon: UserCheck, color: '#16A34A', bgColor: '#F0FDF4' },
+    { label: 'Đến muộn', value: (summary.late || 0).toLocaleString('vi-VN'), subtitle: 'Nhân sự đi làm muộn', icon: Clock3, color: '#D97706', bgColor: '#FFFBEB' },
     { label: 'Vắng mặt', value: summary.absent.toLocaleString('vi-VN'), subtitle: 'Ca cần bố trí thay thế', icon: UserX, color: '#DC2626', bgColor: '#FEF2F2' },
   ];
 
   return (
-    <Row gutter={[16, 16]} className="mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {cards.map((card) => (
-        <Col xs={24} sm={8} key={card.label}>
+        <div key={card.label} className="h-full">
           <KPICard {...card} />
-        </Col>
+        </div>
       ))}
-    </Row>
+    </div>
   );
 };
 

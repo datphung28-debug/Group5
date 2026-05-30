@@ -37,9 +37,9 @@ const scheduleSchema = new mongoose.Schema(
       default: "Quầy thuốc",
     },
     status: {
-      type: String, // 'confirmed', 'pending', 'absent'
+      type: String, // 'confirmed', 'absent', 'late'
       required: true,
-      enum: ["confirmed", "pending", "absent"],
+      enum: ["confirmed", "absent", "late"],
       default: "confirmed",
     },
     note: {

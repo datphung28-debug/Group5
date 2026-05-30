@@ -183,10 +183,10 @@ const SchedulePage = () => {
       (acc, shift) => ({
         total: acc.total + 1,
         confirmed: acc.confirmed + (shift.status === 'confirmed' ? 1 : 0),
-        pending: acc.pending + (shift.status === 'pending' ? 1 : 0),
         absent: acc.absent + (shift.status === 'absent' ? 1 : 0),
+        late: acc.late + (shift.status === 'late' ? 1 : 0),
       }),
-      { total: 0, confirmed: 0, pending: 0, absent: 0 }
+      { total: 0, confirmed: 0, absent: 0, late: 0 }
     )
   ), [mappedShifts]);
 
@@ -475,7 +475,7 @@ const SchedulePage = () => {
                     if (type === 'morning') range = [dayjs('07:00', 'HH:mm'), dayjs('12:00', 'HH:mm')];
                     else if (type === 'afternoon') range = [dayjs('12:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
                     else if (type === 'evening') range = [dayjs('17:00', 'HH:mm'), dayjs('21:00', 'HH:mm')];
-                    else if (type === 'fulltime') range = [dayjs('07:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
+                    else if (type === 'fulltime') range = [dayjs('07:00', 'HH:mm'), dayjs('21:00', 'HH:mm')];
                     else if (type === 'custom') range = [dayjs('07:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
                     
                     if (range) {
@@ -553,7 +553,7 @@ const SchedulePage = () => {
               if (type === 'morning') range = [dayjs('07:00', 'HH:mm'), dayjs('12:00', 'HH:mm')];
               else if (type === 'afternoon') range = [dayjs('12:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
               else if (type === 'evening') range = [dayjs('17:00', 'HH:mm'), dayjs('21:00', 'HH:mm')];
-              else if (type === 'fulltime') range = [dayjs('07:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
+              else if (type === 'fulltime') range = [dayjs('07:00', 'HH:mm'), dayjs('21:00', 'HH:mm')];
               else if (type === 'custom') range = [dayjs('07:00', 'HH:mm'), dayjs('17:00', 'HH:mm')];
               
               if (range) {

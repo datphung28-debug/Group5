@@ -111,12 +111,12 @@ function AppLayout() {
               {/* Backlog routes routed to the construction/backlog screen */}
               <Route path="/activity" element={<BacklogPage title="Lịch sử hoạt động" />} />
               <Route path="/schedule" element={<SchedulePage />} />
-              <Route path="/timesheet" element={<BacklogPage title="Chấm công" />} />
+              <Route path="/timesheet" element={<TimesheetPage />} />
               <Route path="/payroll" element={<BacklogPage title="Bảng lương" />} />
               <Route path="/returns" element={<BacklogPage title="Trả hàng" />} />
               <Route path="/settings" element={<BacklogPage title="Cài đặt hệ thống" />} />
               <Route path="/my-schedule" element={<BacklogPage title="Lịch cá nhân" />} />
-              <Route path="/my-timesheet" element={<BacklogPage title="Chấm công cá nhân" />} />
+              <Route path="/my-timesheet" element={<TimesheetPage />} />
 
               <Route path="/prescriptions/new" element={<div className="p-6"><PrescriptionScanPage /></div>} />
             </Routes>

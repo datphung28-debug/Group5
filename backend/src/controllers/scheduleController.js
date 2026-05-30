@@ -59,7 +59,7 @@ export const createSchedule = async (req, res) => {
       if (shiftType === 'morning') { start = '07:00'; end = '12:00'; }
       else if (shiftType === 'afternoon') { start = '12:00'; end = '17:00'; }
       else if (shiftType === 'evening') { start = '17:00'; end = '21:00'; }
-      else if (shiftType === 'fulltime') { start = '07:00'; end = '17:00'; }
+      else if (shiftType === 'fulltime') { start = '07:00'; end = '21:00'; }
       else { start = '07:00'; end = '17:00'; }
     }
 
@@ -119,7 +119,7 @@ export const updateSchedule = async (req, res) => {
       if (shiftType === 'morning') { checkStartTime = '07:00'; checkEndTime = '12:00'; }
       else if (shiftType === 'afternoon') { checkStartTime = '12:00'; checkEndTime = '17:00'; }
       else if (shiftType === 'evening') { checkStartTime = '17:00'; checkEndTime = '21:00'; }
-      else if (shiftType === 'fulltime') { checkStartTime = '07:00'; checkEndTime = '17:00'; }
+      else if (shiftType === 'fulltime') { checkStartTime = '07:00'; checkEndTime = '21:00'; }
       else if (shiftType === 'custom') { checkStartTime = '07:00'; checkEndTime = '17:00'; }
     }
 

@@ -57,6 +57,7 @@ const ScheduleFilter = ({ filters, onChange, onApply, onReset, staffOptions = ST
               { value: 'all', label: 'Tất cả trạng thái' },
               { value: 'confirmed', label: 'Có mặt' },
               { value: 'absent', label: 'Vắng mặt' },
+              { value: 'late', label: 'Đến muộn' },
             ]}
           />
           <div className="flex items-center gap-3 sm:ml-auto">

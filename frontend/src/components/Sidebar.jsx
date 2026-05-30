@@ -109,11 +109,9 @@ export default function Sidebar({ collapsed, onCollapse }) {
   const BACKLOG_PATHS = new Set([
     '/returns',
     '/activity',
-    '/timesheet',
     '/payroll',
     '/settings',
     '/my-schedule',
-    '/my-timesheet'
   ]);
 
   const filteredMenuGroups = menuGroups
