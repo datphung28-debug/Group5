@@ -66,6 +66,7 @@ const MedicineTable = () => {
 
   const handleAddZone = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!newZoneCode.trim() || !newZoneName.trim()) {
       message.warning('Vui lòng điền đầy đủ Mã khu và Tên khu vực!');
       return;
@@ -80,6 +81,7 @@ const MedicineTable = () => {
     setNewZoneCode('');
     setNewZoneName('');
     setIsAddingZone(false);
+    locForm.setFieldsValue({ zone: code });
     message.success(`Đã thêm khu vực ${code} thành công!`);
   };
 

@@ -78,6 +78,7 @@ const AddMedicinePage = () => {
 
   const handleAddZone = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!newZoneCode.trim() || !newZoneName.trim()) {
       message.warning('Vui lòng điền đầy đủ Mã khu và Tên khu vực!');
       return;
@@ -92,10 +93,11 @@ const AddMedicinePage = () => {
     setNewZoneCode('');
     setNewZoneName('');
     setIsAddingZone(false);
+    setValue('location.zone', code);
     message.success(`Đã thêm khu vực ${code} thành công!`);
   };
 
-  const { control, handleSubmit, formState: { errors } } = useForm({
+  const { control, handleSubmit, setValue, formState: { errors } } = useForm({
     defaultValues: {
       code: '',
       name: '',
