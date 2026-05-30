@@ -10,8 +10,8 @@ const userSchema = new mongoose.Schema(
     address: { type: String, trim: true },
     role: {
       type: String,
-      enum: ["admin", "pharmacist", "customer"],
-      default: "customer",
+      enum: ["admin", "pharmacist"],
+      default: "pharmacist",
     },
     isActive: { type: Boolean, default: true },
   },
