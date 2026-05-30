@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Spin, Result, Button, Divider, Alert } from 'antd';
 import { 
   CheckCircleFilled, 
@@ -12,7 +12,6 @@ import api from '../../api/api';
 
 const EInvoicePage = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
