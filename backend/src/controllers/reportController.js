@@ -4,6 +4,7 @@ import Import from "../models/Import.js";
 import Medicine from "../models/Medicine.js";
 import Customer from "../models/Customer.js";
 import User from "../models/User.js";
+import Supplier from "../models/Supplier.js";
 
 const PAYMENT_LABELS = {
   cash: "Tiền mặt",
@@ -129,10 +130,10 @@ export const buildRevenueReportPayload = ({ sales = [], groupType = "daily" } = 
 export const getDashboard = async (req, res) => {
   try {
     const today = new Date();
-    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
 
     const [
       todaySales,
@@ -141,19 +142,25 @@ export const getDashboard = async (req, res) => {
       lowStockMedicines,
       totalCustomers,
       totalStaff,
+      activeSuppliers,
+      medicinesForValuation,
+      allSalesForDebt
     ] = await Promise.all([
-      Sale.aggregate([
-        { $match: { status: "completed", createdAt: { $gte: startOfDay, $lte: endOfDay } } },
-        { $group: { _id: null, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
-      ]),
-      Sale.aggregate([
-        { $match: { status: "completed", createdAt: { $gte: startOfMonth } } },
-        { $group: { _id: null, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
-      ]),
+      Sale.find({
+        status: "completed",
+        createdAt: { $gte: startOfDay, $lte: endOfDay }
+      }).populate("items.medicine"),
+      Sale.find({
+        status: "completed",
+        createdAt: { $gte: startOfMonth }
+      }).populate("items.medicine"),
       Medicine.countDocuments({ isActive: true }),
       Medicine.countDocuments({ isActive: true, $expr: { $lte: ["$stock", "$minStock"] } }),
       Customer.countDocuments({ isActive: true }),
       User.countDocuments({ isActive: true, role: { $in: ["admin", "pharmacist"] } }),
+      Supplier.find({ isActive: true }),
+      Medicine.find({ isActive: true }),
+      Sale.find({ status: "completed" })
     ]);
 
     // Thuốc sắp hết hạn (30 ngày)
@@ -164,22 +171,161 @@ export const getDashboard = async (req, res) => {
       expiryDate: { $lte: expiringDate, $gte: new Date() },
     });
 
+    // 1. Calculate Today's metrics
+    let revenueToday = 0;
+    let profitToday = 0;
+    todaySales.forEach(sale => {
+      revenueToday += sale.totalAmount || 0;
+      (sale.items || []).forEach(item => {
+        profitToday += getItemGrossProfit(item);
+      });
+    });
+
+    // 2. Calculate Month's metrics
+    let revenueMonth = 0;
+    let profitMonth = 0;
+    monthSales.forEach(sale => {
+      revenueMonth += sale.totalAmount || 0;
+      (sale.items || []).forEach(item => {
+        profitMonth += getItemGrossProfit(item);
+      });
+    });
+
+    // 3. Calculate Debts & Inventory value
+    const supplierDebt = activeSuppliers.reduce((sum, s) => sum + (s.currentDebt || 0), 0);
+    const inventoryValue = medicinesForValuation.reduce((sum, m) => sum + (m.stock || 0) * (m.importPrice || 0), 0);
+    
+    let customerDebt = 0;
+    allSalesForDebt.forEach(sale => {
+      const paid = sale.amountPaid !== undefined && sale.amountPaid !== null ? sale.amountPaid : sale.totalAmount;
+      const debt = Math.max(sale.totalAmount - paid, 0);
+      customerDebt += debt;
+    });
+
+    // 4. Daily revenue & profit for the last 30 days
+    const startOf30DaysAgo = new Date();
+    startOf30DaysAgo.setDate(startOf30DaysAgo.getDate() - 29);
+    startOf30DaysAgo.setHours(0, 0, 0, 0);
+
+    const last30DaysSales = await Sale.find({
+      status: "completed",
+      createdAt: { $gte: startOf30DaysAgo }
+    }).populate("items.medicine");
+
+    const dailyMap = new Map();
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+      dailyMap.set(key, { date: key, revenue: 0, profit: 0 });
+    }
+
+    last30DaysSales.forEach(sale => {
+      const d = new Date(sale.createdAt);
+      const key = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (dailyMap.has(key)) {
+        const item = dailyMap.get(key);
+        item.revenue += sale.totalAmount || 0;
+        (sale.items || []).forEach(si => {
+          item.profit += getItemGrossProfit(si);
+        });
+        dailyMap.set(key, item);
+      }
+    });
+    const revenueProfit30Days = Array.from(dailyMap.values());
+
+    // 5. Hourly Revenue for Today (7h to 21h)
+    const hourlyMap = new Map();
+    for (let h = 7; h <= 21; h++) {
+      const key = `${h}h`;
+      hourlyMap.set(key, { hour: key, revenue: 0 });
+    }
+
+    todaySales.forEach(sale => {
+      const hour = new Date(sale.createdAt).getHours();
+      const key = `${hour}h`;
+      if (hourlyMap.has(key)) {
+        const item = hourlyMap.get(key);
+        item.revenue += sale.totalAmount || 0;
+        hourlyMap.set(key, item);
+      }
+    });
+    const hourlyRevenueToday = Array.from(hourlyMap.values());
+
+    // 6. Yearly Revenue & Comparative Summary (Current Year vs Last Year)
+    const currentYear = today.getFullYear();
+    const startOfLastYear = new Date(currentYear - 1, 0, 1, 0, 0, 0, 0);
+
+    const yearlySales = await Sale.find({
+      status: "completed",
+      createdAt: { $gte: startOfLastYear }
+    }).populate("items.medicine");
+
+    const yearlyMap = new Map();
+    const monthLabels = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
+    monthLabels.forEach((m, idx) => {
+      yearlyMap.set(idx, { month: m, revenueThisYear: 0, revenueLastYear: 0, profitThisYear: 0 });
+    });
+
+    let totalRevThisYear = 0;
+    let totalRevLastYear = 0;
+    let totalProfitThisYear = 0;
+
+    yearlySales.forEach(sale => {
+      const d = new Date(sale.createdAt);
+      const saleYear = d.getFullYear();
+      const monthIdx = d.getMonth();
+
+      const val = yearlyMap.get(monthIdx);
+      if (val) {
+        if (saleYear === currentYear) {
+          val.revenueThisYear += sale.totalAmount || 0;
+          totalRevThisYear += sale.totalAmount || 0;
+          (sale.items || []).forEach(si => {
+            const profit = getItemGrossProfit(si);
+            val.profitThisYear += profit;
+            totalProfitThisYear += profit;
+          });
+        } else if (saleYear === currentYear - 1) {
+          val.revenueLastYear += sale.totalAmount || 0;
+          totalRevLastYear += sale.totalAmount || 0;
+        }
+        yearlyMap.set(monthIdx, val);
+      }
+    });
+
+    const yearlyRevenue = Array.from(yearlyMap.values());
+    const yearlySummary = {
+      revenueThisYear: totalRevThisYear,
+      revenueLastYear: totalRevLastYear,
+      profitThisYear: totalProfitThisYear
+    };
+
     res.json({
       today: {
-        revenue: todaySales[0]?.total || 0,
-        orders: todaySales[0]?.count || 0,
+        revenue: revenueToday,
+        profit: profitToday,
+        orders: todaySales.length,
       },
       month: {
-        revenue: monthSales[0]?.total || 0,
-        orders: monthSales[0]?.count || 0,
+        revenue: revenueMonth,
+        profit: profitMonth,
+        orders: monthSales.length,
       },
       inventory: {
         total: totalMedicines,
         lowStock: lowStockMedicines,
         expiring: expiringMedicines,
+        value: inventoryValue,
       },
       customers: totalCustomers,
       staff: totalStaff,
+      customerDebt,
+      supplierDebt,
+      revenueProfit30Days,
+      hourlyRevenueToday,
+      yearlyRevenue,
+      yearlySummary
     });
   } catch (error) {
     return sendErrorResponse(res, error);
@@ -226,7 +372,13 @@ export const getTopMedicines = async (req, res) => {
       { $limit: Number(limit) },
       { $lookup: { from: "medicines", localField: "_id", foreignField: "_id", as: "medicine" } },
       { $unwind: "$medicine" },
-      { $project: { name: "$medicine.name", code: "$medicine.code", totalSold: 1, revenue: 1 } },
+      { $project: {
+          name: "$medicine.name",
+          code: "$medicine.code",
+          totalSold: 1,
+          revenue: 1,
+          profit: { $subtract: ["$revenue", { $multiply: ["$totalSold", "$medicine.importPrice"] }] }
+      } },
     ]);
 
     res.json(topMedicines);
