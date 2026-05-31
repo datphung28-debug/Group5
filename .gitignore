@@ -8,3 +8,4 @@ DESIGN.md
 .env
 .codegraph/
 node_modules
+.worktrees/
