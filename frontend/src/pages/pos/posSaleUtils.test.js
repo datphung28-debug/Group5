@@ -21,8 +21,8 @@ test('buildSalePayload maps POS cart to sale API contract', () => {
 
   assert.deepEqual(payload, {
     items: [
-      { medicine: 'medicine-1', quantity: 2, discount: 10 },
-      { medicine: 'medicine-2', quantity: 1, discount: 0 },
+      { medicine: 'medicine-1', quantity: 2, discount: 10, dosage: '' },
+      { medicine: 'medicine-2', quantity: 1, discount: 0, dosage: '' },
     ],
     customer: 'customer-1',
     prescription: 'prescription-1',
