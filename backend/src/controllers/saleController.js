@@ -150,9 +150,12 @@ const returnMedicineStock = async (medicineId, quantity, session = null) => {
 // @GET /api/sales
 export const getSales = async (req, res) => {
   try {
-    const { page = 1, limit = 20, startDate, endDate, customer } = req.query;
+    const { page = 1, limit = 20, startDate, endDate, customer, search } = req.query;
     const filter = {};
     if (customer) filter.customer = customer;
+    if (search) {
+      filter.code = { $regex: search, $options: "i" };
+    }
     if (startDate || endDate) {
       filter.createdAt = {};
       if (startDate) filter.createdAt.$gte = new Date(startDate);
