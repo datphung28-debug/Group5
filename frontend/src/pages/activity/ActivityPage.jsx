@@ -1,11 +1,13 @@
-import React, { useMemo, useState } from 'react';
-import { Button, Descriptions, Drawer, Space, message } from 'antd';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { Button, Descriptions, Drawer, Space, message, Alert, Spin } from 'antd';
 import { Download, FileText } from 'lucide-react';
+import dayjs from 'dayjs';
 import PageHeader from '../../components/PageHeader';
 import ActivityFilter from './components/ActivityFilter';
 import ActivityKPIs from './components/ActivityKPIs';
 import ActivityTable from './components/ActivityTable';
 import { ACTION_META, MODULE_LABELS } from './activityData';
+import { activityLogAPI } from '../../api/api';
 
 const initialFilters = {
   period: 'month',
@@ -21,41 +23,66 @@ const ActivityPage = () => {
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [messageApi, contextHolder] = message.useMessage();
 
-  const filteredActivities = useMemo(() => {
-    const keyword = activeFilters.search.trim().toLowerCase();
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-    return [].filter((activity) => {
-      const matchesKeyword =
-        !keyword ||
-        activity.userName.toLowerCase().includes(keyword) ||
-        activity.target.toLowerCase().includes(keyword) ||
-        activity.description.toLowerCase().includes(keyword) ||
-        activity.ipAddress.toLowerCase().includes(keyword);
-      const matchesModule = activeFilters.module === 'all' || activity.module === activeFilters.module;
-      const matchesAction = activeFilters.action === 'all' || activity.action === activeFilters.action;
-      const matchesDate =
-        !activeFilters.dateRange ||
-        activeFilters.dateRange.length !== 2 ||
-        (() => {
-          const activityDay = activity.timestamp.slice(0, 10);
-          const fromDay = activeFilters.dateRange[0].format('YYYY-MM-DD');
-          const toDay = activeFilters.dateRange[1].format('YYYY-MM-DD');
-          return activityDay >= fromDay && activityDay <= toDay;
-        })();
+  const fetchActivities = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let startDate;
+      let endDate;
 
-      return matchesKeyword && matchesModule && matchesAction && matchesDate;
-    });
-  }, [activeFilters]);
+      if (activeFilters.period === 'today') {
+        startDate = dayjs().startOf('day').format('YYYY-MM-DD');
+        endDate = dayjs().endOf('day').format('YYYY-MM-DD');
+      } else if (activeFilters.period === '7days') {
+        startDate = dayjs().subtract(6, 'day').startOf('day').format('YYYY-MM-DD');
+        endDate = dayjs().endOf('day').format('YYYY-MM-DD');
+      } else if (activeFilters.period === 'month') {
+        startDate = dayjs().startOf('month').format('YYYY-MM-DD');
+        endDate = dayjs().endOf('day').format('YYYY-MM-DD');
+      } else if (activeFilters.period === 'custom' && activeFilters.dateRange?.length === 2) {
+        startDate = activeFilters.dateRange[0].format('YYYY-MM-DD');
+        endDate = activeFilters.dateRange[1].format('YYYY-MM-DD');
+      }
+
+      const params = {
+        search: activeFilters.search?.trim() || undefined,
+        module: activeFilters.module === 'all' ? undefined : activeFilters.module,
+        action: activeFilters.action === 'all' ? undefined : activeFilters.action,
+        startDate,
+        endDate,
+        limit: 1000,
+      };
+
+      const res = await activityLogAPI.getAll(params);
+      setActivities(res.data?.activities || []);
+    } catch (err) {
+      console.error("Lỗi lấy lịch sử hoạt động:", err);
+      const msg = err.response?.data?.message || "Không thể tải dữ liệu lịch sử hoạt động từ server.";
+      setError(msg);
+      messageApi.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeFilters, messageApi]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchActivities();
+  }, [fetchActivities]);
 
   const summary = useMemo(() => {
-    const users = new Set(filteredActivities.map((activity) => activity.userName));
+    const users = new Set(activities.map((activity) => activity.userName));
     return {
-      total: filteredActivities.length,
+      total: activities.length,
       users: users.size,
-      warnings: filteredActivities.filter((activity) => activity.status === 'warning').length,
-      exports: filteredActivities.filter((activity) => activity.action === 'export').length,
+      warnings: activities.filter((activity) => activity.status === 'warning').length,
+      exports: activities.filter((activity) => activity.action === 'export').length,
     };
-  }, [filteredActivities]);
+  }, [activities]);
 
   const handleChange = (nextFilters) => {
     setFilters((current) => ({ ...current, ...nextFilters }));
@@ -96,8 +123,27 @@ const ActivityPage = () => {
           setActiveFilters(initialFilters);
         }}
       />
+
+      {error && (
+        <Alert
+          message="Lỗi tải dữ liệu"
+          description={error}
+          type="error"
+          showIcon
+          closable
+          className="mb-6 rounded-[var(--radius-lg)]"
+        />
+      )}
+
       <ActivityKPIs summary={summary} />
-      <ActivityTable data={filteredActivities} onSelect={setSelectedActivity} />
+
+      {loading && activities.length === 0 ? (
+        <div className="flex items-center justify-center p-12 bg-white rounded-[var(--radius-lg)] border border-[var(--color-border-light)] shadow-[var(--shadow-card)]">
+          <Spin size="large" tip="Đang tải lịch sử hoạt động..." />
+        </div>
+      ) : (
+        <ActivityTable data={activities} onSelect={setSelectedActivity} loading={loading} />
+      )}
 
       <Drawer
         title="Chi tiết hoạt động"
@@ -112,8 +158,8 @@ const ActivityPage = () => {
             <Descriptions.Item label="Thời gian">{selectedActivity.timestamp}</Descriptions.Item>
             <Descriptions.Item label="Người dùng">{selectedActivity.userName}</Descriptions.Item>
             <Descriptions.Item label="Vai trò">{selectedActivity.userRole}</Descriptions.Item>
-            <Descriptions.Item label="Thao tác">{ACTION_META[selectedActivity.action].label}</Descriptions.Item>
-            <Descriptions.Item label="Phân hệ">{MODULE_LABELS[selectedActivity.module]}</Descriptions.Item>
+            <Descriptions.Item label="Thao tác">{ACTION_META[selectedActivity.action]?.label || selectedActivity.action}</Descriptions.Item>
+            <Descriptions.Item label="Phân hệ">{MODULE_LABELS[selectedActivity.module] || selectedActivity.module}</Descriptions.Item>
             <Descriptions.Item label="Đối tượng">{selectedActivity.target}</Descriptions.Item>
             <Descriptions.Item label="Nội dung">{selectedActivity.description}</Descriptions.Item>
             <Descriptions.Item label="IP">{selectedActivity.ipAddress}</Descriptions.Item>

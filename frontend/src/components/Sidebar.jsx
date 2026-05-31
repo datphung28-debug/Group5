@@ -107,7 +107,6 @@ export default function Sidebar({ collapsed, onCollapse }) {
   // Filter out backlog items to keep sidebar clean for MVP
   const BACKLOG_PATHS = new Set([
     '/returns',
-    '/activity',
     '/payroll',
     '/settings',
   ]);

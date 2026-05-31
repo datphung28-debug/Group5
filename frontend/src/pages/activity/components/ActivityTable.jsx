@@ -24,7 +24,7 @@ const StatusPill = ({ status }) => {
   );
 };
 
-const ActivityTable = ({ data, onSelect }) => {
+const ActivityTable = ({ data, onSelect, loading }) => {
   const columns = [
     {
       title: 'Thời gian',
@@ -88,6 +88,7 @@ const ActivityTable = ({ data, onSelect }) => {
           rowKey="id"
           columns={columns}
           dataSource={data}
+          loading={loading}
           locale={{ emptyText: <Empty description="Không có lịch sử hoạt động" /> }}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} hoạt động`, className: 'px-6 py-4 border-t border-[var(--color-border-light)]' }}
           scroll={{ x: 1360 }}

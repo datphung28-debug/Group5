@@ -157,3 +157,8 @@ export const timesheetAPI = {
   update: (id, data) => api.put(`/timesheet/${id}`, data),
   delete: (id) => api.delete(`/timesheet/${id}`),
 };
+
+// ─── Activity Logs ─────────────────────────────────────────────────────────
+export const activityLogAPI = {
+  getAll: (params) => api.get('/activity-logs', { params }),
+};

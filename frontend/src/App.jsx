@@ -110,7 +110,7 @@ function AppLayout() {
               <Route path="/report-debt" element={<DebtReportPage />} />
               
               {/* Backlog routes routed to the construction/backlog screen */}
-              <Route path="/activity" element={<BacklogPage title="Lịch sử hoạt động" />} />
+              <Route path="/activity" element={<ActivityPage />} />
               <Route path="/schedule" element={<SchedulePage />} />
               <Route path="/timesheet" element={<TimesheetPage />} />
               <Route path="/payroll" element={<BacklogPage title="Bảng lương" />} />
