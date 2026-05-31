@@ -33,7 +33,7 @@ const MySchedulePage = () => {
 
   // Tính toán dynamic weekDays dựa trên bộ lọc tuần đang chọn
   const weekDays = useMemo(() => {
-    const startOfWeek = activeFilters.week.startOf('week').add(1, 'day');
+    const startOfWeek = activeFilters.week.startOf('isoWeek');
     return [
       { key: 'mon', label: 'Thứ 2', date: startOfWeek.format('DD/MM'), fullDate: startOfWeek.format('YYYY-MM-DD') },
       { key: 'tue', label: 'Thứ 3', date: startOfWeek.add(1, 'day').format('DD/MM'), fullDate: startOfWeek.add(1, 'day').format('YYYY-MM-DD') },
