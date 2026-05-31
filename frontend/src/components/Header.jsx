@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Badge, Button, Empty, Popover, Tag, Spin } from 'antd';
 import { Search, Bell, Plus, ChevronDown, User, X, LogOut, ShoppingCart, FilePlus, TrendingUp } from 'lucide-react';
@@ -21,6 +21,20 @@ export default function Header() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const navigate = useNavigate();
+
+  const searchInputRef = useRef(null);
+  const [searchWidth, setSearchWidth] = useState(null);
+
+  // Measure and sync search box width
+  useEffect(() => {
+    if (!searchInputRef.current) return;
+    const updateWidth = () => {
+      setSearchWidth(searchInputRef.current.offsetWidth);
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
 
   // Instant search logic
   useEffect(() => {
@@ -74,41 +88,45 @@ export default function Header() {
         const imports = importsRes.data?.imports || importsRes.data?.data || importsRes.data || [];
 
         const list = [];
+        const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
         
         // Map medicines with low stock
         if (lowStock.length > 0) {
+          const id = `low-stock-${lowStock.map(m => m._id || m.id).join('-')}`;
           list.push({
-            id: 'low-stock',
+            id,
             title: `${lowStock.length} thuốc sắp hết tồn`,
             description: `Bao gồm: ${lowStock.slice(0, 3).map((m) => m.name).join(', ')}${lowStock.length > 3 ? '...' : ''}.`,
             time: 'Hiện tại',
             type: 'Tồn kho',
-            unread: true,
+            unread: !readIds.includes(id),
           });
         }
 
         // Map medicines expiring in 30 days
         if (expiring.length > 0) {
+          const id = `expiring-soon-${expiring.map(m => m._id || m.id).join('-')}`;
           list.push({
-            id: 'expiring-soon',
+            id,
             title: `${expiring.length} lô thuốc sắp hết hạn`,
             description: `Bao gồm: ${expiring.slice(0, 3).map((m) => m.name).join(', ')}${expiring.length > 3 ? '...' : ''}.`,
             time: 'Hiện tại',
             type: 'Cảnh báo',
-            unread: true,
+            unread: !readIds.includes(id),
           });
         }
 
         // Map recent completed import transactions
         if (imports.length > 0) {
           const latestImport = imports[0];
+          const id = `import-${latestImport._id}`;
           list.push({
-            id: `import-${latestImport._id}`,
+            id,
             title: `Phiếu nhập ${latestImport.code} hoàn tất`,
             description: `Nhập hàng từ nhà cung cấp ${latestImport.supplier?.name || 'NCC'} thành công.`,
             time: 'Gần đây',
             type: 'Nhập hàng',
-            unread: false,
+            unread: !readIds.includes(id),
           });
         }
 
@@ -130,13 +148,31 @@ export default function Header() {
   };
 
   const markAllAsRead = () => {
-    setNotifications((current) => current.map((item) => ({ ...item, unread: false })));
+    setNotifications((current) => {
+      const updated = current.map((item) => ({ ...item, unread: false }));
+      const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
+      updated.forEach((item) => {
+        if (!readIds.includes(item.id)) {
+          readIds.push(item.id);
+        }
+      });
+      localStorage.setItem('read_notifications', JSON.stringify(readIds));
+      return updated;
+    });
   };
 
   const markAsRead = (notificationId) => {
-    setNotifications((current) => current.map((item) => (
-      item.id === notificationId ? { ...item, unread: false } : item
-    )));
+    setNotifications((current) => {
+      const updated = current.map((item) => (
+        item.id === notificationId ? { ...item, unread: false } : item
+      ));
+      const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
+      if (!readIds.includes(notificationId)) {
+        readIds.push(notificationId);
+      }
+      localStorage.setItem('read_notifications', JSON.stringify(readIds));
+      return updated;
+    });
   };
 
   // Content for the user avatar dropdown popover
@@ -212,41 +248,53 @@ export default function Header() {
   );
 
   const searchContent = (
-    <div className="w-[calc(100vw-32px)] max-w-[450px] max-h-[420px] overflow-y-auto p-1.5">
+    <div className="w-full max-h-[420px] overflow-y-auto p-1.5">
       {searchQuery.trim().length < 2 ? (
         <div className="p-2.5">
-          <p className="m-0 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2.5">👉 Phím tắt nhanh</p>
+          <p className="m-0 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2.5">Phím tắt nhanh</p>
           <div className="grid grid-cols-2 gap-2">
             <Link
               to="/pos"
-              onClick={() => setSearchOpen(false)}
-              className="flex items-center gap-2 rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                navigate('/pos');
+                setSearchOpen(false);
+              }}
+              className="flex items-center justify-center rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
             >
-              <ShoppingCart size={15} />
               <span>POS Bán hàng</span>
             </Link>
             <Link
               to="/medicines/add"
-              onClick={() => setSearchOpen(false)}
-              className="flex items-center gap-2 rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                navigate('/medicines/add');
+                setSearchOpen(false);
+              }}
+              className="flex items-center justify-center rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
             >
-              <Plus size={15} />
               <span>Thêm thuốc mới</span>
             </Link>
             <Link
               to="/prescriptions/new"
-              onClick={() => setSearchOpen(false)}
-              className="flex items-center gap-2 rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                navigate('/prescriptions/new');
+                setSearchOpen(false);
+              }}
+              className="flex items-center justify-center rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
             >
-              <FilePlus size={15} />
               <span>Quét đơn thuốc AI</span>
             </Link>
             <Link
               to="/report-revenue"
-              onClick={() => setSearchOpen(false)}
-              className="flex items-center gap-2 rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                navigate('/report-revenue');
+                setSearchOpen(false);
+              }}
+              className="flex items-center justify-center rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
             >
-              <TrendingUp size={15} />
               <span>Báo cáo doanh thu</span>
             </Link>
           </div>
@@ -265,13 +313,14 @@ export default function Header() {
           {/* Medicines section */}
           {searchResults.medicines.length > 0 && (
             <div>
-              <p className="px-3.5 m-0 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5">💊 Thuốc & Dược phẩm ({searchResults.medicines.length})</p>
+              <p className="px-3.5 m-0 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5">Thuốc & Dược phẩm ({searchResults.medicines.length})</p>
               <div className="space-y-0.5">
                 {searchResults.medicines.map(med => (
                   <button
                     key={med._id || med.id}
                     type="button"
-                    onClick={() => {
+                    onMouseDown={(e) => {
+                      e.preventDefault();
                       useMedicineStore.getState().setParams({ search: med.code || med.name, category: '', requiresPrescription: '', lowStock: '' });
                       useMedicineStore.getState().fetchMedicines({ search: med.code || med.name, category: '', requiresPrescription: '', lowStock: '' });
                       navigate('/medicines');
@@ -294,13 +343,14 @@ export default function Header() {
           {/* Customers section */}
           {searchResults.customers.length > 0 && (
             <div>
-              <p className="px-3.5 m-0 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5">👥 Khách hàng ({searchResults.customers.length})</p>
+              <p className="px-3.5 m-0 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5">Khách hàng ({searchResults.customers.length})</p>
               <div className="space-y-0.5">
                 {searchResults.customers.map(cust => (
                   <button
                     key={cust._id || cust.id}
                     type="button"
-                    onClick={() => {
+                    onMouseDown={(e) => {
+                      e.preventDefault();
                       navigate(`/customers?search=${cust.phone || cust.name}`);
                       setSearchQuery('');
                       setSearchOpen(false);
@@ -321,13 +371,14 @@ export default function Header() {
           {/* Invoices section */}
           {searchResults.sales.length > 0 && (
             <div>
-              <p className="px-3.5 m-0 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5">🧾 Hóa đơn bán hàng ({searchResults.sales.length})</p>
+              <p className="px-3.5 m-0 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5">Hóa đơn bán hàng ({searchResults.sales.length})</p>
               <div className="space-y-0.5">
                 {searchResults.sales.map(sale => (
                   <button
                     key={sale._id || sale.id}
                     type="button"
-                    onClick={() => {
+                    onMouseDown={(e) => {
+                      e.preventDefault();
                       navigate(`/invoices?search=${sale.code}`);
                       setSearchQuery('');
                       setSearchOpen(false);
@@ -373,9 +424,15 @@ export default function Header() {
             onOpenChange={setSearchOpen}
             content={searchContent}
             arrow={false}
-            overlayInnerStyle={{ padding: 0, borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-dropdown)' }}
+            overlayInnerStyle={{
+              padding: 0,
+              borderRadius: 'var(--radius-lg)',
+              overflow: 'hidden',
+              boxShadow: 'var(--shadow-dropdown)',
+              width: searchWidth ? `${searchWidth}px` : '450px'
+            }}
           >
-            <div className="relative w-full max-w-md lg:max-w-lg group">
+            <div ref={searchInputRef} className="relative w-full max-w-md lg:max-w-lg group">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                 <Search size={16} className="text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors" />
               </div>
