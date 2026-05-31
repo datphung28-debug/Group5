@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Button, Descriptions, Drawer, Space, message, Modal, Form, Select, DatePicker, TimePicker, Input, InputNumber, Card, Tag } from 'antd';
-import { Download, FileClock, Settings, Clock, LogIn, LogOut, FileSpreadsheet, Eye, Plus, Trash2 } from 'lucide-react';
+import { Download, FileClock, Settings, Clock, LogIn, LogOut, FileSpreadsheet, Eye, Plus, Trash2, Lock } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import TimesheetFilter from './components/TimesheetFilter';
 import TimesheetKPIs from './components/TimesheetKPIs';
@@ -38,6 +38,11 @@ const TimesheetPage = () => {
   const [filters, setFilters] = useState(initialFilters);
   const [activeFilters, setActiveFilters] = useState(initialFilters);
   const [selectedRecord, setSelectedRecord] = useState(null); // Selected staff summary
+  
+  // PIN verification state
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [pinAction, setPinAction] = useState(null); // 'in' or 'out'
+  const [enteredPin, setEnteredPin] = useState('');
   
   // Wage settings state
   const [hourlyWages, setHourlyWages] = useState([
@@ -153,8 +158,22 @@ const TimesheetPage = () => {
   // Clickable KPI card filtering state
   const [activeKpiType, setActiveKpiType] = useState('all');
 
-  // Handle Clock-In (Chấm công vào)
-  const handleClockIn = async () => {
+  // Trigger PIN verification modal before Clock-In
+  const triggerClockIn = () => {
+    setPinAction('in');
+    setEnteredPin('');
+    setPinModalOpen(true);
+  };
+
+  // Trigger PIN verification modal before Clock-Out
+  const triggerClockOut = () => {
+    setPinAction('out');
+    setEnteredPin('');
+    setPinModalOpen(true);
+  };
+
+  // Handle Clock-In (Chấm công vào) with PIN
+  const handleClockIn = async (pin) => {
     const currentHour = dayjs().hour();
     let shiftName = 'Ca sáng';
     let schedTime = '07:00 - 12:00';
@@ -179,6 +198,7 @@ const TimesheetPage = () => {
         status: 'missing',
         method: 'pos',
         note: 'Tự động ghi nhận lúc vào ca',
+        pin,
       });
       messageApi.success('Chấm công vào thành công!');
       fetchTimesheets();
@@ -187,8 +207,8 @@ const TimesheetPage = () => {
     }
   };
 
-  // Handle Clock-Out (Chấm công ra)
-  const handleClockOut = async () => {
+  // Handle Clock-Out (Chấm công ra) with PIN
+  const handleClockOut = async (pin) => {
     const activeRecord = records.find((r) => r.date === todayStr && r.staffId === currentUserId && !r.checkOut);
     if (!activeRecord) return;
 
@@ -226,6 +246,7 @@ const TimesheetPage = () => {
         overtimeHours,
         status,
         note: status === 'late' ? `Đi muộn ${Math.round(inMins - parseTimeToMinutes(activeRecord.scheduledTime.split(' - ')[0]))} phút` : 'Đủ công ca',
+        pin,
       });
       messageApi.success('Chấm công ra thành công!');
       fetchTimesheets();
@@ -536,7 +557,7 @@ const TimesheetPage = () => {
                     danger
                     icon={<LogOut size={18} className="mr-2 inline" />}
                     className="h-11 rounded-[var(--radius-md)] font-semibold px-6 shadow-md hover:scale-[1.02] transition-transform duration-200"
-                    onClick={handleClockOut}
+                    onClick={triggerClockOut}
                   >
                     Chấm công ra
                   </Button>
@@ -554,7 +575,7 @@ const TimesheetPage = () => {
                   type="primary"
                   icon={<LogIn size={18} className="mr-2 inline" />}
                   className="h-11 rounded-[var(--radius-md)] border-none bg-emerald-600 hover:bg-emerald-500 font-semibold px-6 shadow-md hover:scale-[1.02] transition-transform duration-200"
-                  onClick={handleClockIn}
+                  onClick={triggerClockIn}
                 >
                   Chấm công vào
                 </Button>
@@ -855,6 +876,58 @@ const TimesheetPage = () => {
             <Button type="primary" htmlType="submit" className="rounded-[var(--radius-md)] h-10 px-6 bg-emerald-600 hover:bg-emerald-500 border-none">Xuất & Tải xuống</Button>
           </div>
         </Form>
+      </Modal>
+      {/* MODAL: ENTER TIMESHEET PIN */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <Lock className="text-[var(--color-primary)] animate-pulse" size={20} />
+            <span>Xác thực mã PIN chấm công</span>
+          </div>
+        }
+        centered
+        open={pinModalOpen}
+        onCancel={() => setPinModalOpen(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setPinModalOpen(false)} className="rounded-[var(--radius-md)] h-10 px-4">
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            className="rounded-[var(--radius-md)] h-10 px-6 border-none bg-[var(--color-primary)] font-semibold"
+            onClick={async () => {
+              if (!enteredPin || !/^\d{6}$/.test(enteredPin)) {
+                messageApi.error('Vui lòng nhập mã PIN gồm đúng 6 chữ số!');
+                return;
+              }
+              setPinModalOpen(false);
+              if (pinAction === 'in') {
+                await handleClockIn(enteredPin);
+              } else if (pinAction === 'out') {
+                await handleClockOut(enteredPin);
+              }
+            }}
+          >
+            Xác nhận
+          </Button>
+        ]}
+        width={380}
+        className="rounded-[var(--radius-lg)]"
+      >
+        <div className="py-4 text-center">
+          <div className="mb-4 text-[14px] font-medium text-[var(--color-text-secondary)]">
+            Vui lòng nhập mã PIN gồm 6 chữ số để xác thực chấm công:
+          </div>
+          <Input.Password
+            maxLength={6}
+            value={enteredPin}
+            onChange={(e) => setEnteredPin(e.target.value.replace(/\D/g, ''))}
+            className="text-center text-2xl font-bold tracking-[0.3em] h-12 rounded-[var(--radius-md)] w-[240px] mx-auto block placeholder:text-slate-200 border-[var(--color-border)] hover:border-[var(--color-primary)] focus:border-[var(--color-primary)]"
+            placeholder="••••••"
+            autoFocus
+          />
+        </div>
       </Modal>
     </div>
   );

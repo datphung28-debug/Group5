@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema(
       default: "pharmacist",
     },
     isActive: { type: Boolean, default: true },
+    clockInPin: { type: String, default: "" },
   },
   { timestamps: true }
 );

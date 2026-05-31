@@ -41,10 +41,19 @@ export const getTimesheets = async (req, res) => {
 // @POST /api/timesheet - Tạo/Ghi nhận chấm công mới (Check-in)
 export const createTimesheet = async (req, res) => {
   try {
-    const { date, staffId, shift, scheduledTime, checkIn, checkOut, workHours, overtimeHours, status, method, note } = req.body;
+    const { date, staffId, shift, scheduledTime, checkIn, checkOut, workHours, overtimeHours, status, method, note, pin } = req.body;
 
     if (!date || !staffId || !shift || !scheduledTime || !checkIn) {
       return res.status(400).json({ message: "Vui lòng cung cấp đầy đủ thông tin bắt buộc" });
+    }
+
+    if (req.user.role !== "admin") {
+      if (!pin) {
+        return res.status(400).json({ message: "Vui lòng nhập mã PIN chấm công" });
+      }
+      if (req.user.clockInPin && req.user.clockInPin !== pin) {
+        return res.status(400).json({ message: "Mã PIN chấm công không chính xác" });
+      }
     }
 
     const staffUser = await User.findById(staffId);
@@ -84,6 +93,16 @@ export const updateTimesheet = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
+
+    if (req.user.role !== "admin") {
+      const { pin } = updateData;
+      if (!pin) {
+        return res.status(400).json({ message: "Vui lòng nhập mã PIN chấm công" });
+      }
+      if (req.user.clockInPin && req.user.clockInPin !== pin) {
+        return res.status(400).json({ message: "Mã PIN chấm công không chính xác" });
+      }
+    }
 
     const timesheet = await Timesheet.findById(id);
     if (!timesheet) {

@@ -36,7 +36,7 @@ export const getUserById = async (req, res) => {
 // @PUT /api/users/:id
 export const updateUser = async (req, res) => {
   try {
-    const { name, email, phone, address, role, isActive, password } = req.body;
+    const { name, email, phone, address, role, isActive, password, clockInPin } = req.body;
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
 
@@ -52,6 +52,13 @@ export const updateUser = async (req, res) => {
         return res.status(400).json({ message: "Mật khẩu phải từ 6 ký tự trở lên" });
       }
       user.password = password;
+    }
+
+    if (clockInPin !== undefined) {
+      if (clockInPin && !/^\d{6}$/.test(clockInPin)) {
+        return res.status(400).json({ message: "Mã PIN phải gồm đúng 6 ký số" });
+      }
+      user.clockInPin = clockInPin || Math.floor(100000 + Math.random() * 900000).toString();
     }
 
     const updated = await user.save();
@@ -77,7 +84,7 @@ export const deleteUser = async (req, res) => {
 // @POST /api/users - Create new internal user (admin only)
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, phone, address, role } = req.body;
+    const { name, email, password, phone, address, role, clockInPin } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Vui lòng nhập đầy đủ Tên, Email và Mật khẩu" });
@@ -89,6 +96,15 @@ export const createUser = async (req, res) => {
       return res.status(400).json({ message: "Email này đã được sử dụng" });
     }
 
+    let finalPin = clockInPin;
+    if (finalPin) {
+      if (!/^\d{6}$/.test(finalPin)) {
+        return res.status(400).json({ message: "Mã PIN phải gồm đúng 6 ký số" });
+      }
+    } else {
+      finalPin = Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
     const user = new User({
       name,
       email,
@@ -97,6 +113,7 @@ export const createUser = async (req, res) => {
       address,
       role: role || "pharmacist",
       isActive: true,
+      clockInPin: finalPin,
     });
 
     const savedUser = await user.save();
@@ -108,6 +125,7 @@ export const createUser = async (req, res) => {
       address: savedUser.address,
       role: savedUser.role,
       isActive: savedUser.isActive,
+      clockInPin: savedUser.clockInPin,
       message: "Tạo người dùng mới thành công"
     });
   } catch (error) {

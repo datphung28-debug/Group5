@@ -57,6 +57,12 @@ const UserTable = ({ data, loading, onEdit, onToggleStatus }) => {
       render: (phone) => <span className="font-medium text-[var(--color-text-primary)]">{phone || '--'}</span>,
     },
     {
+      title: 'Mã PIN',
+      dataIndex: 'clockInPin',
+      width: 110,
+      render: (pin) => <span className="font-semibold text-slate-700 tracking-wider font-mono">{pin || '--'}</span>,
+    },
+    {
       title: 'Địa chỉ',
       dataIndex: 'address',
       width: 240,
@@ -134,10 +140,14 @@ const UserTable = ({ data, loading, onEdit, onToggleStatus }) => {
               </div>
               <RoleTag role={record.role} />
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-3 text-[13px]">
+            <div className="mt-4 grid grid-cols-3 gap-3 text-[13px]">
               <div className="rounded-[var(--radius-md)] bg-[var(--color-bg-subtle)] p-3">
                 <div className="text-[var(--color-text-muted)]">Số điện thoại</div>
                 <div className="mt-1 font-semibold text-[var(--color-text-primary)]">{record.phone || '--'}</div>
+              </div>
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-bg-subtle)] p-3">
+                <div className="text-[var(--color-text-muted)]">Mã PIN</div>
+                <div className="mt-1 font-mono font-semibold text-slate-700 tracking-wider">{record.clockInPin || '--'}</div>
               </div>
               <div className="rounded-[var(--radius-md)] bg-[var(--color-bg-subtle)] p-3">
                 <div className="text-[var(--color-text-muted)]">Trạng thái</div>

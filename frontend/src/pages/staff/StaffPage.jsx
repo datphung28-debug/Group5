@@ -243,6 +243,33 @@ const StaffPage = () => {
           <Form.Item label="Số điện thoại" name="phone">
             <Input className="h-10 rounded-[var(--radius-md)]" placeholder="Nhập số điện thoại" />
           </Form.Item>
+          <Form.Item
+            label="Mã PIN chấm công (6 chữ số)"
+            name="clockInPin"
+            rules={[
+              { pattern: /^\d{6}$/, message: 'Mã PIN phải gồm đúng 6 chữ số' }
+            ]}
+            extra="Nhập 6 chữ số hoặc click 'Tự động tạo' để sinh mã PIN ngẫu nhiên."
+          >
+            <Input
+              maxLength={6}
+              className="h-10 rounded-[var(--radius-md)]"
+              placeholder="Nhập 6 ký số (Ví dụ: 123456)"
+              addonAfter={
+                <Button 
+                  type="link" 
+                  size="small" 
+                  className="p-0 h-auto font-medium"
+                  onClick={() => {
+                    const randomPin = Math.floor(100000 + Math.random() * 900000).toString();
+                    form.setFieldsValue({ clockInPin: randomPin });
+                  }}
+                >
+                  Tự động tạo
+                </Button>
+              }
+            />
+          </Form.Item>
           <Form.Item label="Vai trò" name="role" rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}>
             <Select
               className="h-10"
