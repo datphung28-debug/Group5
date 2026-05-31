@@ -1090,7 +1090,8 @@ const TimesheetPage = () => {
           <div className="mb-4 text-[14px] font-medium text-[var(--color-text-secondary)]">
             Vui lòng nhập mã PIN gồm 6 chữ số để xác thực chấm công:
           </div>
-          <Input.Password
+          <Input
+            type="password"
             maxLength={6}
             value={enteredPin}
             onChange={(e) => setEnteredPin(e.target.value.replace(/\D/g, ''))}

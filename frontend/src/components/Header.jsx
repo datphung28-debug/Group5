@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Badge, Button, Empty, Popover, Tag, Spin } from 'antd';
-import { Search, Bell, Plus, ChevronDown, User, X, LogOut } from 'lucide-react';
+import { Search, Bell, Plus, ChevronDown, User, X, LogOut, ShoppingCart, FilePlus, TrendingUp } from 'lucide-react';
 import useAuthStore from '../stores/useAuthStore';
-import { medicineAPI, importAPI } from '../api/api';
-
+import { medicineAPI, importAPI, customerAPI, saleAPI } from '../api/api';
+import useMedicineStore from '../stores/useMedicineStore';
 
 
 export default function Header() {
@@ -15,6 +15,48 @@ export default function Header() {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState({ medicines: [], customers: [], sales: [] });
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // Instant search logic
+  useEffect(() => {
+    if (searchQuery.trim().length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSearchResults({ medicines: [], customers: [], sales: [] });
+      return;
+    }
+
+    const delayDebounce = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const [medRes, custRes, saleRes] = await Promise.allSettled([
+          medicineAPI.getAll({ search: searchQuery.trim(), limit: 5 }),
+          customerAPI.getAll({ search: searchQuery.trim(), limit: 5 }),
+          saleAPI.getAll({ search: searchQuery.trim(), limit: 5 })
+        ]);
+
+        const medicines = medRes.status === 'fulfilled' ? (medRes.value.data?.medicines || medRes.value.data || []) : [];
+        const customers = custRes.status === 'fulfilled' ? (custRes.value.data?.customers || custRes.value.data || []) : [];
+        const sales = saleRes.status === 'fulfilled' ? (saleRes.value.data?.sales || saleRes.value.data || []) : [];
+
+        setSearchResults({
+          medicines: Array.isArray(medicines) ? medicines.slice(0, 5) : [],
+          customers: Array.isArray(customers) ? customers.slice(0, 5) : [],
+          sales: Array.isArray(sales) ? sales.slice(0, 5) : [],
+        });
+      } catch (err) {
+        console.error('Instant search error:', err);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchQuery]);
 
   // Fetch real alerts and updates from database
   useEffect(() => {
@@ -169,6 +211,144 @@ export default function Header() {
     </div>
   );
 
+  const searchContent = (
+    <div className="w-[calc(100vw-32px)] max-w-[450px] max-h-[420px] overflow-y-auto p-1.5">
+      {searchQuery.trim().length < 2 ? (
+        <div className="p-2.5">
+          <p className="m-0 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2.5">👉 Phím tắt nhanh</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              to="/pos"
+              onClick={() => setSearchOpen(false)}
+              className="flex items-center gap-2 rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
+            >
+              <ShoppingCart size={15} />
+              <span>POS Bán hàng</span>
+            </Link>
+            <Link
+              to="/medicines/add"
+              onClick={() => setSearchOpen(false)}
+              className="flex items-center gap-2 rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
+            >
+              <Plus size={15} />
+              <span>Thêm thuốc mới</span>
+            </Link>
+            <Link
+              to="/prescriptions/new"
+              onClick={() => setSearchOpen(false)}
+              className="flex items-center gap-2 rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
+            >
+              <FilePlus size={15} />
+              <span>Quét đơn thuốc AI</span>
+            </Link>
+            <Link
+              to="/report-revenue"
+              onClick={() => setSearchOpen(false)}
+              className="flex items-center gap-2 rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
+            >
+              <TrendingUp size={15} />
+              <span>Báo cáo doanh thu</span>
+            </Link>
+          </div>
+        </div>
+      ) : searchLoading ? (
+        <div className="flex flex-col items-center justify-center py-8">
+          <Spin size="small" />
+          <span className="mt-2 text-[12px] text-[var(--color-text-muted)]">Đang tìm kiếm...</span>
+        </div>
+      ) : Object.values(searchResults).every(arr => arr.length === 0) ? (
+        <div className="py-6 px-4">
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không tìm thấy kết quả phù hợp" />
+        </div>
+      ) : (
+        <div className="space-y-3.5 py-1">
+          {/* Medicines section */}
+          {searchResults.medicines.length > 0 && (
+            <div>
+              <p className="px-3.5 m-0 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5">💊 Thuốc & Dược phẩm ({searchResults.medicines.length})</p>
+              <div className="space-y-0.5">
+                {searchResults.medicines.map(med => (
+                  <button
+                    key={med._id || med.id}
+                    type="button"
+                    onClick={() => {
+                      useMedicineStore.getState().setParams({ search: med.code || med.name, category: '', requiresPrescription: '', lowStock: '' });
+                      useMedicineStore.getState().fetchMedicines({ search: med.code || med.name, category: '', requiresPrescription: '', lowStock: '' });
+                      navigate('/medicines');
+                      setSearchQuery('');
+                      setSearchOpen(false);
+                    }}
+                    className="flex w-full items-center justify-between gap-3 px-3.5 py-2 hover:bg-[var(--color-bg-subtle)] transition-colors text-left rounded-lg cursor-pointer"
+                  >
+                    <div className="min-w-0">
+                      <p className="m-0 text-[13px] font-semibold text-[var(--color-text-primary)] truncate">{med.name}</p>
+                      <p className="m-0 mt-0.5 text-[11px] text-[var(--color-text-muted)]">{med.code} · Tồn: <span className="font-semibold">{med.stock} {med.unit?.name || 'Đơn vị'}</span></p>
+                    </div>
+                    <span className="text-[13px] font-bold text-[var(--color-primary)] shrink-0">{Number(med.sellPrice || 0).toLocaleString('vi-VN')}đ</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Customers section */}
+          {searchResults.customers.length > 0 && (
+            <div>
+              <p className="px-3.5 m-0 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5">👥 Khách hàng ({searchResults.customers.length})</p>
+              <div className="space-y-0.5">
+                {searchResults.customers.map(cust => (
+                  <button
+                    key={cust._id || cust.id}
+                    type="button"
+                    onClick={() => {
+                      navigate(`/customers?search=${cust.phone || cust.name}`);
+                      setSearchQuery('');
+                      setSearchOpen(false);
+                    }}
+                    className="flex w-full items-center justify-between gap-3 px-3.5 py-2 hover:bg-[var(--color-bg-subtle)] transition-colors text-left rounded-lg cursor-pointer"
+                  >
+                    <div className="min-w-0">
+                      <p className="m-0 text-[13px] font-semibold text-[var(--color-text-primary)] truncate">{cust.name}</p>
+                      <p className="m-0 mt-0.5 text-[11px] text-[var(--color-text-muted)]">{cust.phone || 'Không có SĐT'}</p>
+                    </div>
+                    <span className="text-[11px] bg-[var(--color-bg-subtle)] border border-[var(--color-border)] rounded-full px-2 py-0.5 font-medium text-[var(--color-text-secondary)] shrink-0">Khách hàng</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Invoices section */}
+          {searchResults.sales.length > 0 && (
+            <div>
+              <p className="px-3.5 m-0 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5">🧾 Hóa đơn bán hàng ({searchResults.sales.length})</p>
+              <div className="space-y-0.5">
+                {searchResults.sales.map(sale => (
+                  <button
+                    key={sale._id || sale.id}
+                    type="button"
+                    onClick={() => {
+                      navigate(`/invoices?search=${sale.code}`);
+                      setSearchQuery('');
+                      setSearchOpen(false);
+                    }}
+                    className="flex w-full items-center justify-between gap-3 px-3.5 py-2 hover:bg-[var(--color-bg-subtle)] transition-colors text-left rounded-lg cursor-pointer"
+                  >
+                    <div className="min-w-0">
+                      <p className="m-0 text-[13px] font-semibold text-[var(--color-text-primary)] truncate">{sale.code}</p>
+                      <p className="m-0 mt-0.5 text-[11px] text-[var(--color-text-muted)]">{sale.createdAt ? new Date(sale.createdAt).toLocaleDateString('vi-VN') : '—'} · {sale.paymentMethod === 'cash' ? 'Tiền mặt' : 'Chuyển khoản'}</p>
+                    </div>
+                    <span className="text-[13px] font-bold text-[var(--color-profit)] shrink-0">{Number(sale.totalAmount || 0).toLocaleString('vi-VN')}đ</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <header className="h-14 md:h-16 bg-white border-b border-[var(--color-border-light)] flex-shrink-0 relative z-20">
       {/* Main header row */}
@@ -186,16 +366,31 @@ export default function Header() {
 
         {/* Center Section: Search Bar (Desktop/Tablet) */}
         <div className="hidden sm:flex flex-[2] md:flex-[2.5] lg:flex-[2] justify-center px-4">
-          <div className="relative w-full max-w-md lg:max-w-lg group">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-              <Search size={16} className="text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors" />
+          <Popover
+            trigger="focus"
+            placement="bottom"
+            open={searchOpen}
+            onOpenChange={setSearchOpen}
+            content={searchContent}
+            arrow={false}
+            overlayInnerStyle={{ padding: 0, borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-dropdown)' }}
+          >
+            <div className="relative w-full max-w-md lg:max-w-lg group">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Search size={16} className="text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors" />
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setSearchOpen(true);
+                }}
+                placeholder="Tìm kiếm thuốc, hóa đơn, khách hàng..."
+                className="w-full bg-[var(--color-bg-app)] border border-transparent focus:border-[var(--color-primary-border)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary-light)] text-[13px] rounded-[var(--radius-md)] py-2 pl-10 pr-4 transition-all duration-200 outline-none text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)]"
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Tìm kiếm thuốc, hóa đơn, khách hàng..."
-              className="w-full bg-[var(--color-bg-app)] border border-transparent focus:border-[var(--color-primary-border)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary-light)] text-[13px] rounded-[var(--radius-md)] py-2 pl-10 pr-4 transition-all duration-200 outline-none text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)]"
-            />
-          </div>
+          </Popover>
         </div>
 
         {/* Right Section: Actions & User */}
@@ -269,17 +464,32 @@ export default function Header() {
       {/* Mobile search dropdown */}
       {mobileSearchOpen && (
         <div className="sm:hidden absolute top-full left-0 right-0 bg-white border-b border-[var(--color-border-light)] px-3 py-2.5 shadow-lg z-20 animate-in slide-in-from-top-2 duration-200">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-              <Search size={16} className="text-[var(--color-primary)]" />
+          <Popover
+            trigger="click"
+            placement="bottom"
+            open={searchOpen}
+            onOpenChange={setSearchOpen}
+            content={searchContent}
+            arrow={false}
+            overlayInnerStyle={{ padding: 0, borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-dropdown)', width: 'calc(100vw - 24px)' }}
+          >
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Search size={16} className="text-[var(--color-primary)]" />
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setSearchOpen(true);
+                }}
+                placeholder="Tìm kiếm thuốc, hóa đơn..."
+                autoFocus
+                className="w-full bg-white border-none focus:ring-0 text-[14px] py-3 pl-10 pr-4 outline-none text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)]"
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Tìm kiếm thuốc, hóa đơn..."
-              autoFocus
-              className="w-full bg-white border-none focus:ring-0 text-[14px] py-3 pl-10 pr-4 outline-none text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)]"
-            />
-          </div>
+          </Popover>
         </div>
       )}
     </header>

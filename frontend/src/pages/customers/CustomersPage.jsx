@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Button, Card, DatePicker, Descriptions, Drawer, Dropdown, Empty, Form, Input, Modal, Pagination, Select, Space, Table, Tag, message } from 'antd';
 import { Activity, CalendarClock, Edit3, Eye, Filter, HeartPulse, MoreVertical, Plus, ReceiptText, RotateCcw, Sparkles, Star, Trash2, UserRound, Users } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -97,9 +98,13 @@ const HealthNotes = ({ customer }) => {
 };
 
 export default function CustomersPage() {
+  const location = useLocation();
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const initialSearch = searchParams.get('search') || '';
+
   const [customers, setCustomers] = useState([]);
-  const [filters, setFilters] = useState({ search: '', segment: 'all' });
-  const [activeFilters, setActiveFilters] = useState(filters);
+  const [filters, setFilters] = useState({ search: initialSearch, segment: 'all' });
+  const [activeFilters, setActiveFilters] = useState({ search: initialSearch, segment: 'all' });
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Card, DatePicker, Descriptions, Dropdown, Empty, Input, Modal, Select, Space, Table, Tag, message, Image } from 'antd';
 import { Eye, Filter, MoreVertical, Plus, Printer, RotateCcw, UserRound, FileText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import { saleAPI } from '../../api/api';
 import { getSalesFromResponse, normalizeInvoice } from './salesInvoiceUtils';
@@ -51,8 +51,12 @@ const DetailMetric = ({ label, value, tone }) => (
 
 const SalesInvoicePage = () => {
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({ search: '', status: 'all', dateRange: null });
-  const [activeFilters, setActiveFilters] = useState(filters);
+  const location = useLocation();
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const initialSearch = searchParams.get('search') || '';
+
+  const [filters, setFilters] = useState({ search: initialSearch, status: 'all', dateRange: null });
+  const [activeFilters, setActiveFilters] = useState({ search: initialSearch, status: 'all', dateRange: null });
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
