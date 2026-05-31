@@ -26,6 +26,7 @@ const SupplierDetailPage = lazy(() => import('./pages/suppliers/SupplierDetailPa
 const StaffPage = lazy(() => import('./pages/staff/StaffPage'));
 const ActivityPage = lazy(() => import('./pages/activity/ActivityPage'));
 const SchedulePage = lazy(() => import('./pages/schedule/SchedulePage'));
+const MySchedulePage = lazy(() => import('./pages/schedule/MySchedulePage'));
 const TimesheetPage = lazy(() => import('./pages/timesheet/TimesheetPage'));
 const PayrollPage = lazy(() => import('./pages/payroll/PayrollPage'));
 const CashbookPage = lazy(() => import('./pages/cashbook/CashbookPage'));
@@ -115,7 +116,7 @@ function AppLayout() {
               <Route path="/payroll" element={<BacklogPage title="Bảng lương" />} />
               <Route path="/returns" element={<BacklogPage title="Trả hàng" />} />
               <Route path="/settings" element={<BacklogPage title="Cài đặt hệ thống" />} />
-              <Route path="/my-schedule" element={<BacklogPage title="Lịch cá nhân" />} />
+              <Route path="/my-schedule" element={<MySchedulePage />} />
               <Route path="/my-timesheet" element={<TimesheetPage />} />
 
               <Route path="/prescriptions/new" element={<div className="p-6"><PrescriptionScanPage /></div>} />

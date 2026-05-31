@@ -13,6 +13,9 @@ export const protect = async (req, res, next) => {
       if (!req.user) {
         return res.status(401).json({ message: "Người dùng không tồn tại" });
       }
+      if (!req.user.isActive) {
+        return res.status(403).json({ message: "Tài khoản của bạn đã bị khóa" });
+      }
       next();
     } catch (error) {
       return res.status(401).json({ message: "Token không hợp lệ hoặc đã hết hạn" });

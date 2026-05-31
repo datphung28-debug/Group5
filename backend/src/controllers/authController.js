@@ -17,8 +17,12 @@ export const login = async (req, res) => {
     }
 
     const user = await User.findOne({ email });
-    if (!user || !user.isActive) {
-      return res.status(401).json({ message: "Email không tồn tại hoặc tài khoản bị khóa" });
+    if (!user) {
+      return res.status(401).json({ message: "Email không tồn tại trong hệ thống" });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({ message: "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để mở lại." });
     }
 
     const isMatch = await user.matchPassword(password);

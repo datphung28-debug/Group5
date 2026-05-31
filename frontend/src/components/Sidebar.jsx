@@ -98,7 +98,6 @@ export default function Sidebar({ collapsed, onCollapse }) {
     {
       title: 'NHÂN VIÊN',
       items: [
-        { path: '/schedule', icon: CalendarDays, label: 'Lịch làm việc', roles: ['pharmacist'] },
         { path: '/my-schedule', icon: CalendarDays, label: 'Lịch của tôi', roles: ['pharmacist'] },
         { path: '/my-timesheet', icon: Clock, label: 'Chấm công POS', roles: ['pharmacist'] },
       ],
@@ -111,7 +110,6 @@ export default function Sidebar({ collapsed, onCollapse }) {
     '/activity',
     '/payroll',
     '/settings',
-    '/my-schedule',
   ]);
 
   const filteredMenuGroups = menuGroups
