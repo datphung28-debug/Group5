@@ -1,11 +1,10 @@
 import React from 'react';
 import { Button, DatePicker, Select, Space, Segmented } from 'antd';
 import { Filter, RotateCcw } from 'lucide-react';
-import { STAFF_OPTIONS } from '../timesheetData';
 
 const { RangePicker } = DatePicker;
 
-const TimesheetFilter = ({ filters, onChange, onApply, onReset, staffOptions = STAFF_OPTIONS }) => {
+const TimesheetFilter = ({ filters, onChange, onApply, onReset, staffOptions = [{ value: 'all', label: 'Tất cả nhân viên' }] }) => {
   return (
     <div className="mb-6 rounded-[var(--radius-lg)] border border-[var(--color-border-light)] bg-white p-4 shadow-[var(--shadow-card)]">
       <div className="flex flex-wrap items-center gap-4 justify-between">

@@ -1,9 +1,8 @@
 import React from 'react';
 import { Button, Input, Select, Space, Segmented } from 'antd';
 import { Filter, RotateCcw, Search } from 'lucide-react';
-import { PAYROLL_PERIOD_OPTIONS, PAYROLL_STAFF_OPTIONS } from '../payrollData';
 
-const PayrollFilter = ({ filters, onChange, onApply, onReset, staffOptions = PAYROLL_STAFF_OPTIONS }) => {
+const PayrollFilter = ({ filters, onChange, onApply, onReset, staffOptions = [] }) => {
   return (
     <div className="mb-6 rounded-[var(--radius-lg)] border border-[var(--color-border-light)] bg-white p-4 shadow-[var(--shadow-card)]">
       <div className="flex flex-col gap-4">
@@ -42,7 +41,7 @@ const PayrollFilter = ({ filters, onChange, onApply, onReset, staffOptions = PAY
             placeholder="Tìm nhân viên, mã phiếu..."
             className="h-10 w-full rounded-[var(--radius-md)] border-[var(--color-border)] md:w-[280px]"
           />
-          <Select value={filters.period} onChange={(period) => onChange({ period })} className="h-10 w-full md:w-[200px]" options={PAYROLL_PERIOD_OPTIONS} />
+          <Select value={filters.period} onChange={(period) => onChange({ period })} className="h-10 w-full md:w-[200px]" options={[{ value: 'all', label: 'Tất cả kỳ lương' }]} />
           <Select value={filters.staffId} onChange={(staffId) => onChange({ staffId })} className="h-10 w-full md:w-[220px]" options={staffOptions} />
         </div>
       </div>

@@ -5,7 +5,7 @@ import PageHeader from '../../components/PageHeader';
 import TimesheetFilter from './components/TimesheetFilter';
 import TimesheetKPIs from './components/TimesheetKPIs';
 import TimesheetTable from './components/TimesheetTable';
-import { METHOD_META, STATUS_META, STAFF_OPTIONS } from './timesheetData';
+import { METHOD_META, STATUS_META } from './timesheetData';
 import { timesheetAPI, userAPI } from '../../api/api';
 import useAuthStore from '../../stores/useAuthStore';
 import dayjs from 'dayjs';
@@ -170,8 +170,8 @@ const TimesheetPage = () => {
   }, [isWageModalOpen, staffList, salarySettings, wageForm]);
 
   // Determine current user information
-  const currentUserId = user?._id || user?.id || 'admin-gpp';
-  const currentUserName = user?.name || 'Admin GPP';
+  const currentUserId = user?._id || user?.id || '';
+  const currentUserName = user?.name || 'Nhân viên';
   const currentUserRole = user?.role === 'admin' ? 'Quản lý' : (user?.role === 'cashier' ? 'Thu ngân' : 'Dược sĩ');
 
   // Today's record of logged in user

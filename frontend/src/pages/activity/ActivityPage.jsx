@@ -5,7 +5,7 @@ import PageHeader from '../../components/PageHeader';
 import ActivityFilter from './components/ActivityFilter';
 import ActivityKPIs from './components/ActivityKPIs';
 import ActivityTable from './components/ActivityTable';
-import { ACTION_META, ACTIVITY_LOGS, MODULE_LABELS } from './activityData';
+import { ACTION_META, MODULE_LABELS } from './activityData';
 
 const initialFilters = {
   period: 'month',
@@ -24,7 +24,7 @@ const ActivityPage = () => {
   const filteredActivities = useMemo(() => {
     const keyword = activeFilters.search.trim().toLowerCase();
 
-    return ACTIVITY_LOGS.filter((activity) => {
+    return [].filter((activity) => {
       const matchesKeyword =
         !keyword ||
         activity.userName.toLowerCase().includes(keyword) ||

@@ -6,85 +6,6 @@ import ReturnFilter from './components/ReturnFilter';
 import ReturnKPIs from './components/ReturnKPIs';
 import ReturnTable from './components/ReturnTable';
 
-const RETURN_RECORDS = [
-  {
-    id: 'RT-1',
-    code: 'TH20260526001',
-    invoiceCode: 'HD202605260004',
-    customer: 'Nguyễn Văn An',
-    phone: '0901111111',
-    createdAt: '26/05/2026 09:20',
-    isoDate: '2026-05-26',
-    staff: 'Dược sĩ Minh',
-    reason: 'Khách mua nhầm hàm lượng',
-    refundMethod: 'cash',
-    status: 'pending',
-    refundAmount: 70000,
-    itemCount: 2,
-    note: 'Kiểm tra vỏ hộp còn nguyên, chờ quản lý duyệt nhập lại kho.',
-    items: [
-      { id: '1', name: 'Paracetamol 500mg', batch: 'DHG2026B', quantity: 2, unitPrice: 35000, total: 70000, condition: 'Còn nguyên' },
-    ],
-  },
-  {
-    id: 'RT-2',
-    code: 'TH20260525003',
-    invoiceCode: 'HD202605250012',
-    customer: 'Trần Thị Bình',
-    phone: '0902222222',
-    createdAt: '25/05/2026 16:45',
-    isoDate: '2026-05-25',
-    staff: 'Admin GPP',
-    reason: 'Đổi sản phẩm theo tư vấn',
-    refundMethod: 'store_credit',
-    status: 'completed',
-    refundAmount: 125000,
-    itemCount: 1,
-    note: 'Đã chuyển thành khoản trừ cho hóa đơn kế tiếp.',
-    items: [
-      { id: '2', name: 'Memantine 10mg', batch: 'IME2026B', quantity: 1, unitPrice: 125000, total: 125000, condition: 'Không nhập kho' },
-    ],
-  },
-  {
-    id: 'RT-3',
-    code: 'TH20260523002',
-    invoiceCode: 'HD202605230007',
-    customer: 'Khách lẻ',
-    phone: '-',
-    createdAt: '23/05/2026 10:05',
-    isoDate: '2026-05-23',
-    staff: 'Dược sĩ Minh',
-    reason: 'Lỗi bao bì',
-    refundMethod: 'transfer',
-    status: 'approved',
-    refundAmount: 84000,
-    itemCount: 2,
-    note: 'Đã duyệt hoàn tiền, chuyển sản phẩm sang khu chờ xử lý.',
-    items: [
-      { id: '3', name: 'Acetylcysteine 600mg', batch: 'TRA2026A', quantity: 2, unitPrice: 42000, total: 84000, condition: 'Chờ xử lý' },
-    ],
-  },
-  {
-    id: 'RT-4',
-    code: 'TH20260518001',
-    invoiceCode: 'HD202605180009',
-    customer: 'Lê Minh Châu',
-    phone: '0903333333',
-    createdAt: '18/05/2026 14:12',
-    isoDate: '2026-05-18',
-    staff: 'Admin GPP',
-    reason: 'Quá thời hạn đổi trả',
-    refundMethod: 'cash',
-    status: 'rejected',
-    refundAmount: 0,
-    itemCount: 1,
-    note: 'Từ chối do phiếu bán quá thời hạn tiếp nhận trả hàng.',
-    items: [
-      { id: '4', name: 'Vitamin C 500mg', batch: 'DHG2027A', quantity: 1, unitPrice: 15000, total: 0, condition: 'Trả lại khách' },
-    ],
-  },
-];
-
 const initialFilters = {
   period: 'month',
   search: '',
@@ -111,7 +32,7 @@ const ReturnsPage = () => {
   const filteredReturns = useMemo(() => {
     const keyword = activeFilters.search.trim().toLowerCase();
 
-    return RETURN_RECORDS.filter((record) => {
+    return [].filter((record) => {
       const matchesKeyword =
         !keyword ||
         record.code.toLowerCase().includes(keyword) ||

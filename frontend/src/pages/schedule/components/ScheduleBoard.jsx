@@ -1,6 +1,6 @@
 import React from 'react';
 import { Empty, Tag } from 'antd';
-import { SHIFT_META, STATUS_META, WEEK_DAYS } from '../scheduleData';
+import { SHIFT_META, STATUS_META } from '../scheduleData';
 
 const ShiftCard = ({ shift, onSelect }) => {
   const shiftMeta = SHIFT_META[shift.shiftType];
@@ -30,7 +30,7 @@ const ShiftCard = ({ shift, onSelect }) => {
   );
 };
 
-const ScheduleBoard = ({ shifts, onSelect, weekDays = WEEK_DAYS }) => {
+const ScheduleBoard = ({ shifts, onSelect, weekDays = [] }) => {
   const grouped = weekDays.map((day) => ({
     ...day,
     shifts: shifts.filter((shift) => shift.day === day.key),

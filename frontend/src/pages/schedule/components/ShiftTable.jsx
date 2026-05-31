@@ -1,9 +1,9 @@
 import React from 'react';
 import { Button, Empty, Space, Table, Tag, Tooltip } from 'antd';
 import { Eye } from 'lucide-react';
-import { SHIFT_META, STATUS_META, WEEK_DAYS } from '../scheduleData';
+import { SHIFT_META, STATUS_META } from '../scheduleData';
 
-const ShiftTable = ({ data, onSelect, weekDays = WEEK_DAYS }) => {
+const ShiftTable = ({ data, onSelect, weekDays = [] }) => {
   const columns = [
     {
       title: 'Ngày',

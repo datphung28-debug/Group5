@@ -7,10 +7,12 @@ import OCRScanner from './components/OCRScanner';
 import { medicineAPI, prescriptionAPI } from '../../api/api';
 import { generatePrescriptionPDF } from '../../utils/generatePrescriptionPDF';
 import { checkPrescriptionSafety } from '../../utils/drugSafety';
+import useAuthStore from '../../stores/useAuthStore';
 
 const { Title, Text } = Typography;
 
 const PrescriptionScanPage = () => {
+  const user = useAuthStore((state) => state.user);
   const [form] = Form.useForm();
   const [medicines, setMedicines] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
@@ -84,7 +86,7 @@ const PrescriptionScanPage = () => {
             location: med?.location
           };
         }),
-        pharmacist: 'Admin GPP',
+        pharmacist: user?.name || 'Nhân viên',
         discount: 0
       };
 

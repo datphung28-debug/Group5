@@ -5,12 +5,12 @@ import PageHeader from '../../components/PageHeader';
 import PayrollFilter from './components/PayrollFilter';
 import PayrollKPIs from './components/PayrollKPIs';
 import PayrollTable from './components/PayrollTable';
-import { PAYROLL_RECORDS, PAYROLL_STATUS_META } from './payrollData';
+import { PAYROLL_STATUS_META } from './payrollData';
 import { userAPI } from '../../api/api';
 
 const initialFilters = {
   search: '',
-  period: '2026-05',
+  period: 'all',
   staffId: 'all',
   status: 'all',
 };
@@ -59,7 +59,7 @@ const PayrollPage = () => {
   }, [staffList]);
 
   const mappedPayrollRecords = useMemo(() => {
-    return PAYROLL_RECORDS.map(record => {
+    return [].map(record => {
       const realUser = staffList.find(u => u.name === record.staffName);
       return {
         ...record,

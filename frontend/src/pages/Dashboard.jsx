@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useMemo } from 'react';
-import { Skeleton, Alert } from 'antd';
+import { Skeleton, Alert, Empty } from 'antd';
 import { motion } from 'framer-motion';
 import {
   TrendingUp,
@@ -31,6 +31,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useDashboard } from '../hooks/useDashboard';
+import { getDashboardTopProducts } from './dashboardTopProducts';
 import '../styles/dashboard.css';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -367,17 +368,7 @@ function YearlySummaryCard({ yearlyRevenue, yearlySummary, formatCurrency }) {
 function TopProductsCard({ products, formatCurrency }) {
   const rankStyles = ['gold', 'silver', 'bronze'];
 
-  // Use provided data or fallback to mock
-  const items = products && products.length > 0 ? products : [
-    { id: '1', name: 'Paracetamol 500mg', quantity: 342, revenue: 17100000, profit: 5130000, profitMargin: 0.30 },
-    { id: '2', name: 'Amoxicillin 500mg', quantity: 285, revenue: 14250000, profit: 3562500, profitMargin: 0.25 },
-    { id: '3', name: 'Vitamin C 1000mg', quantity: 268, revenue: 10720000, profit: 3752000, profitMargin: 0.35 },
-    { id: '4', name: 'Omeprazole 20mg', quantity: 195, revenue: 9750000, profit: 2925000, profitMargin: 0.30 },
-    { id: '5', name: 'Cetirizine 10mg', quantity: 178, revenue: 7120000, profit: 2136000, profitMargin: 0.30 },
-    { id: '6', name: 'Metformin 500mg', quantity: 165, revenue: 6600000, profit: 1650000, profitMargin: 0.25 },
-    { id: '7', name: 'Ibuprofen 400mg', quantity: 152, revenue: 6080000, profit: 1824000, profitMargin: 0.30 },
-    { id: '8', name: 'Azithromycin 250mg', quantity: 140, revenue: 8400000, profit: 2520000, profitMargin: 0.30 },
-  ];
+  const items = getDashboardTopProducts(products);
 
   return (
     <motion.div variants={itemVariants} className="chart-card">
@@ -393,7 +384,9 @@ function TopProductsCard({ products, formatCurrency }) {
       </div>
 
       <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-        {items.map((product, index) => (
+        {items.length === 0 ? (
+          <Empty description="Chưa có dữ liệu bán hàng" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        ) : items.map((product, index) => (
           <div key={product.id} className="top-product-item">
             <div className={`top-product-rank ${rankStyles[index] || 'default'}`}>
               {index + 1}
