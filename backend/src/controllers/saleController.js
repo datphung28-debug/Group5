@@ -4,6 +4,7 @@ import Medicine from "../models/Medicine.js";
 import Customer from "../models/Customer.js";
 import mongoose from "mongoose";
 import { executeTransaction } from "../utils/transaction.js";
+import { createAuditLog } from "../utils/createAuditLog.js";
 
 // Hàm tạo mã hóa đơn tự động
 const generateSaleCode = async () => {
@@ -261,6 +262,14 @@ export const createSale = async (req, res) => {
         return sale;
       }
     );
+
+    await createAuditLog({
+      req,
+      action: "create",
+      module: "sale",
+      target: result.code,
+      description: `Tạo hóa đơn bán hàng ${result.code}`,
+    });
 
     return res.status(201).json(result);
   } catch (error) {

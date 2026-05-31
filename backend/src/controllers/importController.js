@@ -4,6 +4,7 @@ import Medicine from "../models/Medicine.js";
 import Supplier from "../models/Supplier.js";
 import mongoose from "mongoose";
 import { executeTransaction } from "../utils/transaction.js";
+import { createAuditLog } from "../utils/createAuditLog.js";
 
 // Tạo mã phiếu nhập
 const generateImportCode = async () => {
@@ -211,6 +212,14 @@ export const createImport = async (req, res) => {
       (session) => processImportDbOps(session),
       () => processImportDbOps(null)
     );
+
+    await createAuditLog({
+      req,
+      action: "create",
+      module: "inventory",
+      target: importDoc.code,
+      description: `Tạo phiếu nhập hàng ${importDoc.code}`,
+    });
 
     res.status(201).json(importDoc);
   } catch (error) {

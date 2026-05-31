@@ -1,5 +1,6 @@
 import Medicine from "../models/Medicine.js";
 import { sendErrorResponse } from "../utils/errorResponse.js";
+import { createAuditLog } from "../utils/createAuditLog.js";
 
 const populateMedicineQuery = (query) => query
   .populate("category", "name")
@@ -74,6 +75,15 @@ export const createMedicine = async (req, res) => {
 
     const medicine = await Medicine.create(sanitizeMedicineCatalogPayload(req.body));
     const populatedMedicine = await populateMedicineQuery(Medicine.findById(medicine._id));
+
+    await createAuditLog({
+      req,
+      action: "create",
+      module: "medicine",
+      target: populatedMedicine.code || populatedMedicine.name,
+      description: `Tạo thuốc ${populatedMedicine.code || populatedMedicine.name}`,
+    });
+
     res.status(201).json(populatedMedicine);
   } catch (error) {
     return sendErrorResponse(res, error);
@@ -92,6 +102,15 @@ export const updateMedicine = async (req, res) => {
       }
     ));
     if (!medicine) return res.status(404).json({ message: "Không tìm thấy thuốc" });
+
+    await createAuditLog({
+      req,
+      action: "update",
+      module: "medicine",
+      target: medicine.code || medicine.name,
+      description: `Cập nhật thông tin thuốc ${medicine.code || medicine.name}`,
+    });
+
     res.json(medicine);
   } catch (error) {
     return sendErrorResponse(res, error);
@@ -107,6 +126,15 @@ export const deleteMedicine = async (req, res) => {
       { returnDocument: "after" }
     );
     if (!medicine) return res.status(404).json({ message: "Không tìm thấy thuốc" });
+
+    await createAuditLog({
+      req,
+      action: "delete",
+      module: "medicine",
+      target: medicine.code || medicine.name,
+      description: `Xóa thuốc ${medicine.code || medicine.name} khỏi danh mục`,
+    });
+
     res.json({ message: "Đã xóa thuốc khỏi danh mục" });
   } catch (error) {
     return sendErrorResponse(res, error);

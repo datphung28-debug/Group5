@@ -3,6 +3,7 @@ import { sendErrorResponse } from "../utils/errorResponse.js";
 import Medicine from "../models/Medicine.js";
 import Supplier from "../models/Supplier.js";
 import Unit from "../models/Unit.js";
+import { createAuditLog } from "../utils/createAuditLog.js";
 
 // ========== CATEGORY (Nhóm thuốc) ==========
 export const getCategories = async (req, res) => {
@@ -31,6 +32,15 @@ export const getCategories = async (req, res) => {
 export const createCategory = async (req, res) => {
   try {
     const category = await Category.create(req.body);
+
+    await createAuditLog({
+      req,
+      action: "create",
+      module: "medicine",
+      target: category.name,
+      description: `Tạo nhóm thuốc ${category.name}`,
+    });
+
     res.status(201).json(category);
   } catch (error) {
     return sendErrorResponse(res, error);
@@ -41,6 +51,15 @@ export const updateCategory = async (req, res) => {
   try {
     const category = await Category.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!category) return res.status(404).json({ message: "Không tìm thấy nhóm thuốc" });
+
+    await createAuditLog({
+      req,
+      action: "update",
+      module: "medicine",
+      target: category.name,
+      description: `Cập nhật nhóm thuốc ${category.name}`,
+    });
+
     res.json(category);
   } catch (error) {
     return sendErrorResponse(res, error);
@@ -56,6 +75,15 @@ export const deleteCategory = async (req, res) => {
 
     const category = await Category.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
     if (!category) return res.status(404).json({ message: "Không tìm thấy nhóm thuốc" });
+
+    await createAuditLog({
+      req,
+      action: "delete",
+      module: "medicine",
+      target: category.name,
+      description: `Xóa nhóm thuốc ${category.name}`,
+    });
+
     res.json({ message: "Đã xóa nhóm thuốc" });
   } catch (error) {
     return sendErrorResponse(res, error);
@@ -95,6 +123,15 @@ export const getSupplierById = async (req, res) => {
 export const createSupplier = async (req, res) => {
   try {
     const supplier = await Supplier.create(req.body);
+
+    await createAuditLog({
+      req,
+      action: "create",
+      module: "supplier",
+      target: supplier.name,
+      description: `Tạo nhà cung cấp ${supplier.name}`,
+    });
+
     res.status(201).json(supplier);
   } catch (error) {
     return sendErrorResponse(res, error);
@@ -109,6 +146,15 @@ export const updateSupplier = async (req, res) => {
       { returnDocument: "after", runValidators: true }
     );
     if (!supplier) return res.status(404).json({ message: "Không tìm thấy nhà cung cấp" });
+
+    await createAuditLog({
+      req,
+      action: "update",
+      module: "supplier",
+      target: supplier.name,
+      description: `Cập nhật thông tin nhà cung cấp ${supplier.name}`,
+    });
+
     res.json(supplier);
   } catch (error) {
     return sendErrorResponse(res, error);
@@ -119,6 +165,15 @@ export const deleteSupplier = async (req, res) => {
   try {
     const supplier = await Supplier.findByIdAndUpdate(req.params.id, { isActive: false }, { returnDocument: "after" });
     if (!supplier) return res.status(404).json({ message: "Không tìm thấy nhà cung cấp" });
+
+    await createAuditLog({
+      req,
+      action: "delete",
+      module: "supplier",
+      target: supplier.name,
+      description: `Xóa nhà cung cấp ${supplier.name}`,
+    });
+
     res.json({ message: "Đã xóa nhà cung cấp" });
   } catch (error) {
     return sendErrorResponse(res, error);

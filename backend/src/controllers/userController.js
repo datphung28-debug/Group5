@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import { sendErrorResponse } from "../utils/errorResponse.js";
+import { createAuditLog } from "../utils/createAuditLog.js";
 
 // @GET /api/users - Lấy danh sách người dùng (admin)
 export const getUsers = async (req, res) => {
@@ -69,6 +70,15 @@ export const updateUser = async (req, res) => {
     }
 
     const updated = await user.save();
+
+    await createAuditLog({
+      req,
+      action: "update",
+      module: "user",
+      target: updated.name,
+      description: `Cập nhật thông tin nhân viên ${updated.name}`,
+    });
+
     res.json({ ...updated._doc, password: undefined, message: "Cập nhật thành công" });
   } catch (error) {
     return sendErrorResponse(res, error);
@@ -82,6 +92,15 @@ export const deleteUser = async (req, res) => {
     if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
     user.isActive = false;
     await user.save();
+
+    await createAuditLog({
+      req,
+      action: "delete",
+      module: "user",
+      target: user.name,
+      description: `Khóa tài khoản nhân viên ${user.name}`,
+    });
+
     res.json({ message: "Tài khoản đã bị khóa" });
   } catch (error) {
     return sendErrorResponse(res, error);
@@ -131,6 +150,15 @@ export const createUser = async (req, res) => {
     });
 
     const savedUser = await user.save();
+
+    await createAuditLog({
+      req,
+      action: "create",
+      module: "user",
+      target: savedUser.name,
+      description: `Tạo tài khoản nhân viên ${savedUser.name}`,
+    });
+
     res.status(201).json({
       _id: savedUser._id,
       name: savedUser.name,

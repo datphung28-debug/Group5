@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import { sendErrorResponse } from "../utils/errorResponse.js";
 import jwt from "jsonwebtoken";
+import { createAuditLog } from "../utils/createAuditLog.js";
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || "default_jwt_secret_key_gpp", {
@@ -29,6 +30,15 @@ export const login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ message: "Mật khẩu không chính xác" });
     }
+
+    await createAuditLog({
+      req,
+      user,
+      action: "login",
+      module: "auth",
+      target: user.email,
+      description: "Đăng nhập hệ thống thành công",
+    });
 
     res.json({
       _id: user._id,
