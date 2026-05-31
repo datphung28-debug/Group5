@@ -15,6 +15,13 @@ const userSchema = new mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
     clockInPin: { type: String, default: "" },
+    salaryConfig: {
+      type: { type: String, enum: ["hourly", "fixed"], default: "hourly" },
+      baseRate: { type: Number, default: 40000 },
+      allowanceToxic: { type: Number, default: 0 },
+      allowanceLunch: { type: Number, default: 0 },
+      allowanceActive: { type: Number, default: 0 },
+    },
   },
   { timestamps: true }
 );

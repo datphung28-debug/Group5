@@ -29,7 +29,7 @@ export const getTimesheets = async (req, res) => {
     }
 
     const timesheets = await Timesheet.find(filter)
-      .populate("staff", "name role")
+      .populate("staff", "name role salaryConfig")
       .sort({ date: -1, checkIn: -1 });
 
     res.json({ timesheets });
@@ -81,7 +81,7 @@ export const createTimesheet = async (req, res) => {
       note: note || "",
     });
 
-    const populated = await newTimesheet.populate("staff", "name role");
+    const populated = await newTimesheet.populate("staff", "name role salaryConfig");
     res.status(201).json({ timesheet: populated, message: "Ghi nhận chấm công thành công" });
   } catch (error) {
     return sendErrorResponse(res, error);
@@ -118,7 +118,7 @@ export const updateTimesheet = async (req, res) => {
     }
 
     const updated = await Timesheet.findByIdAndUpdate(id, updateData, { new: true, runValidators: true })
-      .populate("staff", "name role");
+      .populate("staff", "name role salaryConfig");
 
     res.json({ timesheet: updated, message: "Cập nhật chấm công thành công" });
   } catch (error) {

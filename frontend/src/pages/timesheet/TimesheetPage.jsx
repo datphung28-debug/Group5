@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Button, Descriptions, Drawer, Space, message, Modal, Form, Select, DatePicker, TimePicker, Input, InputNumber, Card, Tag } from 'antd';
+import { Button, Descriptions, Drawer, Space, message, Modal, Form, Select, DatePicker, TimePicker, Input, InputNumber, Card, Tag, Tabs } from 'antd';
 import { Download, FileClock, Settings, Clock, LogIn, LogOut, FileSpreadsheet, Eye, Plus, Trash2, Lock } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import TimesheetFilter from './components/TimesheetFilter';
@@ -44,12 +44,15 @@ const TimesheetPage = () => {
   const [pinAction, setPinAction] = useState(null); // 'in' or 'out'
   const [enteredPin, setEnteredPin] = useState('');
   
-  // Wage settings state
-  const [hourlyWages, setHourlyWages] = useState([
-    { role: 'Quản lý', rate: 50000 },
-    { role: 'Dược sĩ', rate: 40000 },
-    { role: 'Thu ngân', rate: 30000 },
-  ]);
+  // Unified Salary Global Settings
+  const [salarySettings, setSalarySettings] = useState(() => {
+    const saved = localStorage.getItem('gpp-salary-settings');
+    return saved ? JSON.parse(saved) : {
+      overtimeRate: 1.5,
+      latePenalty: 20000,
+      eveningAllowance: 20000,
+    };
+  });
   
   // Modals visibility states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -100,27 +103,28 @@ const TimesheetPage = () => {
     }
   };
 
+  const fetchStaff = async () => {
+    if (user?.role !== 'admin') {
+      setStaffList([
+        {
+          _id: user?._id || user?.id,
+          name: user?.name || 'Nhân viên',
+          role: user?.role,
+          isActive: true
+        }
+      ]);
+      return;
+    }
+    try {
+      const res = await userAPI.getAll({ limit: 200 });
+      const users = res.data?.users || res.data || [];
+      setStaffList(users.filter(u => u.isActive && u.role !== 'admin'));
+    } catch (err) {
+      console.error("Lỗi lấy danh sách nhân viên:", err);
+    }
+  };
+
   useEffect(() => {
-    const fetchStaff = async () => {
-      if (user?.role !== 'admin') {
-        setStaffList([
-          {
-            _id: user?._id || user?.id,
-            name: user?.name || 'Nhân viên',
-            role: user?.role,
-            isActive: true
-          }
-        ]);
-        return;
-      }
-      try {
-        const res = await userAPI.getAll({ limit: 200 });
-        const users = res.data?.users || res.data || [];
-        setStaffList(users.filter(u => u.isActive && u.role !== 'admin'));
-      } catch (err) {
-        console.error("Lỗi lấy danh sách nhân viên:", err);
-      }
-    };
     fetchStaff();
     fetchTimesheets();
   }, [user]);
@@ -135,14 +139,35 @@ const TimesheetPage = () => {
     ];
   }, [staffList]);
 
-  // Sync hourly wages to form values
+  // Sync salary settings and employee configs to form values
   useEffect(() => {
     if (isWageModalOpen) {
+      const configs = staffList.map(staff => {
+        const config = staff.salaryConfig || {
+          type: 'hourly',
+          baseRate: staff.role === 'admin' ? 50000 : 40000,
+          allowanceToxic: 0,
+          allowanceLunch: 0,
+          allowanceActive: 0
+        };
+        return {
+          staffId: staff._id || staff.id,
+          salaryType: config.type || 'hourly',
+          baseRate: config.baseRate || (staff.role === 'admin' ? 50000 : 40000),
+          allowanceToxic: config.allowanceToxic || 0,
+          allowanceLunch: config.allowanceLunch || 0,
+          allowanceActive: config.allowanceActive || 0
+        };
+      });
+
       wageForm.setFieldsValue({
-        wages: hourlyWages,
+        overtimeRate: salarySettings.overtimeRate,
+        latePenalty: salarySettings.latePenalty,
+        eveningAllowance: salarySettings.eveningAllowance,
+        staffConfigs: configs,
       });
     }
-  }, [isWageModalOpen, hourlyWages, wageForm]);
+  }, [isWageModalOpen, staffList, salarySettings, wageForm]);
 
   // Determine current user information
   const currentUserId = user?._id || user?.id || 'admin-gpp';
@@ -306,11 +331,40 @@ const TimesheetPage = () => {
     }
   };
 
-  // Handle Hourly Wage rates configuration save
-  const handleWageSubmit = (values) => {
-    setHourlyWages(values.wages || []);
-    setIsWageModalOpen(false);
-    messageApi.success('Đã lưu mức thiết lập lương giờ các vị trí thành công!');
+  // Handle Unified Salary configurations save
+  const handleWageSubmit = async (values) => {
+    try {
+      // Save global parameters
+      const nextSettings = {
+        overtimeRate: values.overtimeRate,
+        latePenalty: values.latePenalty,
+        eveningAllowance: values.eveningAllowance,
+      };
+      setSalarySettings(nextSettings);
+      localStorage.setItem('gpp-salary-settings', JSON.stringify(nextSettings));
+
+      // Save employee salary configs in background
+      const updates = (values.staffConfigs || []).map(config => {
+        return userAPI.update(config.staffId, {
+          salaryConfig: {
+            type: config.salaryType,
+            baseRate: config.baseRate,
+            allowanceToxic: config.allowanceToxic,
+            allowanceLunch: config.allowanceLunch,
+            allowanceActive: config.allowanceActive,
+          }
+        });
+      });
+      await Promise.all(updates);
+
+      messageApi.success('Đã lưu thiết lập lương hợp nhất thành công!');
+      setIsWageModalOpen(false);
+      
+      // Reload staff list to apply new rates dynamically
+      fetchStaff();
+    } catch (err) {
+      messageApi.error('Gặp lỗi khi lưu cấu hình lương nhân viên');
+    }
   };
 
   // Simulated functional CSV export matching filters
@@ -408,20 +462,36 @@ const TimesheetPage = () => {
           lateShifts: 0,
           absentShifts: 0,
           totalHours: 0,
+          totalRegularHours: 0,
+          totalOvertimeHours: 0,
+          totalLateShifts: 0,
+          totalEveningShifts: 0,
           timeLogs: [],
         };
       }
       
       const g = groups[record.staffId];
       g.totalShifts += 1;
-      if (record.status === 'complete' || record.status === 'overtime') {
-        g.completeShifts += 1;
-      } else if (record.status === 'late') {
+      
+      const isLate = record.status === 'late';
+      const isEvening = record.shift === 'Ca tối' || (record.checkIn && parseInt(record.checkIn.split(':')[0]) >= 17);
+      
+      if (isLate) {
+        g.totalLateShifts += 1;
         g.lateShifts += 1;
+      } else if (record.status === 'complete' || record.status === 'overtime') {
+        g.completeShifts += 1;
       } else if (record.status === 'absent' || record.status === 'missing') {
         g.absentShifts += 1;
       }
+      
+      if (isEvening) {
+        g.totalEveningShifts += 1;
+      }
+      
       g.totalHours += record.workHours + record.overtimeHours;
+      g.totalRegularHours += record.workHours;
+      g.totalOvertimeHours += record.overtimeHours;
       
       if (record.checkIn) {
         g.timeLogs.push(`${record.checkIn} - ${record.checkOut || '--'}`);
@@ -429,17 +499,53 @@ const TimesheetPage = () => {
     });
     
     return Object.values(groups).map((g) => {
-      const wageObj = hourlyWages.find(w => w.role === g.role);
-      const wageRate = wageObj ? wageObj.rate : 40000;
-      const salary = g.totalHours * wageRate;
+      const staffUser = staffList.find(s => (s._id || s.id) === g.staffId);
+      const config = staffUser?.salaryConfig || {
+        type: 'hourly',
+        baseRate: g.role === 'Quản lý' ? 50000 : 40000,
+        allowanceToxic: 0,
+        allowanceLunch: 0,
+        allowanceActive: 0
+      };
+      
+      const salaryType = config.type || 'hourly';
+      const baseRate = config.baseRate || (g.role === 'Quản lý' ? 50000 : 40000);
+      const allowanceToxic = config.allowanceToxic || 0;
+      const allowanceLunch = config.allowanceLunch || 0;
+      const allowanceActive = config.allowanceActive || 0;
+
+      // 1. Base salary
+      let basePay = 0;
+      if (salaryType === 'fixed') {
+        basePay = baseRate;
+      } else {
+        basePay = g.totalRegularHours * baseRate;
+      }
+
+      // 2. Overtime Pay: OvertimeHours * (HourlyRate || (fixedMonthlySalary / 208)) * overtimeRateMultiplier
+      const hourlyEquivalent = salaryType === 'fixed' ? (baseRate / 208) : baseRate;
+      const otPay = g.totalOvertimeHours * hourlyEquivalent * (salarySettings.overtimeRate || 1.5);
+
+      // 3. Evening shift allowance
+      const eveningPay = g.totalEveningShifts * (salarySettings.eveningAllowance || 20000);
+
+      // 4. Late penalties
+      const lateDeduction = g.totalLateShifts * (salarySettings.latePenalty || 20000);
+
+      // 5. Total allowances
+      const totalAllowances = allowanceToxic + allowanceLunch + allowanceActive;
+
+      // Final salary calculation
+      const salary = basePay + otPay + eveningPay + totalAllowances - lateDeduction;
+
       return {
         ...g,
         id: g.staffId,
-        salary,
+        salary: Math.max(0, salary),
         checkInOutTimes: g.timeLogs.join(', '),
       };
     });
-  }, [filteredRecords, hourlyWages]);
+  }, [filteredRecords, staffList, salarySettings]);
 
   // Master KPI Summarizer
   const summary = useMemo(() => {
@@ -606,15 +712,20 @@ const TimesheetPage = () => {
       <TimesheetTable data={aggregatedRecords} onSelect={setSelectedRecord} />
 
       {/* DRAWER: DETAILED VIEW OF EMPLOYEE ATTENDANCE LOGS */}
-      <Drawer
+      <Modal
         title="Bảng công chi tiết nhân sự"
-        placement="right"
-        width={540}
+        centered
+        width={560}
         open={Boolean(selectedRecord)}
-        onClose={() => setSelectedRecord(null)}
+        onCancel={() => setSelectedRecord(null)}
+        footer={[
+          <Button key="close" type="primary" onClick={() => setSelectedRecord(null)} className="rounded-[var(--radius-md)] border-none bg-[var(--color-primary)] px-6 h-10">
+            Đóng
+          </Button>
+        ]}
       >
         {selectedRecord && (
-          <div className="space-y-5">
+          <div className="space-y-5 pt-3">
             <div className="rounded-[var(--radius-lg)] border border-[var(--color-border-light)] bg-[var(--color-bg-subtle)] p-5">
               <div className="font-bold text-[18px] text-[var(--color-text-primary)]">{selectedRecord.staffName}</div>
               <div className="mt-1 text-[13px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">{selectedRecord.role}</div>
@@ -636,7 +747,7 @@ const TimesheetPage = () => {
               <Tag className="m-0 font-medium">{staffDetailedLogs.length} ca làm</Tag>
             </div>
 
-            <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-320px)] pr-1">
+            <div className="space-y-3 overflow-y-auto max-h-[380px] pr-1">
               {staffDetailedLogs.length === 0 ? (
                 <div className="text-center py-6 text-[var(--color-text-muted)]">Không có bản ghi chi tiết nào trong kỳ này.</div>
               ) : (
@@ -687,7 +798,7 @@ const TimesheetPage = () => {
             </div>
           </div>
         )}
-      </Drawer>
+      </Modal>
 
       {/* MODAL: MANUAL ADD ATTENDANCE ("BỔ SUNG CÔNG") */}
       <Modal
@@ -754,18 +865,18 @@ const TimesheetPage = () => {
         </Form>
       </Modal>
 
-      {/* MODAL: HOURLY WAGE RATES SETTINGS */}
+      {/* MODAL: UNIFIED SALARY ENGINE SETTINGS */}
       <Modal
         title={
           <div className="flex items-center gap-2">
             <Settings className="text-[var(--color-primary)]" size={20} />
-            <span>Thiết lập mức lương giờ theo vị trí</span>
+            <span>Thiết lập động cơ lương hợp nhất</span>
           </div>
         }
         open={isWageModalOpen}
         onCancel={() => setIsWageModalOpen(false)}
         footer={null}
-        width={450}
+        width={560}
         className="rounded-[var(--radius-lg)]"
       >
         <Form
@@ -774,56 +885,116 @@ const TimesheetPage = () => {
           onFinish={handleWageSubmit}
           className="mt-4"
         >
-          <Form.List name="wages">
-            {(fields, { add, remove }) => (
-              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-                {fields.map(({ key, name, ...restField }) => (
-                  <div key={key} className="flex gap-3 items-end bg-[var(--color-bg-subtle)] p-3 rounded-[var(--radius-md)] relative group border border-[var(--color-border-light)]">
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'role']}
-                      rules={[{ required: true, message: 'Nhập tên vị trí' }]}
-                      label={name === 0 ? "Vị trí / Vai trò" : ""}
-                      className="flex-1 m-0"
-                    >
-                      <Input className="h-10 rounded-[var(--radius-md)]" placeholder="Ví dụ: Dược sĩ chính" />
-                    </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'rate']}
-                      rules={[{ required: true, message: 'Nhập lương/giờ' }]}
-                      label={name === 0 ? "Lương giờ (đ/giờ)" : ""}
-                      className="w-[180px] m-0"
-                    >
-                      <InputNumber
-                        className="w-full h-10 rounded-[var(--radius-md)]"
-                        min={0}
-                        formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                        placeholder="Lương..."
-                      />
-                    </Form.Item>
-                    <Button 
-                      type="text" 
-                      danger 
-                      icon={<Trash2 size={18} />} 
-                      onClick={() => remove(name)} 
-                      className="h-10 w-10 flex items-center justify-center rounded-[var(--radius-md)] hover:bg-red-50 border border-transparent hover:border-red-200"
-                    />
-                  </div>
-                ))}
-                <Button 
-                  type="dashed" 
-                  onClick={() => add()} 
-                  block 
-                  icon={<Plus size={16} className="inline mr-1" />}
-                  className="h-10 rounded-[var(--radius-md)] border-dashed border-[var(--color-primary)] text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] flex items-center justify-center"
-                >
-                  Thêm vị trí mới
-                </Button>
-              </div>
-            )}
-          </Form.List>
+          <Tabs defaultActiveKey="1" items={[
+            {
+              key: '1',
+              label: 'Cấu hình chung',
+              children: (
+                <div className="space-y-4 py-3">
+                  <Form.Item
+                    label="Hệ số lương tăng ca (OT)"
+                    name="overtimeRate"
+                    rules={[{ required: true, message: 'Nhập hệ số tăng ca' }]}
+                  >
+                    <InputNumber min={1.0} max={3.0} step={0.1} className="w-full h-10 rounded-[var(--radius-md)]" />
+                  </Form.Item>
+                  <Form.Item
+                    label="Mức phạt đi muộn (đ/ca)"
+                    name="latePenalty"
+                    rules={[{ required: true, message: 'Nhập mức phạt đi muộn' }]}
+                  >
+                    <InputNumber min={0} className="w-full h-10 rounded-[var(--radius-md)]" formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value.replace(/\$\s?|(,*)/g, '')} />
+                  </Form.Item>
+                  <Form.Item
+                    label="Phụ cấp ca tối (đ/ca từ 17:00)"
+                    name="eveningAllowance"
+                    rules={[{ required: true, message: 'Nhập phụ cấp ca tối' }]}
+                  >
+                    <InputNumber min={0} className="w-full h-10 rounded-[var(--radius-md)]" formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value.replace(/\$\s?|(,*)/g, '')} />
+                  </Form.Item>
+                </div>
+              )
+            },
+            {
+              key: '2',
+              label: 'Hồ sơ lương nhân viên',
+              children: (
+                <div className="py-2">
+                  <Form.List name="staffConfigs">
+                    {(fields) => (
+                      <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
+                        {fields.map(({ key, name, ...restField }) => {
+                          const staffId = wageForm.getFieldValue(['staffConfigs', name, 'staffId']);
+                          const staffUser = staffList.find(s => (s._id || s.id) === staffId);
+                          return (
+                            <div key={key} className="bg-[var(--color-bg-subtle)] p-4 rounded-[var(--radius-lg)] border border-[var(--color-border-light)] space-y-3">
+                              <div className="flex justify-between items-center">
+                                <span className="font-bold text-[14px] text-[var(--color-text-primary)]">{staffUser?.name || 'Nhân viên'}</span>
+                                <Tag className="m-0 rounded-full">{staffUser?.role === 'admin' ? 'Quản lý' : 'Dược sĩ'}</Tag>
+                              </div>
+                              <Form.Item {...restField} name={[name, 'staffId']} className="hidden"><Input /></Form.Item>
+                              <div className="grid grid-cols-2 gap-3">
+                                <Form.Item
+                                  {...restField}
+                                  name={[name, 'salaryType']}
+                                  label="Hình thức lương"
+                                  className="m-0"
+                                >
+                                  <Select options={[
+                                    { value: 'hourly', label: 'Lương theo giờ' },
+                                    { value: 'fixed', label: 'Lương cứng tháng' }
+                                  ]} className="h-10" />
+                                </Form.Item>
+                                <Form.Item
+                                  {...restField}
+                                  name={[name, 'baseRate']}
+                                  label="Mức lương cơ bản (đ)"
+                                  className="m-0"
+                                >
+                                  <InputNumber
+                                    className="w-full h-10 rounded-[var(--radius-md)]"
+                                    min={0}
+                                    formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                    parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                                  />
+                                </Form.Item>
+                              </div>
+                              <div className="grid grid-cols-3 gap-2">
+                                <Form.Item
+                                  {...restField}
+                                  name={[name, 'allowanceToxic']}
+                                  label="PC Độc hại"
+                                  className="m-0"
+                                >
+                                  <InputNumber className="w-full h-10 rounded-[var(--radius-md)]" min={0} formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value.replace(/\$\s?|(,*)/g, '')} />
+                                </Form.Item>
+                                <Form.Item
+                                  {...restField}
+                                  name={[name, 'allowanceLunch']}
+                                  label="PC Ăn trưa"
+                                  className="m-0"
+                                >
+                                  <InputNumber className="w-full h-10 rounded-[var(--radius-md)]" min={0} formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value.replace(/\$\s?|(,*)/g, '')} />
+                                </Form.Item>
+                                <Form.Item
+                                  {...restField}
+                                  name={[name, 'allowanceActive']}
+                                  label="PC Chuyên cần"
+                                  className="m-0"
+                                >
+                                  <InputNumber className="w-full h-10 rounded-[var(--radius-md)]" min={0} formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value.replace(/\$\s?|(,*)/g, '')} />
+                                </Form.Item>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </Form.List>
+                </div>
+              )
+            }
+          ]} />
 
           <div className="flex justify-end gap-3 border-t border-[var(--color-border-light)] pt-4 mt-6">
             <Button className="rounded-[var(--radius-md)] h-10 px-4" onClick={() => setIsWageModalOpen(false)}>Hủy</Button>

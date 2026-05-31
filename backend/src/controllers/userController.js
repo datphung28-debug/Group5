@@ -36,7 +36,7 @@ export const getUserById = async (req, res) => {
 // @PUT /api/users/:id
 export const updateUser = async (req, res) => {
   try {
-    const { name, email, phone, address, role, isActive, password, clockInPin } = req.body;
+    const { name, email, phone, address, role, isActive, password, clockInPin, salaryConfig } = req.body;
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
 
@@ -46,6 +46,13 @@ export const updateUser = async (req, res) => {
     user.address = address ?? user.address;
     user.role = role ?? user.role;
     if (isActive !== undefined) user.isActive = isActive;
+
+    if (salaryConfig) {
+      user.salaryConfig = {
+        ...user.salaryConfig,
+        ...salaryConfig
+      };
+    }
 
     if (password) {
       if (password.length < 6) {
@@ -84,7 +91,7 @@ export const deleteUser = async (req, res) => {
 // @POST /api/users - Create new internal user (admin only)
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, phone, address, role, clockInPin } = req.body;
+    const { name, email, password, phone, address, role, clockInPin, salaryConfig } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Vui lòng nhập đầy đủ Tên, Email và Mật khẩu" });
@@ -114,6 +121,13 @@ export const createUser = async (req, res) => {
       role: role || "pharmacist",
       isActive: true,
       clockInPin: finalPin,
+      salaryConfig: salaryConfig || {
+        type: "hourly",
+        baseRate: role === "admin" ? 50000 : 40000,
+        allowanceToxic: 0,
+        allowanceLunch: 0,
+        allowanceActive: 0
+      }
     });
 
     const savedUser = await user.save();
