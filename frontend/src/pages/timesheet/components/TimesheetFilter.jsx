@@ -5,7 +5,7 @@ import { STAFF_OPTIONS } from '../timesheetData';
 
 const { RangePicker } = DatePicker;
 
-const TimesheetFilter = ({ filters, onChange, onApply, onReset }) => {
+const TimesheetFilter = ({ filters, onChange, onApply, onReset, staffOptions = STAFF_OPTIONS }) => {
   return (
     <div className="mb-6 rounded-[var(--radius-lg)] border border-[var(--color-border-light)] bg-white p-4 shadow-[var(--shadow-card)]">
       <div className="flex flex-wrap items-center gap-4 justify-between">
@@ -39,7 +39,7 @@ const TimesheetFilter = ({ filters, onChange, onApply, onReset }) => {
               onApply({ ...filters, staffId });
             }} 
             className="h-10 w-[200px]" 
-            options={STAFF_OPTIONS} 
+            options={staffOptions} 
           />
 
           {/* Chọn khoảng ngày */}

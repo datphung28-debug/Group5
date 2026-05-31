@@ -36,7 +36,7 @@ export const getUserById = async (req, res) => {
 // @PUT /api/users/:id
 export const updateUser = async (req, res) => {
   try {
-    const { name, email, phone, address, role, isActive } = req.body;
+    const { name, email, phone, address, role, isActive, password } = req.body;
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
 
@@ -46,6 +46,13 @@ export const updateUser = async (req, res) => {
     user.address = address ?? user.address;
     user.role = role ?? user.role;
     if (isActive !== undefined) user.isActive = isActive;
+
+    if (password) {
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Mật khẩu phải từ 6 ký tự trở lên" });
+      }
+      user.password = password;
+    }
 
     const updated = await user.save();
     res.json({ ...updated._doc, password: undefined, message: "Cập nhật thành công" });

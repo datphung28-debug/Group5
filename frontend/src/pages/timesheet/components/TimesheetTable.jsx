@@ -17,32 +17,38 @@ const TimesheetTable = ({ data, onSelect }) => {
       ),
     },
     {
+      title: 'Giờ vào / ra',
+      dataIndex: 'checkInOutTimes',
+      width: 160,
+      render: (val) => <span className="font-medium text-[var(--color-text-secondary)]">{val || '--'}</span>,
+    },
+    {
       title: 'Tổng ca',
       dataIndex: 'totalShifts',
       align: 'center',
       width: 100,
-      render: (val) => <span className="font-semibold text-[var(--color-text-primary)]">{val} ca</span>,
+      render: (val) => <span className="font-semibold text-[var(--color-text-primary)]">{val}</span>,
     },
     {
       title: 'Hoàn thành',
       dataIndex: 'completeShifts',
       align: 'center',
       width: 120,
-      render: (val) => <Tag color="success" className="m-0 rounded-full px-3 font-semibold">{val} ca</Tag>,
+      render: (val) => <Tag color="success" className="m-0 rounded-full px-3 font-semibold">{val}</Tag>,
     },
     {
       title: 'Đi muộn',
       dataIndex: 'lateShifts',
       align: 'center',
       width: 100,
-      render: (val) => <Tag color="warning" className="m-0 rounded-full px-3 font-semibold">{val} ca</Tag>,
+      render: (val) => <Tag color="warning" className="m-0 rounded-full px-3 font-semibold">{val}</Tag>,
     },
     {
       title: 'Vắng / Thiếu công',
       dataIndex: 'absentShifts',
       align: 'center',
       width: 130,
-      render: (val) => <Tag color="error" className="m-0 rounded-full px-3 font-semibold">{val} ca</Tag>,
+      render: (val) => <Tag color="error" className="m-0 rounded-full px-3 font-semibold">{val}</Tag>,
     },
     {
       title: 'Tổng giờ làm',
@@ -100,6 +106,7 @@ const TimesheetTable = ({ data, onSelect }) => {
               <div>
                 <h3 className="font-bold text-[var(--color-text-primary)] text-[14px]">{record.staffName}</h3>
                 <p className="mt-1 text-[12px] font-medium text-[var(--color-text-muted)] uppercase tracking-wider">{record.role}</p>
+                <div className="mt-1 text-[11px] font-medium text-[var(--color-text-secondary)]">Vào/Ra: {record.checkInOutTimes || '--'}</div>
               </div>
               <span className="font-extrabold text-[var(--color-profit)] text-[15px]">{record.salary.toLocaleString('vi-VN')} đ</span>
             </div>

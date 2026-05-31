@@ -115,7 +115,11 @@ const StaffPage = () => {
         messageApi.success('Đã tạo người dùng mới thành công');
       } else {
         // Update existing user
-        const res = await userAPI.update(userId, values);
+        const updatePayload = { ...values };
+        if (!updatePayload.password) {
+          delete updatePayload.password;
+        }
+        const res = await userAPI.update(userId, updatePayload);
         const updatedUser = res.data?.user || res.data;
         updateLocalUser(updatedUser);
         messageApi.success('Đã cập nhật người dùng');
@@ -216,25 +220,35 @@ const StaffPage = () => {
           <Form.Item label="Email" name="email" rules={[{ required: true, message: 'Vui lòng nhập email' }, { type: 'email', message: 'Email không hợp lệ' }]}>
             <Input className="h-10 rounded-[var(--radius-md)]" placeholder="name@example.com" />
           </Form.Item>
-          {editingUser?.isNew && (
-            <Form.Item
-              label="Mật khẩu"
-              name="password"
-              rules={[
-                { required: true, message: 'Vui lòng nhập mật khẩu' },
-                { min: 6, message: 'Mật khẩu phải từ 6 ký tự trở lên' },
-              ]}
-            >
-              <Input.Password className="h-10 rounded-[var(--radius-md)]" placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)" />
-            </Form.Item>
-          )}
+          <Form.Item
+            label={editingUser?.isNew ? "Mật khẩu" : "Mật khẩu mới (để trống nếu không đổi)"}
+            name="password"
+            rules={[
+              { required: editingUser?.isNew, message: 'Vui lòng nhập mật khẩu' },
+              {
+                validator: (_, value) => {
+                  if (!value && !editingUser?.isNew) {
+                    return Promise.resolve();
+                  }
+                  if (value && value.length < 6) {
+                    return Promise.reject(new Error('Mật khẩu phải từ 6 ký tự trở lên'));
+                  }
+                  return Promise.resolve();
+                }
+              }
+            ]}
+          >
+            <Input.Password className="h-10 rounded-[var(--radius-md)]" placeholder={editingUser?.isNew ? "Nhập mật khẩu (tối thiểu 6 ký tự)" : "Nhập mật khẩu mới"} />
+          </Form.Item>
           <Form.Item label="Số điện thoại" name="phone">
             <Input className="h-10 rounded-[var(--radius-md)]" placeholder="Nhập số điện thoại" />
           </Form.Item>
           <Form.Item label="Vai trò" name="role" rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}>
             <Select
               className="h-10"
-              options={Object.entries(ROLE_META).map(([value, meta]) => ({ value, label: meta.label }))}
+              options={Object.entries(ROLE_META)
+                .filter(([value]) => value !== 'customer')
+                .map(([value, meta]) => ({ value, label: meta.label }))}
             />
           </Form.Item>
           <Form.Item label="Địa chỉ" name="address">

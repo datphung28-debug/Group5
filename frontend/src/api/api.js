@@ -149,3 +149,11 @@ export const scheduleAPI = {
   copyWeek: (data) => api.post('/schedule/copy-week', data),
   autoAssign: (data) => api.post('/schedule/auto-assign', data),
 };
+
+// ─── Timesheets ────────────────────────────────────────────────────────────
+export const timesheetAPI = {
+  getAll: (params) => api.get('/timesheet', { params }),
+  create: (data) => api.post('/timesheet', data),
+  update: (id, data) => api.put(`/timesheet/${id}`, data),
+  delete: (id) => api.delete(`/timesheet/${id}`),
+};

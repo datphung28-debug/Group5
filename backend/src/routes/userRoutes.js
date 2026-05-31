@@ -4,7 +4,7 @@ import { protect, adminOnly } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.use(protect, adminOnly); // Tất cả route đều yêu cầu admin
+router.use(protect, adminOnly); // Tất cả các route đều yêu cầu admin
 
 router.get("/", getUsers);
 router.post("/", createUser);

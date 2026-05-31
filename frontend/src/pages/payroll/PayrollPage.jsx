@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Button, Descriptions, Drawer, Space, message } from 'antd';
 import { Download, FileCheck2, Save } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
@@ -6,6 +6,7 @@ import PayrollFilter from './components/PayrollFilter';
 import PayrollKPIs from './components/PayrollKPIs';
 import PayrollTable from './components/PayrollTable';
 import { PAYROLL_RECORDS, PAYROLL_STATUS_META } from './payrollData';
+import { userAPI } from '../../api/api';
 
 const initialFilters = {
   search: '',
@@ -32,11 +33,45 @@ const PayrollPage = () => {
   const [activeFilters, setActiveFilters] = useState(initialFilters);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [messageApi, contextHolder] = message.useMessage();
+  const [staffList, setStaffList] = useState([]);
+
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const res = await userAPI.getAll();
+        const users = res.data?.users || res.data || [];
+        setStaffList(users.filter(u => u.isActive));
+      } catch (err) {
+        console.error("Lỗi lấy danh sách nhân viên:", err);
+      }
+    };
+    fetchStaff();
+  }, []);
+
+  const staffOptions = useMemo(() => {
+    return [
+      { value: 'all', label: 'Tất cả nhân viên' },
+      ...staffList.map(u => ({
+        value: u._id,
+        label: `${u.name} (${u.role === 'admin' ? 'Quản lý' : 'Dược sĩ'})`
+      }))
+    ];
+  }, [staffList]);
+
+  const mappedPayrollRecords = useMemo(() => {
+    return PAYROLL_RECORDS.map(record => {
+      const realUser = staffList.find(u => u.name === record.staffName);
+      return {
+        ...record,
+        staffId: realUser ? realUser._id : record.staffId,
+      };
+    });
+  }, [staffList]);
 
   const filteredRecords = useMemo(() => {
     const keyword = activeFilters.search.trim().toLowerCase();
 
-    return PAYROLL_RECORDS.filter((record) => {
+    return mappedPayrollRecords.filter((record) => {
       const matchesKeyword =
         !keyword ||
         record.id.toLowerCase().includes(keyword) ||
@@ -48,7 +83,7 @@ const PayrollPage = () => {
 
       return matchesKeyword && matchesPeriod && matchesStaff && matchesStatus;
     });
-  }, [activeFilters]);
+  }, [activeFilters, mappedPayrollRecords]);
 
   const summary = useMemo(() => (
     filteredRecords.reduce(
@@ -101,6 +136,7 @@ const PayrollPage = () => {
           setFilters(initialFilters);
           setActiveFilters(initialFilters);
         }}
+        staffOptions={staffOptions}
       />
 
       <PayrollKPIs summary={summary} />

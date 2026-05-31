@@ -1,11 +1,12 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Button, Descriptions, Drawer, Space, message, Modal, Form, Select, DatePicker, TimePicker, Input, InputNumber, Card, Tag } from 'antd';
-import { Download, FileClock, Settings, Clock, LogIn, LogOut, FileSpreadsheet, Eye } from 'lucide-react';
+import { Download, FileClock, Settings, Clock, LogIn, LogOut, FileSpreadsheet, Eye, Plus, Trash2 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import TimesheetFilter from './components/TimesheetFilter';
 import TimesheetKPIs from './components/TimesheetKPIs';
 import TimesheetTable from './components/TimesheetTable';
-import { METHOD_META, STATUS_META, TIMESHEET_RECORDS, STAFF_OPTIONS } from './timesheetData';
+import { METHOD_META, STATUS_META, STAFF_OPTIONS } from './timesheetData';
+import { timesheetAPI, userAPI } from '../../api/api';
 import useAuthStore from '../../stores/useAuthStore';
 import dayjs from 'dayjs';
 
@@ -31,17 +32,19 @@ const parseTimeToMinutes = (timeStr) => {
 
 const TimesheetPage = () => {
   const { user } = useAuthStore();
-  const [records, setRecords] = useState(TIMESHEET_RECORDS);
+  const [records, setRecords] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState(initialFilters);
   const [activeFilters, setActiveFilters] = useState(initialFilters);
   const [selectedRecord, setSelectedRecord] = useState(null); // Selected staff summary
   
   // Wage settings state
-  const [hourlyWages, setHourlyWages] = useState({
-    'Quản lý': 50000,
-    'Dược sĩ': 40000,
-    'Thu ngân': 30000,
-  });
+  const [hourlyWages, setHourlyWages] = useState([
+    { role: 'Quản lý', rate: 50000 },
+    { role: 'Dược sĩ', rate: 40000 },
+    { role: 'Thu ngân', rate: 30000 },
+  ]);
   
   // Modals visibility states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -62,19 +65,82 @@ const TimesheetPage = () => {
     return () => clearInterval(timer);
   }, []);
 
+  const fetchTimesheets = async () => {
+    setLoading(true);
+    try {
+      const res = await timesheetAPI.getAll();
+      const dbRecords = res.data?.timesheets || res.data || [];
+      const mapped = dbRecords.map(r => ({
+        id: r._id || r.id,
+        date: r.date,
+        staffId: r.staff?._id || r.staff || '',
+        staffName: r.staff?.name || 'Không rõ',
+        role: r.staff?.role === 'admin' ? 'Quản lý' : (r.staff?.role === 'cashier' ? 'Thu ngân' : 'Dược sĩ'),
+        shift: r.shift,
+        scheduledTime: r.scheduledTime,
+        checkIn: r.checkIn,
+        checkOut: r.checkOut,
+        workHours: r.workHours,
+        overtimeHours: r.overtimeHours,
+        status: r.status,
+        method: r.method,
+        note: r.note,
+      }));
+      setRecords(mapped);
+    } catch (err) {
+      console.error(err);
+      messageApi.error("Không thể tải bản ghi chấm công từ database");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchStaff = async () => {
+      if (user?.role !== 'admin') {
+        setStaffList([
+          {
+            _id: user?._id || user?.id,
+            name: user?.name || 'Nhân viên',
+            role: user?.role,
+            isActive: true
+          }
+        ]);
+        return;
+      }
+      try {
+        const res = await userAPI.getAll({ limit: 200 });
+        const users = res.data?.users || res.data || [];
+        setStaffList(users.filter(u => u.isActive && u.role !== 'admin'));
+      } catch (err) {
+        console.error("Lỗi lấy danh sách nhân viên:", err);
+      }
+    };
+    fetchStaff();
+    fetchTimesheets();
+  }, [user]);
+
+  const staffOptions = useMemo(() => {
+    return [
+      { value: 'all', label: 'Tất cả nhân viên' },
+      ...staffList.map(u => ({
+        value: u._id,
+        label: `${u.name} (${u.role === 'admin' ? 'Quản lý' : 'Dược sĩ'})`
+      }))
+    ];
+  }, [staffList]);
+
   // Sync hourly wages to form values
   useEffect(() => {
     if (isWageModalOpen) {
       wageForm.setFieldsValue({
-        adminWage: hourlyWages['Quản lý'],
-        pharmacistWage: hourlyWages['Dược sĩ'],
-        cashierWage: hourlyWages['Thu ngân'],
+        wages: hourlyWages,
       });
     }
   }, [isWageModalOpen, hourlyWages, wageForm]);
 
   // Determine current user information
-  const currentUserId = user?.id || 'admin-gpp';
+  const currentUserId = user?._id || user?.id || 'admin-gpp';
   const currentUserName = user?.name || 'Admin GPP';
   const currentUserRole = user?.role === 'admin' ? 'Quản lý' : (user?.role === 'cashier' ? 'Thu ngân' : 'Dược sĩ');
 
@@ -88,7 +154,7 @@ const TimesheetPage = () => {
   const [activeKpiType, setActiveKpiType] = useState('all');
 
   // Handle Clock-In (Chấm công vào)
-  const handleClockIn = () => {
+  const handleClockIn = async () => {
     const currentHour = dayjs().hour();
     let shiftName = 'Ca sáng';
     let schedTime = '07:00 - 12:00';
@@ -103,83 +169,76 @@ const TimesheetPage = () => {
       schedTime = 'Tùy chỉnh';
     }
 
-    const newRecord = {
-      id: `TS-${Date.now()}`,
-      date: todayStr,
-      staffId: currentUserId,
-      staffName: currentUserName,
-      role: currentUserRole,
-      shift: shiftName,
-      scheduledTime: schedTime,
-      checkIn: dayjs().format('HH:mm'),
-      checkOut: null,
-      workHours: 0,
-      overtimeHours: 0,
-      status: 'missing',
-      method: 'pos',
-      note: 'Tự động ghi nhận lúc vào ca',
-    };
-
-    setRecords((prev) => [newRecord, ...prev]);
-    messageApi.success('Chấm công vào thành công!');
+    try {
+      await timesheetAPI.create({
+        date: todayStr,
+        staffId: currentUserId,
+        shift: shiftName,
+        scheduledTime: schedTime,
+        checkIn: dayjs().format('HH:mm'),
+        status: 'missing',
+        method: 'pos',
+        note: 'Tự động ghi nhận lúc vào ca',
+      });
+      messageApi.success('Chấm công vào thành công!');
+      fetchTimesheets();
+    } catch (err) {
+      messageApi.error(err.response?.data?.message || 'Không thể chấm công vào');
+    }
   };
 
   // Handle Clock-Out (Chấm công ra)
-  const handleClockOut = () => {
-    setRecords((prev) =>
-      prev.map((r) => {
-        if (r.date === todayStr && r.staffId === currentUserId && !r.checkOut) {
-          const checkOutTime = dayjs().format('HH:mm');
-          const checkInTime = r.checkIn;
-          
-          const inMins = parseTimeToMinutes(checkInTime);
-          const outMins = parseTimeToMinutes(checkOutTime);
-          const diffMins = Math.max(0, outMins - inMins);
-          const workHours = diffMins / 60;
-          
-          let overtimeHours = 0;
-          let status = 'complete';
-          
-          if (r.scheduledTime !== 'Tùy chỉnh') {
-            const [schedStart, schedEnd] = r.scheduledTime.split(' - ');
-            const schedStartMins = parseTimeToMinutes(schedStart);
-            const schedEndMins = parseTimeToMinutes(schedEnd);
-            const schedDuration = (schedEndMins - schedStartMins) / 60;
-            
-            if (inMins > schedStartMins + 15) {
-              status = 'late';
-            }
-            if (outMins > schedEndMins) {
-              overtimeHours = Math.max(0, (outMins - schedEndMins) / 60);
-              if (overtimeHours > 0.5 && status !== 'late') {
-                status = 'overtime';
-              }
-            }
-          }
+  const handleClockOut = async () => {
+    const activeRecord = records.find((r) => r.date === todayStr && r.staffId === currentUserId && !r.checkOut);
+    if (!activeRecord) return;
 
-          return {
-            ...r,
-            checkOut: checkOutTime,
-            workHours,
-            overtimeHours,
-            status,
-            note: status === 'late' ? `Đi muộn ${Math.round(inMins - parseTimeToMinutes(r.scheduledTime.split(' - ')[0]))} phút` : 'Đủ công ca',
-          };
+    const checkOutTime = dayjs().format('HH:mm');
+    const checkInTime = activeRecord.checkIn;
+    
+    const inMins = parseTimeToMinutes(checkInTime);
+    const outMins = parseTimeToMinutes(checkOutTime);
+    const diffMins = Math.max(0, outMins - inMins);
+    const workHours = diffMins / 60;
+    
+    let overtimeHours = 0;
+    let status = 'complete';
+    
+    if (activeRecord.scheduledTime !== 'Tùy chỉnh') {
+      const [schedStart, schedEnd] = activeRecord.scheduledTime.split(' - ');
+      const schedStartMins = parseTimeToMinutes(schedStart);
+      const schedEndMins = parseTimeToMinutes(schedEnd);
+      
+      if (inMins > schedStartMins + 15) {
+        status = 'late';
+      }
+      if (outMins > schedEndMins) {
+        overtimeHours = Math.max(0, (outMins - schedEndMins) / 60);
+        if (overtimeHours > 0.5 && status !== 'late') {
+          status = 'overtime';
         }
-        return r;
-      })
-    );
-    messageApi.success('Chấm công ra thành công!');
+      }
+    }
+
+    try {
+      await timesheetAPI.update(activeRecord.id, {
+        checkOut: checkOutTime,
+        workHours,
+        overtimeHours,
+        status,
+        note: status === 'late' ? `Đi muộn ${Math.round(inMins - parseTimeToMinutes(activeRecord.scheduledTime.split(' - ')[0]))} phút` : 'Đủ công ca',
+      });
+      messageApi.success('Chấm công ra thành công!');
+      fetchTimesheets();
+    } catch (err) {
+      messageApi.error(err.response?.data?.message || 'Không thể chấm công ra');
+    }
   };
 
   // Handle manual attendance addition ("Bổ sung công")
-  const handleAddRecordSubmit = (values) => {
+  const handleAddRecordSubmit = async (values) => {
     const dateStr = values.date.format('YYYY-MM-DD');
     const checkInStr = values.checkIn ? values.checkIn.format('HH:mm') : null;
     const checkOutStr = values.checkOut ? values.checkOut.format('HH:mm') : null;
-    
-    const staff = STAFF_OPTIONS.find((s) => s.value === values.staffId);
-    const staffName = staff ? staff.label : 'Nhân viên';
     
     let schedTime = '07:00 - 12:00';
     if (values.shift === 'Ca chiều') schedTime = '12:00 - 17:00';
@@ -203,38 +262,34 @@ const TimesheetPage = () => {
       }
     }
     
-    const newRecord = {
-      id: `TS-${Date.now()}`,
-      date: dateStr,
-      staffId: values.staffId,
-      staffName: staffName,
-      role: values.staffId === 'admin-gpp' ? 'Quản lý' : 'Dược sĩ',
-      shift: values.shift,
-      scheduledTime: schedTime,
-      checkIn: checkInStr,
-      checkOut: checkOutStr,
-      workHours,
-      overtimeHours,
-      status: values.status,
-      method: 'manual',
-      note: values.note || 'Bổ sung công thủ công',
-    };
-    
-    setRecords((prev) => [newRecord, ...prev]);
-    setIsAddModalOpen(false);
-    addForm.resetFields();
-    messageApi.success('Đã bổ sung bản ghi chấm công!');
+    try {
+      await timesheetAPI.create({
+        date: dateStr,
+        staffId: values.staffId,
+        shift: values.shift,
+        scheduledTime: schedTime,
+        checkIn: checkInStr,
+        checkOut: checkOutStr,
+        workHours,
+        overtimeHours,
+        status: values.status,
+        method: 'manual',
+        note: values.note || 'Bổ sung công thủ công',
+      });
+      messageApi.success('Đã bổ sung bản ghi chấm công!');
+      setIsAddModalOpen(false);
+      addForm.resetFields();
+      fetchTimesheets();
+    } catch (err) {
+      messageApi.error(err.response?.data?.message || 'Không thể bổ sung bản ghi chấm công');
+    }
   };
 
   // Handle Hourly Wage rates configuration save
   const handleWageSubmit = (values) => {
-    setHourlyWages({
-      'Quản lý': values.adminWage,
-      'Dược sĩ': values.pharmacistWage,
-      'Thu ngân': values.cashierWage,
-    });
+    setHourlyWages(values.wages || []);
     setIsWageModalOpen(false);
-    messageApi.success('Đã lưu mức thiết lập lương giờ của các vị trí!');
+    messageApi.success('Đã lưu mức thiết lập lương giờ các vị trí thành công!');
   };
 
   // Simulated functional CSV export matching filters
@@ -332,6 +387,7 @@ const TimesheetPage = () => {
           lateShifts: 0,
           absentShifts: 0,
           totalHours: 0,
+          timeLogs: [],
         };
       }
       
@@ -345,15 +401,21 @@ const TimesheetPage = () => {
         g.absentShifts += 1;
       }
       g.totalHours += record.workHours + record.overtimeHours;
+      
+      if (record.checkIn) {
+        g.timeLogs.push(`${record.checkIn} - ${record.checkOut || '--'}`);
+      }
     });
     
     return Object.values(groups).map((g) => {
-      const wageRate = hourlyWages[g.role] || 40000;
+      const wageObj = hourlyWages.find(w => w.role === g.role);
+      const wageRate = wageObj ? wageObj.rate : 40000;
       const salary = g.totalHours * wageRate;
       return {
         ...g,
         id: g.staffId,
         salary,
+        checkInOutTimes: g.timeLogs.join(', '),
       };
     });
   }, [filteredRecords, hourlyWages]);
@@ -511,6 +573,7 @@ const TimesheetPage = () => {
           setActiveFilters(initialFilters);
           setActiveKpiType('all');
         }}
+        staffOptions={staffOptions}
       />
 
       <TimesheetKPIs 
@@ -626,7 +689,7 @@ const TimesheetPage = () => {
           className="mt-4 space-y-4"
         >
           <Form.Item label="Nhân viên cần bổ sung" name="staffId" rules={[{ required: true, message: 'Vui lòng chọn nhân viên' }]}>
-            <Select className="h-10" options={STAFF_OPTIONS.filter(o => o.value !== 'all')} placeholder="Chọn dược sĩ / thu ngân..." />
+            <Select className="h-10" options={staffOptions.filter(o => o.value !== 'all')} placeholder="Chọn dược sĩ / thu ngân..." />
           </Form.Item>
 
           <div className="grid grid-cols-2 gap-4">
@@ -688,19 +751,58 @@ const TimesheetPage = () => {
           form={wageForm}
           layout="vertical"
           onFinish={handleWageSubmit}
-          className="mt-4 space-y-4"
+          className="mt-4"
         >
-          <Form.Item label="Mức lương vị trí: Quản lý (đ/giờ)" name="adminWage" rules={[{ required: true, message: 'Vui lòng nhập mức lương' }]}>
-            <InputNumber className="w-full h-10 rounded-[var(--radius-md)]" formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value.replace(/\$\s?|(,*)/g, '')} />
-          </Form.Item>
-
-          <Form.Item label="Mức lương vị trí: Dược sĩ (đ/giờ)" name="pharmacistWage" rules={[{ required: true, message: 'Vui lòng nhập mức lương' }]}>
-            <InputNumber className="w-full h-10 rounded-[var(--radius-md)]" formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value.replace(/\$\s?|(,*)/g, '')} />
-          </Form.Item>
-
-          <Form.Item label="Mức lương vị trí: Thu ngân (đ/giờ)" name="cashierWage" rules={[{ required: true, message: 'Vui lòng nhập mức lương' }]}>
-            <InputNumber className="w-full h-10 rounded-[var(--radius-md)]" formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value.replace(/\$\s?|(,*)/g, '')} />
-          </Form.Item>
+          <Form.List name="wages">
+            {(fields, { add, remove }) => (
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                {fields.map(({ key, name, ...restField }) => (
+                  <div key={key} className="flex gap-3 items-end bg-[var(--color-bg-subtle)] p-3 rounded-[var(--radius-md)] relative group border border-[var(--color-border-light)]">
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'role']}
+                      rules={[{ required: true, message: 'Nhập tên vị trí' }]}
+                      label={name === 0 ? "Vị trí / Vai trò" : ""}
+                      className="flex-1 m-0"
+                    >
+                      <Input className="h-10 rounded-[var(--radius-md)]" placeholder="Ví dụ: Dược sĩ chính" />
+                    </Form.Item>
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'rate']}
+                      rules={[{ required: true, message: 'Nhập lương/giờ' }]}
+                      label={name === 0 ? "Lương giờ (đ/giờ)" : ""}
+                      className="w-[180px] m-0"
+                    >
+                      <InputNumber
+                        className="w-full h-10 rounded-[var(--radius-md)]"
+                        min={0}
+                        formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                        placeholder="Lương..."
+                      />
+                    </Form.Item>
+                    <Button 
+                      type="text" 
+                      danger 
+                      icon={<Trash2 size={18} />} 
+                      onClick={() => remove(name)} 
+                      className="h-10 w-10 flex items-center justify-center rounded-[var(--radius-md)] hover:bg-red-50 border border-transparent hover:border-red-200"
+                    />
+                  </div>
+                ))}
+                <Button 
+                  type="dashed" 
+                  onClick={() => add()} 
+                  block 
+                  icon={<Plus size={16} className="inline mr-1" />}
+                  className="h-10 rounded-[var(--radius-md)] border-dashed border-[var(--color-primary)] text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] flex items-center justify-center"
+                >
+                  Thêm vị trí mới
+                </Button>
+              </div>
+            )}
+          </Form.List>
 
           <div className="flex justify-end gap-3 border-t border-[var(--color-border-light)] pt-4 mt-6">
             <Button className="rounded-[var(--radius-md)] h-10 px-4" onClick={() => setIsWageModalOpen(false)}>Hủy</Button>

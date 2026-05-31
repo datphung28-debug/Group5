@@ -17,7 +17,9 @@ export const getSchedules = async (req, res) => {
       filter.date = { $lte: endDate };
     }
 
-    if (staffId && staffId !== "all") {
+    if (req.user.role !== "admin") {
+      filter.staff = req.user._id;
+    } else if (staffId && staffId !== "all") {
       filter.staff = staffId;
     }
     if (shiftType && shiftType !== "all") {

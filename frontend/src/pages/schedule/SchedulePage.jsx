@@ -94,16 +94,27 @@ const SchedulePage = () => {
   // 1. Tải danh sách nhân sự từ Database
   useEffect(() => {
     const fetchStaff = async () => {
+      if (currentUser?.role !== 'admin') {
+        setStaffList([
+          {
+            _id: currentUser?._id || currentUser?.id,
+            name: currentUser?.name || 'Nhân viên',
+            role: currentUser?.role,
+            isActive: true
+          }
+        ]);
+        return;
+      }
       try {
-        const res = await userAPI.getAll();
+        const res = await userAPI.getAll({ limit: 200 });
         const users = res.data?.users || res.data || [];
-        setStaffList(users.filter(u => u.isActive));
+        setStaffList(users.filter(u => u.isActive && u.role !== 'admin'));
       } catch (err) {
         console.error("Lỗi lấy danh sách nhân viên:", err);
       }
     };
     fetchStaff();
-  }, []);
+  }, [currentUser]);
 
   // Map danh sách nhân sự sang Options cho ô chọn Select
   const staffOptions = useMemo(() => {
