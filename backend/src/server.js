@@ -18,6 +18,8 @@ import cashbookRoutes from "./routes/cashbookRoutes.js";
 import scheduleRoutes from "./routes/scheduleRoutes.js";
 import timesheetRoutes from "./routes/timesheetRoutes.js";
 import activityLogRoutes from "./routes/activityLogRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
+import returnRoutes from "./routes/returnRoutes.js";
 
 dotenv.config();
 
@@ -49,6 +51,8 @@ app.use("/api/cashbook", cashbookRoutes);
 app.use("/api/schedule", scheduleRoutes);
 app.use("/api/timesheet", timesheetRoutes);
 app.use("/api/activity-logs", activityLogRoutes);
+app.use("/api/ai", aiRoutes);
+app.use("/api/returns", returnRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

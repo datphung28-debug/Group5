@@ -113,6 +113,7 @@ export const saleAPI = {
 // ─── Imports ───────────────────────────────────────────────────────────────
 export const importAPI = {
   getAll: (params) => api.get('/imports', { params }),
+  getSuggested: () => api.get('/imports/suggest'),
   getById: (id) => api.get(`/imports/${id}`),
   create: (data) => api.post('/imports', data),
 };
@@ -161,4 +162,16 @@ export const timesheetAPI = {
 // ─── Activity Logs ─────────────────────────────────────────────────────────
 export const activityLogAPI = {
   getAll: (params) => api.get('/activity-logs', { params }),
+};
+
+// ─── AI ────────────────────────────────────────────────────────────────────
+export const aiAPI = {
+  checkInteractions: (data) => api.post('/ai/check-interactions', data),
+};
+
+// ─── Returns ─────────────────────────────────────────────────────────────
+export const returnAPI = {
+  getAll: (params) => api.get('/returns', { params }),
+  create: (data) => api.post('/returns', data),
+  updateStatus: (id, status) => api.put(`/returns/${id}/status`, { status }),
 };

@@ -114,7 +114,7 @@ function AppLayout() {
               <Route path="/schedule" element={<SchedulePage />} />
               <Route path="/timesheet" element={<TimesheetPage />} />
               <Route path="/payroll" element={<BacklogPage title="Bảng lương" />} />
-              <Route path="/returns" element={<BacklogPage title="Trả hàng" />} />
+              <Route path="/returns" element={<ReturnsPage />} />
               <Route path="/settings" element={<BacklogPage title="Cài đặt hệ thống" />} />
               <Route path="/my-schedule" element={<MySchedulePage />} />
               <Route path="/my-timesheet" element={<TimesheetPage />} />
