@@ -17,16 +17,59 @@ const OCRScanner = ({ onScanComplete, allMedicines }) => {
   const [scannedItems, setScannedItems] = useState([]);
   const [prescriptionInfo, setPrescriptionInfo] = useState(null);
 
+  // Hàm nén ảnh trước khi gửi để AI xử lý siêu tốc (giảm dung lượng, giữ nguyên chữ)
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200; // Giới hạn chiều rộng ảnh để AI đọc nhanh hơn
+          const MAX_HEIGHT = 1600;
+          let width = img.width;
+          let height = img.height;
+
+          // Tính toán tỷ lệ thu nhỏ
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height *= MAX_WIDTH / width));
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width *= MAX_HEIGHT / height));
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Nén thành JPEG với chất lượng 70%
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          resolve(compressedBase64);
+        };
+      };
+    });
+  };
+
   // Xử lý khi upload file
   const handleUpload = async (file) => {
-    // Hiển thị preview ảnh
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const imageBase64 = e.target.result;
+    setIsScanning(true);
+    setProgress(5);
+    setStatusText('🖼️ Đang tối ưu hóa hình ảnh...');
+
+    try {
+      // ═══ BƯỚC 0: Nén ảnh siêu tốc ở Frontend ═══
+      const imageBase64 = await compressImage(file);
       setPreviewImage(imageBase64);
 
-      setIsScanning(true);
-      setProgress(10);
+      setProgress(20);
       setStatusText('🚀 Đang gửi ảnh lên AI Gemini...');
 
       try {
@@ -37,6 +80,8 @@ const OCRScanner = ({ onScanComplete, allMedicines }) => {
         const response = await api.post('/prescriptions/scan-ai', {
           imageBase64: imageBase64,
           mimeType: file.type || 'image/jpeg',
+        }, {
+          timeout: 60000 // Bắt buộc phải để timeout 60s để AI kịp xử lý và retry nếu nghẽn mạng
         });
 
         if (!response.data?.success) {
@@ -70,8 +115,12 @@ const OCRScanner = ({ onScanComplete, allMedicines }) => {
       } finally {
         setIsScanning(false);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Lỗi nén ảnh:', err);
+      setIsScanning(false);
+      message.error('Không thể tối ưu hóa hình ảnh. Hãy thử ảnh khác.');
+    }
+    
     return false; // Chặn upload mặc định của antd
   };
 
