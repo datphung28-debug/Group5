@@ -38,6 +38,50 @@ const PurchaseOrderPage = () => {
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [optionsError, setOptionsError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [loadingSuggestion, setLoadingSuggestion] = useState(false);
+  
+  const handleGetSuggestedImports = async () => {
+    setLoadingSuggestion(true);
+    try {
+      const res = await importAPI.getSuggested();
+      const suggestions = res.data?.suggestions || [];
+      if (suggestions.length === 0) {
+        message.info('Tất cả thuốc đều đang có đủ tồn kho, không cần nhập thêm lúc này.');
+        return;
+      }
+      
+      const newItems = suggestions.map(s => ({
+        key: Date.now() + Math.random(),
+        medicineId: s.medicine._id,
+        unit: typeof s.medicine.unit === 'object' ? s.medicine.unit?.name : s.medicine.unit,
+        quantity: s.suggestedQuantity,
+        importPrice: s.medicine.importPrice || 0,
+        discount: 0,
+        batchNumber: '',
+        expiryDate: null
+      }));
+
+      // Nếu chỉ có 1 dòng trống ban đầu thì ghi đè, nếu không thì append
+      setItems(prev => {
+        if (prev.length === 1 && !prev[0].medicineId) {
+          return newItems;
+        }
+        return [...prev, ...newItems];
+      });
+      
+      // Tự động chọn nhà cung cấp nếu các thuốc gợi ý có chung 1 NCC
+      const uniqueSuppliers = [...new Set(suggestions.map(s => s.medicine.supplier?._id || s.medicine.supplier).filter(Boolean))];
+      if (uniqueSuppliers.length === 1 && !form.getFieldValue('supplierId')) {
+        form.setFieldsValue({ supplierId: uniqueSuppliers[0] });
+      }
+
+      message.success(`Đã tự động thêm ${suggestions.length} loại thuốc cần nhập (dưới mức tồn tối thiểu) vào danh sách.`);
+    } catch (error) {
+      message.error('Lỗi khi lấy dữ liệu gợi ý nhập hàng');
+    } finally {
+      setLoadingSuggestion(false);
+    }
+  };
   
   const [items, setItems] = useState([
     { key: 'first-row', medicineId: null, unit: '', quantity: 1, importPrice: 0, discount: 0, batchNumber: '', expiryDate: null }
@@ -418,10 +462,11 @@ const PurchaseOrderPage = () => {
                 
                 <Space size={12}>
                   <Button
-                    icon={<PlusSquare size={18} className="mr-2 inline" />}
-                    className="flex items-center border-[var(--color-border)] rounded-[var(--radius-md)] font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]"
+                    loading={loadingSuggestion}
+                    onClick={handleGetSuggestedImports}
+                    className="flex items-center border-purple-400 text-purple-600 rounded-[var(--radius-md)] font-medium hover:text-purple-700 hover:border-purple-600 bg-purple-50"
                   >
-                    Thuốc mới
+                    <span className="mr-2">✨</span> Gợi ý tự động
                   </Button>
                   <Button
                     type="primary"

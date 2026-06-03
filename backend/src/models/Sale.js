@@ -25,6 +25,8 @@ const saleSchema = new mongoose.Schema(
     },
     amountPaid: { type: Number, min: 0 },   // tiền khách đưa
     changeAmount: { type: Number, min: 0 }, // tiền thừa
+    pointsUsed: { type: Number, default: 0, min: 0 }, // điểm khách đã dùng
+    pointsEarned: { type: Number, default: 0, min: 0 }, // điểm khách được cộng
     status: {
       type: String,
       enum: ["completed", "cancelled", "refunded"],

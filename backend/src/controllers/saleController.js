@@ -194,11 +194,21 @@ export const getSaleById = async (req, res) => {
 // @POST /api/sales - Tạo hóa đơn bán hàng
 export const createSale = async (req, res) => {
   try {
-    const { customer, prescription, items, discount = 0, paymentMethod, amountPaid, notes } = req.body;
+    const { customer, prescription, items, discount = 0, paymentMethod, amountPaid, notes, pointsUsed = 0 } = req.body;
 
     const validationError = validateCreateSalePayload({ items, discount });
     if (validationError) {
       return res.status(400).json(validationError);
+    }
+
+    let customerDoc = null;
+    if (customer) {
+      customerDoc = await Customer.findById(customer);
+      if (customerDoc && Number(pointsUsed) > 0) {
+        if (customerDoc.points < Number(pointsUsed)) {
+          return res.status(400).json({ message: "Khách hàng không đủ điểm tích lũy" });
+        }
+      }
     }
 
     // Kiểm tra tồn kho và tính tổng tiền
@@ -226,6 +236,13 @@ export const createSale = async (req, res) => {
       return res.status(400).json(payment);
     }
 
+    // Xử lý giảm giá từ điểm (1 điểm = 1000 VNĐ)
+    const pointsDiscount = Number(pointsUsed || 0) * 1000;
+    const finalTotalAmount = Math.max(0, payment.totalAmount - pointsDiscount);
+    
+    // Tính lại tiền thừa
+    const finalChangeAmount = paymentMethod === 'cash' ? Math.max(0, payment.amountPaid - finalTotalAmount) : 0;
+
     const code = await generateSaleCode();
 
     const salePayload = {
@@ -234,13 +251,40 @@ export const createSale = async (req, res) => {
       prescription,
       items: processedItems,
       subTotal,
-      discount: Number(discount || 0),
-      totalAmount: payment.totalAmount,
+      discount: Number(discount || 0) + pointsDiscount,
+      totalAmount: finalTotalAmount,
       paymentMethod,
       amountPaid: payment.amountPaid,
-      changeAmount: payment.changeAmount,
+      changeAmount: finalChangeAmount,
+      pointsUsed: Number(pointsUsed || 0),
+      pointsEarned: Math.floor(finalTotalAmount / 10000),
       notes,
       createdBy: req.user._id,
+    };
+
+    const pointsEarned = salePayload.pointsEarned;
+
+    const updateCustomerData = (incTotal) => {
+      const updates = { 
+        $inc: { 
+          totalSpent: incTotal, 
+          points: pointsEarned - Number(pointsUsed || 0) 
+        } 
+      };
+      return updates;
+    };
+
+    const updateMemberTier = async (customerId, session) => {
+      const c = await Customer.findById(customerId);
+      if (c) {
+        let newTier = "Thường";
+        if (c.totalSpent >= 50000000) newTier = "Kim cương";
+        else if (c.totalSpent >= 20000000) newTier = "Vàng";
+        else if (c.totalSpent >= 5000000) newTier = "Bạc";
+        c.memberTier = newTier;
+        if (session) await c.save({ session });
+        else await c.save();
+      }
     };
 
     const result = await executeTransaction(
@@ -250,7 +294,8 @@ export const createSale = async (req, res) => {
           await deductMedicineStockFEFO(item.medicine, item.quantity, session);
         }
         if (customer) {
-          await Customer.findByIdAndUpdate(customer, { $inc: { totalSpent: payment.totalAmount } }, { session });
+          await Customer.findByIdAndUpdate(customer, updateCustomerData(finalTotalAmount), { session });
+          await updateMemberTier(customer, session);
         }
         return sale[0];
       },
@@ -260,7 +305,8 @@ export const createSale = async (req, res) => {
           await deductMedicineStockFEFO(item.medicine, item.quantity);
         }
         if (customer) {
-          await Customer.findByIdAndUpdate(customer, { $inc: { totalSpent: payment.totalAmount } });
+          await Customer.findByIdAndUpdate(customer, updateCustomerData(finalTotalAmount));
+          await updateMemberTier(customer);
         }
         return sale;
       }
@@ -303,11 +349,16 @@ export const cancelSale = async (req, res) => {
         await returnMedicineStock(item.medicine, item.quantity, session);
       }
 
-      // Trừ tổng chi tiêu khách hàng
+      // Trừ tổng chi tiêu khách hàng và hoàn điểm
       if (sale.customer) {
+        // Hóa đơn bị hủy: Trừ totalSpent, hoàn lại điểm đã dùng (cộng) và thu hồi điểm đã cộng (trừ)
+        const pointsToRestore = (sale.pointsUsed || 0) - (sale.pointsEarned || Math.floor(sale.totalAmount / 10000));
         await Customer.findByIdAndUpdate(
           sale.customer, 
-          { $inc: { totalSpent: -sale.totalAmount } },
+          { $inc: { 
+            totalSpent: -sale.totalAmount,
+            points: pointsToRestore
+          } },
           { session }
         );
       }
@@ -319,7 +370,7 @@ export const cancelSale = async (req, res) => {
       await session.abortTransaction();
       session.endSession();
 
-      const isTxNotSupported = txError.message?.includes("Transaction") || txError.codeName === "TransactionOutcomeUnknown" || txError.message?.includes("replica set");
+      const isTxNotSupported = txError.message?.includes("Transaction") || txError.codeName === "TransactionOutcomeUnknown" || txError.message?.includes("replica set") || txError.message?.includes("retryable writes");
       if (isTxNotSupported) {
         // Fallback
         sale.status = "cancelled";
@@ -330,10 +381,14 @@ export const cancelSale = async (req, res) => {
           await returnMedicineStock(item.medicine, item.quantity);
         }
 
-        // Trừ tổng chi tiêu khách hàng
+        // Trừ tổng chi tiêu khách hàng và hoàn điểm
         if (sale.customer) {
+          const pointsToRestore = (sale.pointsUsed || 0) - (sale.pointsEarned || Math.floor(sale.totalAmount / 10000));
           await Customer.findByIdAndUpdate(sale.customer, {
-            $inc: { totalSpent: -sale.totalAmount },
+            $inc: { 
+              totalSpent: -sale.totalAmount,
+              points: pointsToRestore 
+            },
           });
         }
 

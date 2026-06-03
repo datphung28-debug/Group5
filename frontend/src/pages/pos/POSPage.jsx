@@ -17,7 +17,7 @@ import PharmacyMap from '../prescriptions/components/PharmacyMap';
 import ReceiptPrint from './components/ReceiptPrint';
 import AddCustomerModal from './components/AddCustomerModal';
 import CustomerHistoryModal from './components/CustomerHistoryModal';
-import { medicineAPI, saleAPI, customerAPI, prescriptionAPI } from '../../api/api';
+import { medicineAPI, saleAPI, customerAPI, prescriptionAPI, aiAPI } from '../../api/api';
 import { checkPrescriptionSafety } from '../../utils/drugSafety';
 import { buildSalePayload, getCartStockIssue, getCashPaymentIssue } from './posSaleUtils';
 
@@ -38,12 +38,41 @@ const POSPage = () => {
   const [medicines, setMedicines] = useState([]);
   const [medicineError, setMedicineError] = useState('');
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
+  const [isCheckingAI, setIsCheckingAI] = useState(false);
+
+  const handleCheckAIInteractions = async () => {
+    if (cart.length < 2) {
+      message.warning('Cần ít nhất 2 loại thuốc trong giỏ hàng để kiểm tra tương tác');
+      return;
+    }
+    const medicinesList = cart.map(item => item.medicine.name);
+    setIsCheckingAI(true);
+    try {
+      const res = await aiAPI.checkInteractions(medicinesList);
+      if (res.data.safe) {
+        Modal.success({
+          title: 'An toàn (Đánh giá bởi AI)',
+          content: res.data.message || 'Không phát hiện tương tác nguy hiểm.',
+        });
+      } else {
+        Modal.error({
+          title: 'Cảnh báo Tương tác Thuốc (Đánh giá bởi AI)',
+          content: res.data.message || 'Có tương tác nguy hiểm, vui lòng kiểm tra lại!',
+          okButtonProps: { danger: true }
+        });
+      }
+    } catch (error) {
+      message.error('Lỗi kết nối tới AI. Vui lòng thử lại sau.');
+    } finally {
+      setIsCheckingAI(false);
+    }
+  };
 
   // ═══════════════════════════════════════════════════════════════════
   // PHASE 1: TREO ĐƠN — Quản lý nhiều đơn hàng cùng lúc
   // ═══════════════════════════════════════════════════════════════════
   const [orders, setOrders] = useState([
-    { id: 1, name: 'Đơn 1', cart: [], discount: 0, customerGiven: null, paymentMethod: 'cash', customer: null }
+    { id: 1, name: 'Đơn 1', cart: [], discount: 0, customerGiven: null, paymentMethod: 'cash', customer: null, pointsUsed: 0 }
   ]);
   const [activeOrderIdx, setActiveOrderIdx] = useState(0);
   const activeOrder = orders[activeOrderIdx] || orders[0];
@@ -178,7 +207,8 @@ const POSPage = () => {
     return sum + (item.medicine.sellPrice * item.quantity * (1 - (item.discount || 0) / 100));
   }, 0), [cart]);
   const orderDiscount = activeOrder?.discount || 0;
-  const total = Math.max(0, subTotal - orderDiscount);
+  const pointsDiscount = (activeOrder?.pointsUsed || 0) * 1000;
+  const total = Math.max(0, subTotal - orderDiscount - pointsDiscount);
   const customerGiven = activeOrder?.customerGiven;
   const change = Math.max(0, (customerGiven || 0) - total);
   const paymentMethod = activeOrder?.paymentMethod || 'cash';
@@ -194,7 +224,7 @@ const POSPage = () => {
   // ═══════════════════════════════════════════════════════════════════
   const addNewOrder = () => {
     const newId = Date.now();
-    const newOrders = [...orders, { id: newId, name: `Đơn ${orders.length + 1}`, cart: [], discount: 0, customerGiven: null, paymentMethod: 'cash', customer: null }];
+    const newOrders = [...orders, { id: newId, name: `Đơn ${orders.length + 1}`, cart: [], discount: 0, customerGiven: null, paymentMethod: 'cash', customer: null, pointsUsed: 0 }];
     setOrders(newOrders);
     setActiveOrderIdx(newOrders.length - 1);
   };
@@ -351,6 +381,7 @@ const POSPage = () => {
         paymentMethod,
         amountPaid: paymentMethod === 'cash' ? customerGiven : total,
       });
+      payload.pointsUsed = activeOrder.pointsUsed || 0;
 
       const isOffline = !navigator.onLine;
 
@@ -403,7 +434,7 @@ const POSPage = () => {
         }));
 
         // Reset đơn hàng hiện tại
-        updateActiveOrder({ cart: [], discount: 0, customerGiven: null, prescription: null, customer: null });
+        updateActiveOrder({ cart: [], discount: 0, customerGiven: null, prescription: null, customer: null, pointsUsed: 0 });
 
         if (autoPrint) {
           setSelectedInvoiceToPrint(invoiceData);
@@ -435,7 +466,7 @@ const POSPage = () => {
         }
 
         // Reset đơn hiện tại
-        updateActiveOrder({ cart: [], discount: 0, customerGiven: null, prescription: null, customer: null });
+        updateActiveOrder({ cart: [], discount: 0, customerGiven: null, prescription: null, customer: null, pointsUsed: 0 });
 
         // Refresh data
         fetchTodayInvoices();
@@ -494,7 +525,7 @@ const POSPage = () => {
             return m;
           }));
 
-          updateActiveOrder({ cart: [], discount: 0, customerGiven: null, prescription: null, customer: null });
+          updateActiveOrder({ cart: [], discount: 0, customerGiven: null, prescription: null, customer: null, pointsUsed: 0 });
 
           if (autoPrint) {
             setSelectedInvoiceToPrint(invoiceData);
@@ -1023,9 +1054,21 @@ const POSPage = () => {
                   Mặt hàng: <strong className="text-slate-700">{cart.length}</strong> ·
                   Tổng SL: <strong className="text-slate-700">{cart.reduce((s, i) => s + i.quantity, 0)}</strong>
                 </span>
-                <Button type="default" icon={<EnvironmentOutlined />} className="border-blue-400 text-blue-600 font-medium hover:bg-blue-50 rounded-lg" onClick={() => setIsMapDrawerOpen(true)}>
-                  Sơ Đồ Nhặt Thuốc
-                </Button>
+                <div className="flex gap-2">
+                  {cart.length > 1 && (
+                    <Button 
+                      type="default" 
+                      loading={isCheckingAI}
+                      onClick={handleCheckAIInteractions}
+                      className="border-purple-400 text-purple-600 font-medium hover:bg-purple-50 rounded-lg flex items-center justify-center gap-1"
+                    >
+                      <span>✨</span> AI Check
+                    </Button>
+                  )}
+                  <Button type="default" icon={<EnvironmentOutlined />} className="border-blue-400 text-blue-600 font-medium hover:bg-blue-50 rounded-lg" onClick={() => setIsMapDrawerOpen(true)}>
+                    Sơ Đồ
+                  </Button>
+                </div>
               </div>
             )}
           </div>
@@ -1073,6 +1116,31 @@ const POSPage = () => {
                     label: `${c.name} - ${c.phone}`
                   }))}
                 />
+                {activeOrder.customer && (
+                  (() => {
+                    const c = customers.find(x => x._id === activeOrder.customer);
+                    if (!c) return null;
+                    return (
+                      <div className="mt-2 p-2 bg-blue-50 border border-blue-100 rounded-lg">
+                        <div className="flex justify-between items-center text-sm mb-1">
+                          <span className="text-slate-600">Hạng: <strong className="text-blue-600">{c.memberTier || 'Thường'}</strong></span>
+                          <span className="text-slate-600">Điểm: <strong className="text-amber-500">{c.points || 0}</strong></span>
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-xs text-slate-500">Đổi điểm (1 điểm = 1k đ)</span>
+                          <InputNumber 
+                            size="small"
+                            min={0}
+                            max={c.points || 0}
+                            value={activeOrder.pointsUsed || 0}
+                            onChange={(val) => updateActiveOrder({ pointsUsed: val || 0 })}
+                            className="w-20"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()
+                )}
               </div>
 
               {/* Đơn thuốc (Rx) */}
@@ -1420,20 +1488,32 @@ const POSPage = () => {
 
         /* Print Settings for 80mm Receipt */
         @media print {
+          html, body {
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+          }
           #root, .ant-modal-root {
             display: none !important;
           }
           #global-print-container {
-            display: flex !important;
-            justify-content: center !important;
-            width: 100%;
-            padding: 0;
-            margin: 0;
+            display: block !important;
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .print-receipt-area {
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            transform: none !important;
           }
         }
         @page {
-          size: 80mm auto;
           margin: 0;
+          size: 80mm auto;
         }
       `}</style>
     </div>

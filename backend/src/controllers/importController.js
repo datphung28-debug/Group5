@@ -226,3 +226,43 @@ export const createImport = async (req, res) => {
     return sendErrorResponse(res, error);
   }
 };
+
+// @GET /api/imports/suggest - Tự động gợi ý đặt hàng dựa trên minStock
+export const getSuggestedImports = async (req, res) => {
+  try {
+    const medicines = await Medicine.find({ isActive: true })
+      .populate("supplier", "name")
+      .populate("unit", "name")
+      .lean();
+      
+    const suggestions = [];
+
+    for (const med of medicines) {
+      const minStock = med.minStock || 10;
+      if (med.stock <= minStock) {
+        // Gợi ý đặt hàng để tồn kho đạt gấp đôi mức tối thiểu (hoặc tùy logic)
+        const suggestedQuantity = Math.max(minStock * 2 - med.stock, 0);
+        
+        if (suggestedQuantity > 0) {
+          suggestions.push({
+            medicine: {
+              _id: med._id,
+              name: med.name,
+              code: med.code,
+              unit: med.unit,
+              importPrice: med.importPrice,
+              supplier: med.supplier
+            },
+            suggestedQuantity,
+            currentStock: med.stock,
+            minStock: minStock
+          });
+        }
+      }
+    }
+
+    res.json({ suggestions });
+  } catch (error) {
+    return sendErrorResponse(res, error);
+  }
+};

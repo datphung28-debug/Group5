@@ -1,6 +1,7 @@
 import CashbookTransaction from "../models/CashbookTransaction.js";
 import Import from "../models/Import.js";
 import Sale from "../models/Sale.js";
+import Return from "../models/Return.js";
 import { sendErrorResponse } from "../utils/errorResponse.js";
 
 const PAYMENT_METHOD_LABELS = {
@@ -34,7 +35,7 @@ const buildDateFilter = ({ startDate, endDate } = {}) => {
   return filter;
 };
 
-export const normalizeCashbookEntries = ({ sales = [], imports = [], manualTransactions = [] } = {}) => {
+export const normalizeCashbookEntries = ({ sales = [], imports = [], returns = [], manualTransactions = [] } = {}) => {
   const saleEntries = sales.map((sale) => ({
     id: `sale-${sale._id}`,
     source: "sale",
@@ -65,6 +66,22 @@ export const normalizeCashbookEntries = ({ sales = [], imports = [], manualTrans
       reference: item.code,
     }));
 
+  const returnEntries = returns
+    .filter((item) => item.status === "approved" || item.status === "completed")
+    .map((item) => ({
+      id: `return-${item._id}`,
+      source: "return",
+      type: "chi",
+      category: "Trả hàng",
+      paymentMethod: item.refundMethod || "cash",
+      paymentMethodLabel: PAYMENT_METHOD_LABELS[item.refundMethod] || item.refundMethod || "Tiền mặt",
+      description: `Hoàn tiền phiếu trả ${item.code}`,
+      amount: Number(item.refundAmount || 0),
+      staff: getCreatorName(item),
+      timestamp: item.updatedAt || item.createdAt,
+      reference: item.code,
+    }));
+
   const manualEntries = manualTransactions.map((transaction) => {
     const paymentMethod = normalizePaymentMethod(transaction.paymentMethod);
     return {
@@ -83,7 +100,7 @@ export const normalizeCashbookEntries = ({ sales = [], imports = [], manualTrans
     };
   });
 
-  return [...saleEntries, ...importEntries, ...manualEntries].sort(
+  return [...saleEntries, ...importEntries, ...returnEntries, ...manualEntries].sort(
     (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
   );
 };
@@ -135,11 +152,13 @@ export const getCashbook = async (req, res) => {
 
     const saleFilter = { status: "completed" };
     const importFilter = {};
+    const returnFilter = { status: { $in: ["approved", "completed"] } };
     const manualFilter = {};
 
     if (dateFilter) {
       saleFilter.createdAt = dateFilter;
       importFilter.importDate = dateFilter;
+      returnFilter.updatedAt = dateFilter; // Trả hàng tính theo ngày duyệt
       manualFilter.transactionDate = dateFilter;
     }
     if (paymentMethod) {
@@ -149,17 +168,20 @@ export const getCashbook = async (req, res) => {
     if (type) manualFilter.type = type;
     if (category) manualFilter.category = category;
 
-    const [sales, imports, manualTransactions] = await Promise.all([
+    const [sales, imports, returns, manualTransactions] = await Promise.all([
       type && type !== "thu"
         ? []
         : Sale.find(saleFilter).populate("createdBy", "name").sort({ createdAt: -1 }).limit(500),
       type && type !== "chi"
         ? []
         : Import.find(importFilter).populate("supplier", "name").populate("createdBy", "name").sort({ importDate: -1 }).limit(500),
+      type && type !== "chi"
+        ? []
+        : Return.find(returnFilter).populate("createdBy", "name").sort({ updatedAt: -1 }).limit(500),
       CashbookTransaction.find(manualFilter).populate("createdBy", "name").sort({ transactionDate: -1 }).limit(500),
     ]);
 
-    let transactions = normalizeCashbookEntries({ sales, imports, manualTransactions });
+    let transactions = normalizeCashbookEntries({ sales, imports, returns, manualTransactions });
     if (category) {
       transactions = transactions.filter((transaction) => transaction.category === category);
     }

@@ -12,6 +12,8 @@ const customerSchema = new mongoose.Schema(
     allergies: { type: String, trim: true },
     chronicDiseases: { type: String, trim: true },
     totalSpent: { type: Number, default: 0 }, // tổng chi tiêu
+    points: { type: Number, default: 0 }, // điểm thưởng tích lũy
+    memberTier: { type: String, enum: ["Thường", "Bạc", "Vàng", "Kim cương"], default: "Thường" }, // hạng thành viên
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
