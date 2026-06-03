@@ -5,6 +5,8 @@ import PageHeader from '../../components/PageHeader';
 import ReturnFilter from './components/ReturnFilter';
 import ReturnKPIs from './components/ReturnKPIs';
 import ReturnTable from './components/ReturnTable';
+import CreateReturnModal from './components/CreateReturnModal';
+import { returnAPI } from '../../api/api';
 
 const initialFilters = {
   period: 'month',
@@ -28,19 +30,59 @@ const ReturnsPage = () => {
   const [activeFilters, setActiveFilters] = useState(initialFilters);
   const [selectedReturn, setSelectedReturn] = useState(null);
   const [messageApi, contextHolder] = message.useMessage();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [returns, setReturns] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchReturns = async () => {
+    setLoading(true);
+    try {
+      const res = await returnAPI.getAll({ 
+        search: activeFilters.search, 
+        status: activeFilters.status 
+      });
+      // Format data
+      const formatted = res.data.returns.map(r => ({
+        id: r._id,
+        code: r.code,
+        invoiceCode: r.invoiceCode,
+        customer: r.customer?.name || 'Khách lẻ',
+        phone: r.customer?.phone || '',
+        status: r.status,
+        refundMethod: r.refundMethod,
+        isoDate: r.createdAt.substring(0, 10),
+        createdAt: new Date(r.createdAt).toLocaleString('vi-VN'),
+        refundAmount: r.refundAmount,
+        itemCount: r.items.length,
+        staff: r.createdBy?.name || '',
+        reason: r.reason,
+        note: r.note,
+        items: r.items.map(item => ({
+          id: item._id,
+          name: item.medicine?.name || 'Thuốc',
+          batch: '',
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          total: item.total,
+          condition: 'Tốt',
+        }))
+      }));
+      setReturns(formatted);
+    } catch (error) {
+      messageApi.error('Lỗi khi tải danh sách trả hàng');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchReturns();
+  }, [activeFilters]);
 
   const filteredReturns = useMemo(() => {
     const keyword = activeFilters.search.trim().toLowerCase();
 
-    return [].filter((record) => {
-      const matchesKeyword =
-        !keyword ||
-        record.code.toLowerCase().includes(keyword) ||
-        record.invoiceCode.toLowerCase().includes(keyword) ||
-        record.customer.toLowerCase().includes(keyword) ||
-        record.phone.toLowerCase().includes(keyword);
-      const matchesStatus = activeFilters.status === 'all' || record.status === activeFilters.status;
-      const matchesRefundMethod = activeFilters.refundMethod === 'all' || record.refundMethod === activeFilters.refundMethod;
+    return returns.filter((record) => {
       const matchesDate =
         !activeFilters.dateRange ||
         activeFilters.dateRange.length !== 2 ||
@@ -50,9 +92,9 @@ const ReturnsPage = () => {
           return record.isoDate >= fromDay && record.isoDate <= toDay;
         })();
 
-      return matchesKeyword && matchesStatus && matchesRefundMethod && matchesDate;
+      return matchesDate;
     });
-  }, [activeFilters]);
+  }, [activeFilters, returns]);
 
   const summary = useMemo(() => (
     filteredReturns.reduce(
@@ -76,8 +118,15 @@ const ReturnsPage = () => {
     setActiveFilters(initialFilters);
   };
 
-  const handleStatusAction = (action) => {
-    messageApi.info(`Chức năng ${action} phiếu trả hàng sẽ được nối với API khi có backend.`);
+  const handleStatusAction = async (action, statusValue) => {
+    try {
+      await returnAPI.updateStatus(selectedReturn.id, statusValue);
+      messageApi.success(`Đã ${action} phiếu trả hàng!`);
+      setSelectedReturn(null);
+      fetchReturns();
+    } catch (error) {
+      messageApi.error(`Lỗi khi ${action} phiếu trả hàng`);
+    }
   };
 
   const itemColumns = [
@@ -108,7 +157,7 @@ const ReturnsPage = () => {
               type="primary"
               icon={<FilePlus size={18} className="mr-2 inline" />}
               className="h-10 rounded-[var(--radius-md)] border-none bg-[var(--color-primary)] px-6 font-medium shadow-[var(--shadow-card)] hover:bg-[var(--color-primary-hover)]"
-              onClick={() => messageApi.info('Chức năng tạo phiếu trả hàng sẽ được nối với API khi có backend.')}
+              onClick={() => setIsModalOpen(true)}
             >
               Tạo phiếu trả
             </Button>
@@ -138,11 +187,11 @@ const ReturnsPage = () => {
               <Button icon={<Printer size={16} />} className="rounded-[var(--radius-md)]">In phiếu</Button>
               {selectedReturn.status === 'pending' && (
                 <>
-                  <Button icon={<XCircle size={16} />} danger className="rounded-[var(--radius-md)]" onClick={() => handleStatusAction('từ chối')}>
+                  <Button icon={<XCircle size={16} />} danger className="rounded-[var(--radius-md)]" onClick={() => handleStatusAction('từ chối', 'rejected')}>
                     Từ chối
                   </Button>
-                  <Button type="primary" icon={<CheckCircle2 size={16} />} className="rounded-[var(--radius-md)] border-none bg-[var(--color-primary)]" onClick={() => handleStatusAction('duyệt')}>
-                    Duyệt phiếu
+                  <Button type="primary" icon={<CheckCircle2 size={16} />} className="rounded-[var(--radius-md)] border-none bg-[var(--color-primary)]" onClick={() => handleStatusAction('duyệt', 'approved')}>
+                    Duyệt tự động
                   </Button>
                 </>
               )}
@@ -191,6 +240,14 @@ const ReturnsPage = () => {
           </div>
         )}
       </Drawer>
+      <CreateReturnModal 
+        open={isModalOpen} 
+        onCancel={() => setIsModalOpen(false)} 
+        onSuccess={() => {
+          setIsModalOpen(false);
+          fetchReturns();
+        }}
+      />
     </div>
   );
 };
