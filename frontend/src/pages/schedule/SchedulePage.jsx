@@ -30,7 +30,6 @@ const SchedulePage = () => {
   const [selectedShift, setSelectedShift] = useState(null);
   const [schedules, setSchedules] = useState([]);
   const [staffList, setStaffList] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   
@@ -124,8 +123,7 @@ const SchedulePage = () => {
   }, [staffList]);
 
   // 2. Tải danh sách lịch phân ca từ Database
-  const fetchSchedules = async () => {
-    setLoading(true);
+  const fetchSchedules = React.useCallback(async () => {
     try {
       const params = {
         startDate: activeDateRange.start,
@@ -136,16 +134,16 @@ const SchedulePage = () => {
       };
       const res = await scheduleAPI.getAll(params);
       setSchedules(res.data?.schedules || []);
-    } catch (err) {
+    } catch {
       messageApi.error("Không thể tải lịch phân ca từ database");
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [activeDateRange.start, activeDateRange.end, activeFilters.staffId, activeFilters.shiftType, activeFilters.status, messageApi]);
 
   useEffect(() => {
-    fetchSchedules();
-  }, [activeFilters, activeDateRange]);
+    Promise.resolve().then(() => {
+      fetchSchedules();
+    });
+  }, [activeFilters, activeDateRange, fetchSchedules]);
 
   // Map dữ liệu từ DB thành dữ liệu phù hợp với component UI
   const mappedShifts = useMemo(() => {
@@ -351,7 +349,7 @@ const SchedulePage = () => {
         note: selectedShift.note,
       });
     }
-  }, [selectedShift]);
+  }, [selectedShift, editForm]);
 
   const selectedDay = selectedShift ? weekDays.find((day) => day.key === selectedShift.day) : null;
 

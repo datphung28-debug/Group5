@@ -52,7 +52,7 @@ const MySchedulePage = () => {
     return { start, end };
   }, [weekDays]);
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = React.useCallback(async () => {
     setLoading(true);
     try {
       const params = {
@@ -64,18 +64,20 @@ const MySchedulePage = () => {
       };
       const res = await scheduleAPI.getAll(params);
       setSchedules(res.data?.schedules || []);
-    } catch (err) {
+    } catch {
       messageApi.error("Không thể tải lịch làm việc cá nhân");
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeDateRange.start, activeDateRange.end, currentUser, activeFilters.shiftType, activeFilters.status, messageApi]);
 
   useEffect(() => {
     if (currentUser) {
-      fetchSchedules();
+      Promise.resolve().then(() => {
+        fetchSchedules();
+      });
     }
-  }, [activeFilters, activeDateRange, currentUser]);
+  }, [activeFilters, activeDateRange, currentUser, fetchSchedules]);
 
   const mappedShifts = useMemo(() => {
     const SHIFT_ORDER = {

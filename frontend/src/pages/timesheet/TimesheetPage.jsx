@@ -34,7 +34,6 @@ const TimesheetPage = () => {
   const { user } = useAuthStore();
   const [records, setRecords] = useState([]);
   const [staffList, setStaffList] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState(initialFilters);
   const [activeFilters, setActiveFilters] = useState(initialFilters);
   const [selectedRecord, setSelectedRecord] = useState(null); // Selected staff summary
@@ -73,8 +72,7 @@ const TimesheetPage = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const fetchTimesheets = async () => {
-    setLoading(true);
+  const fetchTimesheets = React.useCallback(async () => {
     try {
       const res = await timesheetAPI.getAll();
       const dbRecords = res.data?.timesheets || res.data || [];
@@ -98,12 +96,10 @@ const TimesheetPage = () => {
     } catch (err) {
       console.error(err);
       messageApi.error("Không thể tải bản ghi chấm công từ database");
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [messageApi]);
 
-  const fetchStaff = async () => {
+  const fetchStaff = React.useCallback(async () => {
     if (user?.role !== 'admin') {
       setStaffList([
         {
@@ -122,12 +118,14 @@ const TimesheetPage = () => {
     } catch (err) {
       console.error("Lỗi lấy danh sách nhân viên:", err);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
-    fetchStaff();
-    fetchTimesheets();
-  }, [user]);
+    Promise.resolve().then(() => {
+      fetchStaff();
+      fetchTimesheets();
+    });
+  }, [user, fetchStaff, fetchTimesheets]);
 
   const staffOptions = useMemo(() => {
     return [
@@ -362,7 +360,7 @@ const TimesheetPage = () => {
       
       // Reload staff list to apply new rates dynamically
       fetchStaff();
-    } catch (err) {
+    } catch {
       messageApi.error('Gặp lỗi khi lưu cấu hình lương nhân viên');
     }
   };

@@ -70,8 +70,9 @@ const ActivityPage = () => {
   }, [activeFilters, messageApi]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchActivities();
+    Promise.resolve().then(() => {
+      fetchActivities();
+    });
   }, [fetchActivities]);
 
   const summary = useMemo(() => {
