@@ -39,8 +39,9 @@ export default function Header() {
   // Instant search logic
   useEffect(() => {
     if (searchQuery.trim().length < 2) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSearchResults({ medicines: [], customers: [], sales: [] });
+      Promise.resolve().then(() => {
+        setSearchResults({ medicines: [], customers: [], sales: [] });
+      });
       return;
     }
 

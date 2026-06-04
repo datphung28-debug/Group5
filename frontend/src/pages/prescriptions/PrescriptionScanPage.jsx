@@ -30,8 +30,9 @@ const PrescriptionScanPage = () => {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchMedicines();
+    Promise.resolve().then(() => {
+      fetchMedicines();
+    });
   }, []);
 
   const handlePrint = async () => {

@@ -33,8 +33,9 @@ const ExpiryWarningPage = () => {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchExpiring(activeRange);
+    Promise.resolve().then(() => {
+      fetchExpiring(activeRange);
+    });
   }, [activeRange, fetchExpiring]);
 
   const summary = useMemo(() => getExpirySummary(rows), [rows]);

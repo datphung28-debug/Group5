@@ -127,8 +127,9 @@ export default function CustomersPage() {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchCustomers();
+    Promise.resolve().then(() => {
+      fetchCustomers();
+    });
   }, []);
 
   const filteredCustomers = useMemo(() => {
