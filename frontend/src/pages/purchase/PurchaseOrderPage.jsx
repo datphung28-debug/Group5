@@ -76,7 +76,7 @@ const PurchaseOrderPage = () => {
       }
 
       message.success(`Đã tự động thêm ${suggestions.length} loại thuốc cần nhập (dưới mức tồn tối thiểu) vào danh sách.`);
-    } catch (error) {
+    } catch {
       message.error('Lỗi khi lấy dữ liệu gợi ý nhập hàng');
     } finally {
       setLoadingSuggestion(false);

@@ -32,10 +32,8 @@ const ReturnsPage = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [returns, setReturns] = useState([]);
-  const [loading, setLoading] = useState(false);
 
-  const fetchReturns = async () => {
-    setLoading(true);
+  const fetchReturns = React.useCallback(async () => {
     try {
       const res = await returnAPI.getAll({ 
         search: activeFilters.search, 
@@ -68,19 +66,18 @@ const ReturnsPage = () => {
         }))
       }));
       setReturns(formatted);
-    } catch (error) {
+    } catch {
       messageApi.error('Lỗi khi tải danh sách trả hàng');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [activeFilters.search, activeFilters.status, messageApi]);
 
   React.useEffect(() => {
-    fetchReturns();
-  }, [activeFilters]);
+    Promise.resolve().then(() => {
+      fetchReturns();
+    });
+  }, [activeFilters, fetchReturns]);
 
   const filteredReturns = useMemo(() => {
-    const keyword = activeFilters.search.trim().toLowerCase();
 
     return returns.filter((record) => {
       const matchesDate =
@@ -124,7 +121,7 @@ const ReturnsPage = () => {
       messageApi.success(`Đã ${action} phiếu trả hàng!`);
       setSelectedReturn(null);
       fetchReturns();
-    } catch (error) {
+    } catch {
       messageApi.error(`Lỗi khi ${action} phiếu trả hàng`);
     }
   };

@@ -32,7 +32,7 @@ const CreateReturnModal = ({ open, onCancel, onSuccess }) => {
       } else {
         message.error('Không tìm thấy hóa đơn mã: ' + value);
       }
-    } catch (error) {
+    } catch {
       message.error('Lỗi khi tìm hóa đơn');
     } finally {
       setSearching(false);

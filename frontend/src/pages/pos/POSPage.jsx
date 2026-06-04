@@ -61,7 +61,7 @@ const POSPage = () => {
           okButtonProps: { danger: true }
         });
       }
-    } catch (error) {
+    } catch {
       message.error('Lỗi kết nối tới AI. Vui lòng thử lại sau.');
     } finally {
       setIsCheckingAI(false);
@@ -555,7 +555,7 @@ const POSPage = () => {
     }
 
     await proceedCheckout();
-  }, [activeOrder.customer, activeOrder.prescription, autoPrint, cart, checkoutSubmitting, customerGiven, customers, fetchMedicines, fetchTodayInvoices, fetchPrescriptions, orderDiscount, paymentMethod, total, updateActiveOrder]);
+  }, [activeOrder.customer, activeOrder.prescription, activeOrder.pointsUsed, autoPrint, cart, checkoutSubmitting, customerGiven, customers, fetchMedicines, fetchTodayInvoices, fetchPrescriptions, orderDiscount, paymentMethod, subTotal, total, updateActiveOrder, setIsReceiptModalOpen]);
 
   // ═══════════════════════════════════════════════════════════════════
   // PHASE 1: PHÍM TẮT TOÀN CỤC
@@ -586,11 +586,12 @@ const POSPage = () => {
 
   // Clock & Data fetching
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchMedicines();
-    fetchTodayInvoices();
-    fetchCustomers();
-    fetchPrescriptions();
+    Promise.resolve().then(() => {
+      fetchMedicines();
+      fetchTodayInvoices();
+      fetchCustomers();
+      fetchPrescriptions();
+    });
     const timer = setInterval(() => setTime(dayjs()), 1000);
     return () => clearInterval(timer);
   }, [fetchCustomers, fetchMedicines, fetchTodayInvoices, fetchPrescriptions]);
