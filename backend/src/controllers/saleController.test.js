@@ -44,6 +44,7 @@ test("buildProcessedSaleItem calculates snapshot price and line total", () => {
     unitPrice: 10000,
     discount: 10,
     total: 18000,
+    dosage: undefined,
   });
 });
 

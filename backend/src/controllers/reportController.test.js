@@ -27,36 +27,24 @@ test("normalizeRevenueRange builds a month range from date filters", () => {
 
 test("buildRevenueReportPayload computes KPIs and chart data from sales", () => {
   const payload = buildRevenueReportPayload({
-    sales: [
+    salesData: [
       {
         createdAt: new Date("2026-05-03T09:00:00.000Z"),
         totalAmount: 100000,
         paymentMethod: "cash",
-        items: [
-          {
-            quantity: 2,
-            total: 100000,
-            medicine: {
-              importPrice: 30000,
-              category: { name: "Giảm đau" },
-            },
-          },
-        ],
+        saleProfit: 40000,
+        categories: [
+          { name: "Giảm đau", total: 100000 }
+        ]
       },
       {
         createdAt: new Date("2026-05-04T09:00:00.000Z"),
         totalAmount: 50000,
         paymentMethod: "transfer",
-        items: [
-          {
-            quantity: 1,
-            total: 50000,
-            medicine: {
-              importPrice: 20000,
-              category: { name: "Vitamin" },
-            },
-          },
-        ],
+        saleProfit: 30000,
+        categories: [
+          { name: "Vitamin", total: 50000 }
+        ]
       },
     ],
     groupType: "daily",
