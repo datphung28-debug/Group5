@@ -4,6 +4,7 @@ import { Plus, RotateCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import { importAPI } from '../../api/api';
+import useAuthStore from '../../stores/useAuthStore';
 import {
   getImportId,
   getImportsFromResponse,
@@ -24,6 +25,8 @@ const formatDate = (value) => {
 
 const PurchaseOrdersPage = () => {
   const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.role === 'admin';
   const [imports, setImports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -144,14 +147,16 @@ const PurchaseOrdersPage = () => {
             >
               Làm mới
             </Button>
-            <Button
-              type="primary"
-              icon={<Plus size={16} className="mr-2 inline" />}
-              onClick={() => navigate('/purchase-orders/create')}
-              className="h-10 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] border-none font-medium shadow-md"
-            >
-              Tạo đơn nhập
-            </Button>
+            {isAdmin && (
+              <Button
+                type="primary"
+                icon={<Plus size={16} className="mr-2 inline" />}
+                onClick={() => navigate('/purchase-orders/create')}
+                className="h-10 rounded-[var(--radius-md)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] border-none font-medium shadow-md"
+              >
+                Tạo đơn nhập
+              </Button>
+            )}
           </Space>
         }
       />
@@ -181,9 +186,11 @@ const PurchaseOrdersPage = () => {
                 description="Chưa có phiếu nhập hàng"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
               >
-                <Button type="primary" onClick={() => navigate('/purchase-orders/create')}>
-                  Tạo phiếu nhập đầu tiên
-                </Button>
+                {isAdmin && (
+                  <Button type="primary" onClick={() => navigate('/purchase-orders/create')}>
+                    Tạo phiếu nhập đầu tiên
+                  </Button>
+                )}
               </Empty>
             ),
           }}

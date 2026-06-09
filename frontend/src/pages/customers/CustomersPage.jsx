@@ -5,6 +5,7 @@ import { Activity, CalendarClock, Edit3, Eye, Filter, HeartPulse, MoreVertical, 
 import dayjs from 'dayjs';
 import PageHeader from '../../components/PageHeader';
 import { customerAPI, saleAPI } from '../../api/api';
+import useAuthStore from '../../stores/useAuthStore';
 
 const SEGMENT_FILTER_OPTIONS = [
   { value: 'all', label: 'Tất cả' },
@@ -99,6 +100,8 @@ const HealthNotes = ({ customer }) => {
 
 export default function CustomersPage() {
   const location = useLocation();
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.role === 'admin';
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const initialSearch = searchParams.get('search') || '';
 
@@ -233,6 +236,11 @@ export default function CustomersPage() {
   };
 
   const handleDeleteCustomer = (customer) => {
+    if (!isAdmin) {
+      message.warning('Bạn không có quyền xóa khách hàng. Vui lòng liên hệ quản trị viên.');
+      return;
+    }
+
     Modal.confirm({
       title: 'Xóa khách hàng',
       content: `Bạn có chắc chắn muốn xóa khách hàng ${customer.name}? Hành động này sẽ được thực hiện dưới dạng xóa mềm.`,
@@ -294,7 +302,7 @@ export default function CustomersPage() {
           <button
             type="button"
             className="w-fit cursor-pointer border-0 bg-transparent p-0 text-left leading-5 font-semibold text-[var(--color-primary)]"
-          onClick={(event) => { event.stopPropagation(); handleViewCustomer(customer); }}
+            onClick={(event) => { event.stopPropagation(); handleViewCustomer(customer); }}
           >
             {customer.name}
           </button>
@@ -319,14 +327,16 @@ export default function CustomersPage() {
         const items = [
           { key: 'view', label: 'Xem chi tiết', icon: <Eye size={16} />, onClick: () => handleViewCustomer(customer) },
           { key: 'edit', label: 'Chỉnh sửa', icon: <Edit3 size={16} />, onClick: () => handleOpenEdit(customer) },
-          { key: 'delete', label: 'Xóa', danger: true, icon: <Trash2 size={16} />, onClick: () => handleDeleteCustomer(customer) },
+          ...(isAdmin ? [{ key: 'delete', label: 'Xóa', danger: true, icon: <Trash2 size={16} />, onClick: () => handleDeleteCustomer(customer) }] : []),
         ];
 
         return (
           <div className="flex min-h-12 items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
             <Button type="text" aria-label="Xem khách hàng" icon={<Eye size={17} className="text-[var(--color-primary)]" />} className="rounded-full hover:bg-[var(--color-primary-light)]" onClick={() => handleViewCustomer(customer)} />
             <Button type="text" aria-label="Sửa khách hàng" icon={<Edit3 size={17} className="text-[var(--color-text-secondary)]" />} className="rounded-full hover:bg-[var(--color-bg-subtle)]" onClick={() => handleOpenEdit(customer)} />
-            <Button type="text" aria-label="Xóa khách hàng" icon={<Trash2 size={17} className="text-red-500" />} className="rounded-full hover:bg-red-50" onClick={() => handleDeleteCustomer(customer)} />
+            {isAdmin && (
+              <Button type="text" aria-label="Xóa khách hàng" icon={<Trash2 size={17} className="text-red-500" />} className="rounded-full hover:bg-red-50" onClick={() => handleDeleteCustomer(customer)} />
+            )}
             <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
               <Button type="text" aria-label="Thêm thao tác" icon={<MoreVertical size={17} className="text-[var(--color-text-secondary)]" />} className="rounded-full hover:bg-[var(--color-bg-subtle)] sm:hidden" />
             </Dropdown>
@@ -420,7 +430,7 @@ export default function CustomersPage() {
               <Dropdown menu={{ items: [
                 { key: 'view', label: 'Xem chi tiết', icon: <Eye size={16} />, onClick: () => handleViewCustomer(customer) },
                 { key: 'edit', label: 'Chỉnh sửa', icon: <Edit3 size={16} />, onClick: () => handleOpenEdit(customer) },
-                { key: 'delete', label: 'Xóa', danger: true, icon: <Trash2 size={16} />, onClick: () => handleDeleteCustomer(customer) }
+                ...(isAdmin ? [{ key: 'delete', label: 'Xóa', danger: true, icon: <Trash2 size={16} />, onClick: () => handleDeleteCustomer(customer) }] : [])
               ] }} trigger={['click']}>
                 <Button type="text" icon={<MoreVertical size={18} className="text-[var(--color-text-secondary)]" />} />
               </Dropdown>

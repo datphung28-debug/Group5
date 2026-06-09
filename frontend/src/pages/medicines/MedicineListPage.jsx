@@ -7,12 +7,15 @@ import FilterBar from './components/FilterBar';
 import MedicineTable from './components/MedicineTable';
 import useMedicineStore from '../../stores/useMedicineStore';
 import useCategoryStore from '../../stores/useCategoryStore';
+import useAuthStore from '../../stores/useAuthStore';
 
 const MedicineListPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { fetchMedicines, setParams, params, total, loading } = useMedicineStore();
   const { categories, fetchCategories } = useCategoryStore();
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.role === 'admin';
 
   const searchParams = new URLSearchParams(location.search);
   const initialCategory = searchParams.get('group') || '';
@@ -60,7 +63,7 @@ const MedicineListPage = () => {
       <PageHeader
         title={selectedCategoryName ? `Danh mục thuốc — Nhóm ${selectedCategoryName}` : 'Danh mục thuốc'}
         subtitle="Quản lý danh sách thuốc trong hệ thống"
-        actions={
+        actions={isAdmin ? (
           <Button
             type="primary"
             icon={<Plus size={18} className="mr-2 inline" />}
@@ -69,7 +72,7 @@ const MedicineListPage = () => {
           >
             Thêm thuốc mới
           </Button>
-        }
+        ) : null}
       />
 
       {/* Filter Bar */}
@@ -88,7 +91,7 @@ const MedicineListPage = () => {
       </div>
 
       {/* Table */}
-      <MedicineTable />
+      <MedicineTable canManageMedicines={isAdmin} />
     </div>
   );
 };

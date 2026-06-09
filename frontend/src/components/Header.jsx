@@ -9,6 +9,7 @@ import useMedicineStore from '../stores/useMedicineStore';
 
 export default function Header() {
   const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.role === 'admin';
   const logout = useAuthStore((state) => state.logout);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -265,17 +266,19 @@ export default function Header() {
             >
               <span>POS Bán hàng</span>
             </Link>
-            <Link
-              to="/medicines/add"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                navigate('/medicines/add');
-                setSearchOpen(false);
-              }}
-              className="flex items-center justify-center rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
-            >
-              <span>Thêm thuốc mới</span>
-            </Link>
+            {isAdmin && (
+              <Link
+                to="/medicines/add"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  navigate('/medicines/add');
+                  setSearchOpen(false);
+                }}
+                className="flex items-center justify-center rounded-lg bg-[var(--color-bg-subtle)] border border-[var(--color-border-light)] p-2 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all"
+              >
+                <span>Thêm thuốc mới</span>
+              </Link>
+            )}
             <Link
               to="/prescriptions/new"
               onMouseDown={(e) => {

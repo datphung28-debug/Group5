@@ -124,7 +124,7 @@ function AppLayout() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/medicines" element={<MedicineListPage />} />
-              <Route path="/medicines/add" element={<AddMedicinePage />} />
+              <Route path="/medicines/add" element={adminOnly(<AddMedicinePage />)} />
               <Route path="/medicine-groups" element={<MedicineGroupsPage />} />
               <Route path="/inventory/expiry" element={<ExpiryWarningPage />} />
               <Route path="/inventory" element={<InventoryPage />} />

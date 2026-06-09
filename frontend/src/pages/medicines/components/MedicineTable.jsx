@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import useMedicineStore from '../../../stores/useMedicineStore';
 
-const MedicineTable = () => {
+const MedicineTable = ({ canManageMedicines = false }) => {
   const { medicines, loading, error, total, params, setParams, fetchMedicines, deleteMedicine, updateMedicine } = useMedicineStore();
   
   // State quản lý Modal cập nhật vị trí
@@ -123,6 +123,11 @@ const MedicineTable = () => {
   };
 
   const handleDelete = async (record) => {
+    if (!canManageMedicines) {
+      message.warning('Bạn không có quyền xóa thuốc. Vui lòng liên hệ quản trị viên.');
+      return;
+    }
+
     const res = await deleteMedicine(record._id || record.id);
     if (res.success) {
       message.success(`Đã xóa thuốc ${record.code}`);
@@ -137,6 +142,11 @@ const MedicineTable = () => {
   };
 
   const handleOpenPriceModal = (record) => {
+    if (!canManageMedicines) {
+      message.warning('Bạn không có quyền chỉnh sửa thuốc. Vui lòng liên hệ quản trị viên.');
+      return;
+    }
+
     setEditingMedicine(record);
     priceForm.setFieldsValue({
       importPrice: Number(record.importPrice || 0),
@@ -147,6 +157,11 @@ const MedicineTable = () => {
   };
 
   const handleSavePrice = async () => {
+    if (!canManageMedicines) {
+      message.warning('Bạn không có quyền chỉnh sửa thuốc. Vui lòng liên hệ quản trị viên.');
+      return;
+    }
+
     try {
       const values = await priceForm.validateFields();
       const res = await updateMedicine(editingMedicine._id || editingMedicine.id, values);
@@ -163,6 +178,11 @@ const MedicineTable = () => {
   };
 
   const handleOpenLocationModal = (record) => {
+    if (!canManageMedicines) {
+      message.warning('Bạn không có quyền cập nhật vị trí thuốc. Vui lòng liên hệ quản trị viên.');
+      return;
+    }
+
     setEditingMedicine(record);
     const loc = record.location || {};
     locForm.setFieldsValue({
@@ -176,6 +196,11 @@ const MedicineTable = () => {
   };
 
   const handleSaveLocation = async () => {
+    if (!canManageMedicines) {
+      message.warning('Bạn không có quyền cập nhật vị trí thuốc. Vui lòng liên hệ quản trị viên.');
+      return;
+    }
+
     try {
       const values = await locForm.validateFields();
       values.label = `${values.zone}-${String(values.shelf).padStart(2,'0')}-${values.row}-${values.column}`;
@@ -344,42 +369,46 @@ const MedicineTable = () => {
             label: 'Xem chi tiết',
             icon: <Eye size={16} />,
           },
-          {
-            key: 'edit',
-            label: 'Chỉnh sửa',
-            icon: <Pencil size={16} />,
-            onClick: () => handleOpenPriceModal(record),
-          },
-          {
-            key: 'update_loc',
-            label: 'Cập nhật vị trí',
-            icon: <MapPin size={16} />,
-            onClick: () => handleOpenLocationModal(record),
-          },
+          ...(canManageMedicines ? [
+            {
+              key: 'edit',
+              label: 'Chỉnh sửa',
+              icon: <Pencil size={16} />,
+              onClick: () => handleOpenPriceModal(record),
+            },
+            {
+              key: 'update_loc',
+              label: 'Cập nhật vị trí',
+              icon: <MapPin size={16} />,
+              onClick: () => handleOpenLocationModal(record),
+            },
+          ] : []),
           {
             key: 'inventory',
             label: 'Xem tồn kho',
             icon: <Warehouse size={16} />,
           },
-          {
-            type: 'divider',
-          },
-          {
-            key: 'delete',
-            danger: true,
-            icon: <Trash2 size={16} />,
-            label: (
-              <Popconfirm
-                title="Bạn có chắc muốn xóa thuốc này không?"
-                onConfirm={() => handleDelete(record)}
-                okText="Xóa"
-                cancelText="Hủy"
-                onPopupClick={(e) => e.stopPropagation()}
-              >
-                <span className="block w-full">Xóa thuốc</span>
-              </Popconfirm>
-            ),
-          },
+          ...(canManageMedicines ? [
+            {
+              type: 'divider',
+            },
+            {
+              key: 'delete',
+              danger: true,
+              icon: <Trash2 size={16} />,
+              label: (
+                <Popconfirm
+                  title="Bạn có chắc muốn xóa thuốc này không?"
+                  onConfirm={() => handleDelete(record)}
+                  okText="Xóa"
+                  cancelText="Hủy"
+                  onPopupClick={(e) => e.stopPropagation()}
+                >
+                  <span className="block w-full">Xóa thuốc</span>
+                </Popconfirm>
+              ),
+            },
+          ] : []),
         ];
 
         return (
