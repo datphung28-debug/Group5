@@ -1,9 +1,11 @@
 import express from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
+import { protect, staffOnly } from '../middlewares/authMiddleware.js';
 dotenv.config();
 
 const router = express.Router();
+router.use(protect, staffOnly);
 
 let genAI = null;
 if (process.env.GEMINI_API_KEY) {

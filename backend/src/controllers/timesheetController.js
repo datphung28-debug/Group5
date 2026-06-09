@@ -2,6 +2,12 @@ import Timesheet from "../models/Timesheet.js";
 import User from "../models/User.js";
 import { sendErrorResponse } from "../utils/errorResponse.js";
 
+export const canManageTimesheetStaff = ({ actor, staffId }) => {
+  if (!actor || !staffId) return false;
+  if (actor.role === "admin") return true;
+  return actor._id.toString() === staffId.toString();
+};
+
 // @GET /api/timesheet - Lấy danh sách chấm công
 export const getTimesheets = async (req, res) => {
   try {
@@ -45,6 +51,10 @@ export const createTimesheet = async (req, res) => {
 
     if (!date || !staffId || !shift || !scheduledTime || !checkIn) {
       return res.status(400).json({ message: "Vui lòng cung cấp đầy đủ thông tin bắt buộc" });
+    }
+
+    if (!canManageTimesheetStaff({ actor: req.user, staffId })) {
+      return res.status(403).json({ message: "Bạn chỉ được chấm công cho chính mình" });
     }
 
     if (req.user.role !== "admin") {
@@ -108,6 +118,15 @@ export const updateTimesheet = async (req, res) => {
     if (!timesheet) {
       return res.status(404).json({ message: "Không tìm thấy bản ghi chấm công" });
     }
+
+    if (!canManageTimesheetStaff({ actor: req.user, staffId: timesheet.staff })) {
+      return res.status(403).json({ message: "Bạn chỉ được cập nhật chấm công của chính mình" });
+    }
+    if (updateData.staffId && !canManageTimesheetStaff({ actor: req.user, staffId: updateData.staffId })) {
+      return res.status(403).json({ message: "Bạn không được chuyển bản ghi chấm công cho nhân viên khác" });
+    }
+
+    delete updateData.pin;
 
     if (updateData.staffId) {
       const staffUser = await User.findById(updateData.staffId);

@@ -75,6 +75,37 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+function RoleRoute({ roles, children }) {
+  const user = useAuthStore((state) => state.user);
+  const role = user?.role;
+
+  if (!roles.includes(role)) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-160px)] p-6 bg-[var(--color-bg-app)]">
+        <Result
+          status="403"
+          title={<span className="text-xl font-bold text-[var(--color-text-primary)]">Không có quyền truy cập</span>}
+          subTitle={<span className="text-[var(--color-text-secondary)]">Tài khoản của bạn không được phân quyền vào màn hình này.</span>}
+          extra={
+            <Button
+              type="primary"
+              onClick={() => window.history.back()}
+              className="bg-[var(--color-primary)] border-none h-10 px-6 rounded-[var(--radius-md)] font-medium hover:bg-[var(--color-primary-hover)]"
+            >
+              Quay lại
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  return children;
+}
+
+const adminOnly = (element) => <RoleRoute roles={['admin']}>{element}</RoleRoute>;
+const pharmacistOnly = (element) => <RoleRoute roles={['pharmacist']}>{element}</RoleRoute>;
+
 function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -98,26 +129,26 @@ function AppLayout() {
               <Route path="/inventory/expiry" element={<ExpiryWarningPage />} />
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
-              <Route path="/purchase-orders/create" element={<PurchaseOrderPage />} />
+              <Route path="/purchase-orders/create" element={adminOnly(<PurchaseOrderPage />)} />
               <Route path="/invoices" element={<SalesInvoicePage />} />
               <Route path="/customers" element={<CustomersPage />} />
               <Route path="/suppliers" element={<SuppliersPage />} />
               <Route path="/suppliers/:supplierId" element={<SupplierDetailPage />} />
-              <Route path="/staff" element={<StaffPage />} />
-              <Route path="/cash-book" element={<CashbookPage />} />
-              <Route path="/report-revenue" element={<RevenueReportPage />} />
-              <Route path="/report-io" element={<InventoryFlowReportPage />} />
-              <Route path="/report-debt" element={<DebtReportPage />} />
+              <Route path="/staff" element={adminOnly(<StaffPage />)} />
+              <Route path="/cash-book" element={adminOnly(<CashbookPage />)} />
+              <Route path="/report-revenue" element={adminOnly(<RevenueReportPage />)} />
+              <Route path="/report-io" element={adminOnly(<InventoryFlowReportPage />)} />
+              <Route path="/report-debt" element={adminOnly(<DebtReportPage />)} />
               
               {/* Backlog routes routed to the construction/backlog screen */}
-              <Route path="/activity" element={<ActivityPage />} />
-              <Route path="/schedule" element={<SchedulePage />} />
-              <Route path="/timesheet" element={<TimesheetPage />} />
-              <Route path="/payroll" element={<BacklogPage title="Bảng lương" />} />
+              <Route path="/activity" element={adminOnly(<ActivityPage />)} />
+              <Route path="/schedule" element={adminOnly(<SchedulePage />)} />
+              <Route path="/timesheet" element={adminOnly(<TimesheetPage />)} />
+              <Route path="/payroll" element={adminOnly(<BacklogPage title="Bảng lương" />)} />
               <Route path="/returns" element={<ReturnsPage />} />
-              <Route path="/settings" element={<BacklogPage title="Cài đặt hệ thống" />} />
-              <Route path="/my-schedule" element={<MySchedulePage />} />
-              <Route path="/my-timesheet" element={<TimesheetPage />} />
+              <Route path="/settings" element={adminOnly(<BacklogPage title="Cài đặt hệ thống" />)} />
+              <Route path="/my-schedule" element={pharmacistOnly(<MySchedulePage />)} />
+              <Route path="/my-timesheet" element={pharmacistOnly(<TimesheetPage />)} />
 
               <Route path="/prescriptions/new" element={<div className="p-6"><PrescriptionScanPage /></div>} />
             </Routes>

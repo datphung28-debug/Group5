@@ -67,7 +67,7 @@ export default function Sidebar({ collapsed, onCollapse }) {
     {
       title: 'TÀI CHÍNH',
       items: [
-        { path: '/cash-book', icon: Wallet, label: 'Sổ quỹ' },
+        { path: '/cash-book', icon: Wallet, label: 'Sổ quỹ', roles: ['admin'] },
       ],
     },
     {
