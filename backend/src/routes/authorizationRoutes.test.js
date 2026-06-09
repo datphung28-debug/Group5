@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import aiRoutes from "./aiRoutes.js";
 import cashbookRoutes from "./cashbookRoutes.js";
+import customerRoutes from "./customerRoutes.js";
 import importRoutes from "./importRoutes.js";
+import medicineRoutes from "./medicineRoutes.js";
 import reportRoutes from "./reportRoutes.js";
 
 const getRouteHandlerNames = (router, path, method) => {
@@ -42,4 +44,15 @@ test("AI interaction checks require authenticated staff permission", () => {
   const middleware = getGlobalMiddlewareNames(aiRoutes);
 
   assert.deepEqual(middleware, ["protect", "staffOnly"]);
+});
+
+test("customer deletion requires admin permission", () => {
+  const handlers = getRouteHandlerNames(customerRoutes, "/:id", "delete");
+
+  assert.ok(handlers.includes("adminOnly"));
+});
+
+test("medicine catalog reads require staff permission", () => {
+  assert.ok(getRouteHandlerNames(medicineRoutes, "/", "get").includes("staffOnly"));
+  assert.ok(getRouteHandlerNames(medicineRoutes, "/:id", "get").includes("staffOnly"));
 });

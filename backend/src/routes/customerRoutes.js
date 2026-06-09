@@ -7,7 +7,7 @@ import {
   updateCustomer,
   deleteCustomer,
 } from "../controllers/customerController.js";
-import { protect, staffOnly } from "../middlewares/authMiddleware.js";
+import { protect, staffOnly, adminOnly } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
@@ -18,6 +18,6 @@ router.get("/:id", getCustomerById);
 router.get("/:id/history", getCustomerHistory);
 router.post("/", createCustomer);
 router.put("/:id", updateCustomer);
-router.delete("/:id", deleteCustomer);
+router.delete("/:id", adminOnly, deleteCustomer);
 
 export default router;
